@@ -15,3 +15,4 @@
 - Không trả stack trace, SQL hay đường dẫn trong response. Chi tiết chỉ ghi log phía server (HTTP 500 trả thông báo chung).
 - Không đặt secret trong code hoặc biến NEXT_PUBLIC_*. Secret chỉ đọc từ .env phía server.
 - Viết test PHPUnit cho logic thuần (giá, trùng lịch, tồn kho, state machine). Sau khi code xong phase, chạy test và báo kết quả thật, không tự khẳng định "đã pass".
+
