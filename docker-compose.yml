@@ -10,6 +10,7 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --default-time-zone=+07:00
+      --log-bin-trust-function-creators=1
     environment:
       MYSQL_DATABASE: studio_dev
       MYSQL_USER: studio_user
