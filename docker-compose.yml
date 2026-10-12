@@ -2,20 +2,23 @@ version: '3.8'
 
 services:
   db:
-    image: mysql:8.0
+    image: docker.io/library/mysql:8.0
     container_name: studio_db
     restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-time-zone=+07:00
     environment:
-      MYSQL_DATABASE: studio_db
+      MYSQL_DATABASE: studio_dev
       MYSQL_USER: studio_user
       MYSQL_PASSWORD: studio_password
       MYSQL_ROOT_PASSWORD: root_password
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysqldata:/var/lib/mysql:z
-      - ./database/init:/docker-entrypoint-initdb.d:z
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u studio_user -pstudio_password || exit 1"]
       interval: 5s
@@ -24,44 +27,51 @@ services:
       start_period: 15s
 
   api:
+    image: studio-rental-api:latest
     build:
       context: ./server
-      dockerfile: Dockerfile
+      dockerfile: docker/api.Dockerfile
     container_name: studio_api
     restart: unless-stopped
     ports:
       - "8000:80"
     environment:
+      APP_ENV: dev
       DB_HOST: db
       DB_PORT: 3306
-      DB_NAME: studio_db
+      DB_NAME: studio_dev
       DB_USER: studio_user
       DB_PASSWORD: studio_password
+      DB_PASS: studio_password
+      ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
     volumes:
       - ./server:/var/www/html:z
     depends_on:
       db:
         condition: service_healthy
 
-  web:
+  cron:
+    image: studio-rental-api:latest
     build:
-      context: ./client
-      dockerfile: Dockerfile.dev
-    container_name: studio_web
+      context: ./server
+      dockerfile: docker/api.Dockerfile
+    container_name: studio_cron
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
-      PORT: 3000
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      APP_ENV: dev
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: studio_dev
+      DB_USER: studio_user
+      DB_PASSWORD: studio_password
+      DB_PASS: studio_password
     volumes:
-      - ./client:/app:z
-      - client_node_modules:/app/node_modules
-      - client_next:/app/.next
+      - ./server:/var/www/html:z
     depends_on:
-      - api
+      db:
+        condition: service_healthy
+    command: >
+      bash -c "while true; do php /var/www/html/bin/expire-bookings.php || true; sleep 60; done"
 
 volumes:
   mysqldata:
-  client_node_modules:
-  client_next:
