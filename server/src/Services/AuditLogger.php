@@ -38,3 +38,4 @@ class AuditLogger
         return (int) $pdo->lastInsertId();
     }
 }
+

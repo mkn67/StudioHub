@@ -75,3 +75,4 @@ class JwtServiceTest extends TestCase
         $this->jwtService->verify($token);
     }
 }
+

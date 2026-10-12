@@ -42,3 +42,4 @@ class Pipeline
         return $pipeline($request);
     }
 }
+

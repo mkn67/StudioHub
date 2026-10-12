@@ -69,3 +69,4 @@ class ErrorHandlerTest extends TestCase
         $this->assertEmpty($formatted['errors']);
     }
 }
+

@@ -48,3 +48,4 @@ class ApiException extends Exception
         return $this->errors;
     }
 }
+

@@ -155,3 +155,4 @@ try {
     fwrite(STDERR, "[MIGRATION FAILED] " . $e->getMessage() . "\n");
     exit(1);
 }
+

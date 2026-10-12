@@ -160,3 +160,4 @@ class OwnershipGuard
         return $booking;
     }
 }
+

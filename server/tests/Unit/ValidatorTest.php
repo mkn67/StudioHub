@@ -65,3 +65,4 @@ class ValidatorTest extends TestCase
         Validator::assertValid(['name' => ''], ['name' => 'required']);
     }
 }
+

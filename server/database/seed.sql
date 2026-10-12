@@ -113,3 +113,4 @@ INSERT INTO equipments (equipment_id, studio_id, category_id, name, brand, descr
 (5, 2, 4, 'Micro Shure SM7B', 'Shure', 'Micro thu âm giọng nói tiêu chuẩn vàng cho Podcast', 60000.00, 'hour', 4, 'active'),
 (6, 2, 5, 'Đèn Aputure 300d Mark II', 'Aputure', 'Đèn LED daylight siêu sáng chỉ số CRI 96+', 80000.00, 'hour', 3, 'active'),
 (7, 2, 4, 'Bàn Trộn Âm Thanh Rodecaster Pro II', 'Rode', 'Integrated audio production studio cho 4 người', 250000.00, 'session', 2, 'active');
+

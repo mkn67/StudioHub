@@ -139,3 +139,4 @@ class Request
         return $this->getAttribute('user');
     }
 }
+

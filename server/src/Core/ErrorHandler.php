@@ -104,3 +104,4 @@ class ErrorHandler
         set_error_handler([self::class, 'handleError']);
     }
 }
+
