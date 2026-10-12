@@ -1,0 +1,27 @@
+FROM php:8.2-apache
+
+# Install PHP PDO MySQL extension (using built-in mysqlnd driver)
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Enable Apache mod_rewrite for RESTful routing
+RUN a2enmod rewrite
+
+# Configure Apache DocumentRoot to point to /var/www/html/public
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Configure Apache to allow .htaccess overrides in DocumentRoot
+RUN echo '<Directory /var/www/html/public>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' > /etc/apache2/conf-available/override.conf \
+    && a2enconf override
+
+WORKDIR /var/www/html
+
+EXPOSE 80
+
+CMD ["apache2-foreground"]

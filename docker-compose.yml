@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: studio_db
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: studio_db
+      MYSQL_USER: studio_user
+      MYSQL_PASSWORD: studio_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysqldata:/var/lib/mysql:z
+      - ./database/init:/docker-entrypoint-initdb.d:z
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u studio_user -pstudio_password || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: studio_api
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: studio_db
+      DB_USER: studio_user
+      DB_PASSWORD: studio_password
+    volumes:
+      - ./server:/var/www/html:z
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: studio_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    volumes:
+      - ./client:/app:z
+      - client_node_modules:/app/node_modules
+      - client_next:/app/.next
+    depends_on:
+      - api
+
+volumes:
+  mysqldata:
+  client_node_modules:
+  client_next:
