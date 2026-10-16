@@ -27,6 +27,7 @@ use App\Middleware\CorsMiddleware;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 use App\Controllers\HealthController;
+use App\Controllers\AuthController;
 
 $router = new Router();
 $router->use(new CorsMiddleware());
@@ -34,6 +35,13 @@ $router->use(new CorsMiddleware());
 // Public health check route
 $router->get('/api/health', [HealthController::class, 'check']);
 $router->get('/health', [HealthController::class, 'check']);
+
+// --- Phase 3: Auth & Account Routes ---
+$router->post('/api/auth/register', [AuthController::class, 'register']);
+$router->post('/api/auth/login', [AuthController::class, 'login']);
+$router->post('/api/auth/logout', [AuthController::class, 'logout'], [new AuthMiddleware()]);
+$router->get('/api/auth/profile', [AuthController::class, 'profile'], [new AuthMiddleware()]);
+$router->patch('/api/auth/profile', [AuthController::class, 'updateProfile'], [new AuthMiddleware()]);
 
 // Verification routes for Phase 2 Auth/Role/Ownership
 $router->get('/api/test/me', function (Request $req) {
