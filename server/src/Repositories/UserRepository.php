@@ -122,3 +122,4 @@ class UserRepository
         return $stmt->execute($params);
     }
 }
+

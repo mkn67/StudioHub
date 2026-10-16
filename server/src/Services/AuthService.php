@@ -266,3 +266,4 @@ class AuthService
         return $this->getProfile($userId);
     }
 }
+

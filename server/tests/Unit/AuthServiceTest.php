@@ -247,3 +247,4 @@ class AuthServiceTest extends TestCase
         ]);
     }
 }
+

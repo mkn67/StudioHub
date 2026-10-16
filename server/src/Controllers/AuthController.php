@@ -63,3 +63,4 @@ class AuthController
         ApiResponse::success($updated, 'Cập nhật thông tin thành công', 200);
     }
 }
+
