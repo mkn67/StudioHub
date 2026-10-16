@@ -91,7 +91,8 @@ class Validator
 
                     case 'min':
                         $min = (float) ($params[0] ?? 0);
-                        if (is_numeric($value)) {
+                        $isNumericField = is_int($value) || is_float($value) || in_array('int', $ruleList, true) || in_array('integer', $ruleList, true) || in_array('numeric', $ruleList, true);
+                        if ($isNumericField && is_numeric($value)) {
                             if ((float) $value < $min) {
                                 $errors[] = [
                                     'field'   => $field,
@@ -99,8 +100,16 @@ class Validator
                                     'message' => "Trường {$field} phải có giá trị tối thiểu là {$min}",
                                 ];
                             }
-                        } elseif (is_string($value)) {
-                            if (mb_strlen($value) < (int) $min) {
+                        } elseif (is_array($value)) {
+                            if (count($value) < (int) $min) {
+                                $errors[] = [
+                                    'field'   => $field,
+                                    'code'    => 'min_items',
+                                    'message' => "Trường {$field} phải có tối thiểu {$min} phần tử",
+                                ];
+                            }
+                        } else {
+                            if (mb_strlen((string) $value) < (int) $min) {
                                 $errors[] = [
                                     'field'   => $field,
                                     'code'    => 'min_length',
@@ -112,7 +121,8 @@ class Validator
 
                     case 'max':
                         $max = (float) ($params[0] ?? 0);
-                        if (is_numeric($value)) {
+                        $isNumericField = is_int($value) || is_float($value) || in_array('int', $ruleList, true) || in_array('integer', $ruleList, true) || in_array('numeric', $ruleList, true);
+                        if ($isNumericField && is_numeric($value)) {
                             if ((float) $value > $max) {
                                 $errors[] = [
                                     'field'   => $field,
@@ -120,8 +130,16 @@ class Validator
                                     'message' => "Trường {$field} phải có giá trị tối đa là {$max}",
                                 ];
                             }
-                        } elseif (is_string($value)) {
-                            if (mb_strlen($value) > (int) $max) {
+                        } elseif (is_array($value)) {
+                            if (count($value) > (int) $max) {
+                                $errors[] = [
+                                    'field'   => $field,
+                                    'code'    => 'max_items',
+                                    'message' => "Trường {$field} không được vượt quá {$max} phần tử",
+                                ];
+                            }
+                        } else {
+                            if (mb_strlen((string) $value) > (int) $max) {
                                 $errors[] = [
                                     'field'   => $field,
                                     'code'    => 'max_length',
