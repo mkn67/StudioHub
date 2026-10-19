@@ -92,3 +92,4 @@ class EquipmentRepository
         return (bool) $stmt->fetchColumn();
     }
 }
+

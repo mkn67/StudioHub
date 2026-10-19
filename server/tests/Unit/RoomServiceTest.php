@@ -174,3 +174,4 @@ class RoomServiceTest extends TestCase
         $this->roomService->getRoomRates(3);
     }
 }
+

@@ -35,3 +35,4 @@ class LookupController
         ApiResponse::success($amenities, 'Lấy danh sách tiện ích thành công', 200);
     }
 }
+

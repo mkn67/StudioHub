@@ -26,3 +26,4 @@ class EquipmentController
         ApiResponse::success($equipments, 'Lấy danh sách thiết bị thành công', 200);
     }
 }
+

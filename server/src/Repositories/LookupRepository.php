@@ -48,3 +48,4 @@ class LookupRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+

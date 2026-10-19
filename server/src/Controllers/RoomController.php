@@ -59,3 +59,4 @@ class RoomController
         ApiResponse::success($rates, 'Lấy bảng giá của phòng thành công', 200);
     }
 }
+

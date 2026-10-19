@@ -69,3 +69,4 @@ class EquipmentService
         return $this->equipmentRepo->getActiveEquipmentsByStudio($studioId, $categoryId);
     }
 }
+
