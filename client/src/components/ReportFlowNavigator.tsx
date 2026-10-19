@@ -30,14 +30,14 @@ export default function ReportFlowNavigator() {
       num: '2',
       title: 'Màn hình 2: Chi tiết & Lịch Time-slot',
       req: 'Slot Grid',
-      href: '/rooms/room-artemis-01',
+      href: '/rooms/1',
       icon: CalendarCheck,
     },
     {
       num: '3',
       title: 'Màn hình 3: Thêm thiết bị dùng chung',
       req: 'Add-ons',
-      href: '/rooms/room-artemis-01#equipment-section',
+      href: '/rooms/1',
       icon: PackagePlus,
     },
     {

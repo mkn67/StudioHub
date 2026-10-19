@@ -65,7 +65,7 @@ export default function SystemHealthPage() {
             Kiểm Tra Kết Nối Hệ Thống (DevOps Health Check)
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Kiểm tra thông suốt: Next.js 14 ➔ PHP 8.2 Native API (PDO) ➔ PostgreSQL 16 (btree_gist)
+            Kiểm tra thông suốt: Next.js 14 ➔ PHP 8.2 Native API (PDO) ➔ MySQL 8.0.46 (InnoDB)
           </p>
         </div>
 
