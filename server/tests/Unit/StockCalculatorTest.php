@@ -85,3 +85,4 @@ class StockCalculatorTest extends TestCase
         $this->assertSame(0, $peak);
     }
 }
+

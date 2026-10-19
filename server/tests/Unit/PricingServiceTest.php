@@ -166,3 +166,4 @@ class PricingServiceTest extends TestCase
         $this->assertEquals(44400000, $res['deposit_amount']);
     }
 }
+

@@ -70,3 +70,4 @@ class EquipmentCategoryRepository
         return (int) $this->pdo->lastInsertId();
     }
 }
+

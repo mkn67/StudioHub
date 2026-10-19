@@ -88,7 +88,12 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+<<<<<<< HEAD
     command: npm run dev -- --hostname 0.0.0.0
+=======
+      - API_INTERNAL_URL=http://api
+    command: npm run dev
+>>>>>>> 9dd1977 (feat: connect frontend with backend for host management and booking engine (phases 5 & 6))
     depends_on:
       - api
 

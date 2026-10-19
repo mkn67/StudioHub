@@ -108,3 +108,4 @@ class StudioRepository
         return $stmt->execute($params);
     }
 }
+

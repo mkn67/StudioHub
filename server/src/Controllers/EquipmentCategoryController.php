@@ -63,3 +63,4 @@ class EquipmentCategoryController
         ApiResponse::created($category, 'Tạo danh mục thiết bị thành công');
     }
 }
+

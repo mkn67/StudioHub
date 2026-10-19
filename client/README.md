@@ -1,8 +1,14 @@
 # StudioHub
 
+<<<<<<< HEAD
 Frontend marketplace cho thuê phòng Studio, giao diện tiếng Việt, Next.js App Router + TypeScript + React + Tailwind CSS. Không có backend, database hoặc giao dịch tiền thật.
 
 ## Chạy ứng dụng
+=======
+A Vietnamese studio rental frontend with a PHP API connection for room discovery and customer authentication/profile updates. Booking, payment, host workspace, and administrator workspace still use the normalized, versioned browser demo database until their API contracts are connected.
+
+The API stores authentication and profile changes in MySQL and enforces JWT authentication for supported routes. Payment outcomes and the remaining booking, host, and admin workflows are demonstrations and do not update the server database. There is no real payment gateway or money movement. See [backend integration status](docs/BACKEND-INTEGRATION.md) and the [implementation brief](docs/IMPLEMENTATION-BRIEF.md).
+>>>>>>> 9dd1977 (feat: connect frontend with backend for host management and booking engine (phases 5 & 6))
 
 Yêu cầu Node.js 24 và npm. Trên PowerShell có chặn script, dùng `npm.cmd`:
 
@@ -29,6 +35,7 @@ node scripts/production-qa.mjs
 
 Script dùng bản production tại cổng 3001. `scripts/browser-qa.mjs` dùng bản development cổng 3000. Nếu chưa có Chromium, cài qua `npx.cmd playwright install chromium`. Trong môi trường sandbox hạn chế Windows, runner `tsx` có thể cần quyền gọi thông tin tài khoản hệ điều hành; đây là giới hạn môi trường chạy test, không phải lỗi nghiệp vụ.
 
+<<<<<<< HEAD
 ## Khám phá bản demo
 
 - `/`: hero ảnh Studio, tìm kiếm, danh mục, phòng nổi bật.
@@ -40,6 +47,21 @@ Script dùng bản production tại cổng 3001. `scripts/browser-qa.mjs` dùng 
 - `/admin`: xét duyệt đối tác, tài khoản, yêu cầu khôi phục, giám sát phòng/Studio, quyền, ngoại lệ và audit.
 
 **Môi trường demo** ở góc dưới trong chế độ development cho phép đổi nhân vật, tăng thời gian, đặt lại dữ liệu và tải sáu tình huống mẫu. Điều khiển này bị loại khỏi production. Đồng hồ demo bắt đầu lúc 09:00 ngày 25/10/2026, múi giờ Việt Nam, và chỉ thay đổi khi tăng thời gian mô phỏng. Dùng `npm.cmd run dev` để kiểm tra timeout, no-show và quá giờ mà không phải chờ thật.
+=======
+`.env.local` contains `NEXT_PUBLIC_DEMO_MODE=true` and `NEXT_PUBLIC_API_URL=http://localhost:8000`. Start the PHP API and MySQL services before using backend authentication and live room browsing. Restart Next.js after changing either value. Backend mode connects room discovery, login, customer registration, profile refresh/edit, and logout. Demo accounts remain available for the local booking/host/admin preview; those changes are not server writes.
+
+Browser demo accounts use **`StudioHub123`**. Backend development seed accounts use **`password123`**.
+
+| Account         | Email                     | Behavior                                                                           |
+| --------------- | ------------------------- | ---------------------------------------------------------------------------------- |
+| Backend customer | `customer@studio.local`  | Sign in and update profile through the PHP API                                     |
+| Customer        | `khach@studiohub.demo`    | Create bookings, simulate deposits, follow and cancel eligible orders              |
+| Approved host   | `chu@studiohub.demo`      | Manage owned studios, rooms, inventory, rates and bookings                         |
+| Administrator   | `admin@studiohub.demo`    | Approve hosts, lock accounts, hide venues, maintain catalogs, inspect audit events |
+| Pending host    | `choduyet@studiohub.demo` | Account Status until an administrator approves the application                     |
+| Rejected host   | `tuchoi@studiohub.demo`   | See the reason, edit the application and resubmit                                  |
+| Locked customer | `bikhoa@studiohub.demo`   | Account Status with the recorded lock reason                                       |
+>>>>>>> 9dd1977 (feat: connect frontend with backend for host management and booking engine (phases 5 & 6))
 
 ## Dữ liệu và kiến trúc
 
@@ -60,4 +82,52 @@ Dữ liệu tồn tại trên cùng trình duyệt và được chia sẻ giữa
 - Không mô phỏng thuế, hợp đồng, thiệt hại thiết bị hoặc phạt no-show ngoài cọc vì nguồn chưa quy định.
 - Bảng quyền Admin là bản mô tả phạm vi quyền đã duyệt, không cho tự cấp quyền tùy ý.
 
+<<<<<<< HEAD
 Đây là bản demo frontend, chưa phải ứng dụng production bảo mật.
+=======
+The host studio selector intentionally starts with **Tất cả Studio** for the overview and booking list. Select a specific studio for room, inventory, rate, calendar, and settings management. An approved host with no studios receives a first-studio setup state; approval never creates a studio automatically.
+
+## Demonstrate the complete booking flow
+
+1. Search the public marketplace by **Bình Thạnh**, open **Phòng Nắng**, and choose an available future interval, for example 09:00–11:00 at least ten days from today.
+2. Check availability, continue to booking, choose equipment, and continue to confirmation. If anonymous, log in as the sample customer; the selected interval and equipment survive login.
+3. Review the itemized price and contact information, accept the acknowledgment and create the order. Choose **Tôi đã thanh toán** on the payment page to record the simulated deposit immediately.
+4. The order now shows **Chờ xác nhận**, not **Đã xác nhận**. A successful simulated deposit does not confirm the rental.
+5. Open another tab on the same origin, log in as the approved host, and find that exact order in **Đơn thuê**. Confirm it. The customer tab updates from the shared database.
+6. In the customer tab, cancel an eligible future order. Both tabs show the cancellation and availability is released. A paid deposit shows **chờ xử lý theo chính sách**; the demo never claims a real refund.
+7. Create another order and exercise failed payment and retry. Retry keeps the existing order code and adds a payment attempt rather than creating another order.
+
+Other useful demonstrations: approve the pending host as admin; hide Nắng Studio and observe its removal from public search while existing booking snapshots remain readable; lock the customer account in an admin tab and watch the customer tab move to Account Status.
+
+## Data and reset
+
+`src/services/storage/adapter.ts` is the only module that accesses browser storage. It validates database version 2 with Zod and migrates the known version 1 contract. The API JWT is stored in the current tab session through this adapter. Unknown or malformed demo data is retained and a recovery screen offers a **confirmed** reset. Storage access and quota failures produce actionable error states.
+
+- `localStorage`: one database at `studiohub.demo.database`, with users, applications, studios, rooms, catalogs, equipment, rates, bookings, payment attempts and audit events.
+- `sessionStorage`: the current tab's session, booking drafts and workspace preferences. Tabs can therefore sign in as different accounts while sharing the domain data.
+- Every mutation reads the freshest validated database, checks permission and invariants, updates a revision, persists, then publishes. Browser `storage` events refresh other tabs.
+- Price, equipment, room, rules and contact snapshots are written when the order is created. Later price or profile edits do not rewrite historical orders.
+- Expiry ticks release unpaid holds and record a system timeline event. Confirmed bookings are never automatically marked completed.
+
+To reset, log in, open the account menu and select **Đặt lại dữ liệu demo**, then confirm. Reset restores coherent sample data and logs out the current tab. Sample dates are relative to the reset date in Vietnam. Other tabs refresh the shared database. Reset affects this app's namespace, not unrelated browser storage.
+
+E2E tests use isolated `studiohub.test.*` namespaces and a fixed Vietnam-local clock. They do not change ordinary demo data. `?fixture=NAME` selects a test namespace only in demo mode; use the ordinary URL in a fresh tab for a normal demonstration.
+
+## Architecture
+
+Next.js App Router, React, strict TypeScript and Tailwind CSS. Thin route files compose feature modules. Server layouts and metadata surround client-only interactive features. Local shadcn-style primitives use Radix for dialog, sheet, drawer and menu behavior; forms use React Hook Form and Zod; analytics use a chart wrapper around Recharts with readable table alternatives.
+
+Pure domain modules own pricing, Vietnam-local interval validation, overlap and cleaning buffers, shared equipment concurrency, lifecycle transitions, access resolution, effective visibility and snapshot-derived statistics. `StudioService` is the single observable mock service; `AppProvider` subscribes with `useSyncExternalStore`. There are no separately maintained customer, host or admin booking stores. Components display the one pricing calculation rather than duplicating formulas.
+
+Related documents: [design tokens and components](DESIGN.md), [rendered design review](docs/DESIGN-REVIEW.md), [demo business assumptions](docs/BUSINESS-ASSUMPTIONS.md), [image provenance](docs/ASSETS.md), [verification record](docs/VERIFICATION.md), and [milestone progress](PROGRESS.md).
+
+## Limitations
+
+Most application data is local to one browser origin, not shared across devices or backed up. Browser event synchronization cannot provide a server transaction or lock against simultaneous cross-process writes. The frontend demo catalog differs from the backend seed catalog; backend mode therefore disables booking submission instead of sending demo room/rate identifiers to MySQL. Image uploads are compressed and remain subject to browser quota. Demo venue names, photographs and statistics describe sample records, not real businesses or marketplace performance.
+
+Cancellation, hold expiry, approval and completion behavior are configurable demo assumptions; payment authorization, settlement, refund eligibility, identity checks, legal terms and server access control require a backend agreement. See the assumptions document.
+
+The requested Impeccable package was not available in the supplied environment. No Impeccable invocation is claimed; manual rendered critique, accessibility audit and responsive polish are documented instead. Direct Google Fonts download was unavailable, so the font is bundled with `@fontsource/be-vietnam-pro`.
+
+The production dependency audit reported no vulnerabilities. The full dependency audit identified an unresolved high-severity `braces` advisory in the development-only ESLint glob dependency chain; its suggested forced fix would downgrade the Next.js ESLint tooling. The application does not use that dependency for runtime matching. Details and the audit date are in the verification record.
+>>>>>>> 9dd1977 (feat: connect frontend with backend for host management and booking engine (phases 5 & 6))

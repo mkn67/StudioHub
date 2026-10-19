@@ -60,3 +60,4 @@ class BookingController
         ApiResponse::created($result, 'Đặt phòng thành công');
     }
 }
+

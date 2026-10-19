@@ -247,3 +247,4 @@ class BookingRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+

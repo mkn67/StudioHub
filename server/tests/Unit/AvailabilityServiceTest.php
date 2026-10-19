@@ -77,3 +77,4 @@ class AvailabilityServiceTest extends TestCase
         ));
     }
 }
+

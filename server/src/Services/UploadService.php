@@ -89,3 +89,4 @@ class UploadService
         return '/uploads/rooms/' . $randomName;
     }
 }
+
