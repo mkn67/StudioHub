@@ -33,5 +33,11 @@ Thumbs.db
 *.swo
 *~
 
+# Uploads
+server/public/uploads/*
+!server/public/uploads/.gitkeep
+server/public/uploads/**/*
+!server/public/uploads/**/.gitkeep
+
 # Symlink compatibility
 studio-rental-web

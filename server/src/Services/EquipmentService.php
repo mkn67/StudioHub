@@ -68,5 +68,37 @@ class EquipmentService
 
         return $this->equipmentRepo->getActiveEquipmentsByStudio($studioId, $categoryId);
     }
+
+    /**
+     * Create equipment
+     *
+     * @param array $data
+     * @return array
+     */
+    public function createEquipment(array $data): array
+    {
+        $id = $this->equipmentRepo->create($data);
+        return [
+            'equipment_id' => $id,
+            'name'         => $data['name'],
+            'message'      => 'Tạo thiết bị thành công',
+        ];
+    }
+
+    /**
+     * Update equipment
+     *
+     * @param int $equipmentId
+     * @param array $data
+     * @return array
+     */
+    public function updateEquipment(int $equipmentId, array $data): array
+    {
+        $this->equipmentRepo->update($equipmentId, $data);
+        return [
+            'equipment_id' => $equipmentId,
+            'message'      => 'Cập nhật thiết bị thành công',
+        ];
+    }
 }
 

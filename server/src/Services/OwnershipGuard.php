@@ -159,5 +159,65 @@ class OwnershipGuard
 
         return $booking;
     }
+
+    /**
+     * Assert that host owns the specified room rate and the rate belongs to the room.
+     *
+     * @param int $hostId
+     * @param int $roomId
+     * @param int $rateId
+     * @return array The rate record
+     * @throws ApiException (404 if not found, 400 if rate does not belong to room, 403 if not owner)
+     */
+    public static function assertOwnsRate(int $hostId, int $roomId, int $rateId): array
+    {
+        $room = self::assertOwnsRoom($hostId, $roomId);
+
+        $pdo = Db::getConnection();
+        $stmt = $pdo->prepare('SELECT * FROM room_rates WHERE rate_id = ?');
+        $stmt->execute([$rateId]);
+        $rate = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$rate) {
+            throw new ApiException(404, 'rate_not_found', 'Bảng giá không tồn tại');
+        }
+
+        if ((int) $rate['room_id'] !== $roomId) {
+            throw new ApiException(400, 'invalid_rate', 'Bảng giá không thuộc phòng này');
+        }
+
+        return $rate;
+    }
+
+    /**
+     * Assert that host owns the equipment category.
+     *
+     * @param int $hostId
+     * @param int $categoryId
+     * @return array The category record
+     * @throws ApiException (404 if not found, 403 if not owner)
+     */
+    public static function assertOwnsCategory(int $hostId, int $categoryId): array
+    {
+        $pdo = Db::getConnection();
+        $stmt = $pdo->prepare('
+            SELECT c.*, s.host_id
+            FROM equipment_categories c
+            JOIN studios s ON c.studio_id = s.studio_id
+            WHERE c.category_id = ?
+        ');
+        $stmt->execute([$categoryId]);
+        $cat = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$cat) {
+            throw new ApiException(404, 'category_not_found', 'Danh mục thiết bị không tồn tại');
+        }
+
+        if ((int) $cat['host_id'] !== $hostId) {
+            throw new ApiException(403, 'forbidden', 'Bạn không có quyền quản lý danh mục thiết bị này');
+        }
+
+        return $cat;
+    }
 }
 

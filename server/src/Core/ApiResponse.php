@@ -30,6 +30,17 @@ class ApiResponse
     }
 
     /**
+     * Send 201 Created JSON response
+     *
+     * @param mixed $data
+     * @param string $message
+     */
+    public static function created(mixed $data = null, string $message = 'Created'): void
+    {
+        self::success($data, $message, 201);
+    }
+
+    /**
      * Send standard error JSON response
      *
      * @param int $statusCode HTTP status code

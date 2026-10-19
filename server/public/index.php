@@ -55,6 +55,36 @@ $router->get('/api/equipments', [EquipmentController::class, 'index']);
 $router->get('/api/space-types', [LookupController::class, 'spaceTypes']);
 $router->get('/api/amenities', [LookupController::class, 'amenities']);
 
+// --- Phase 5: Host Management Routes ---
+use App\Controllers\StudioController;
+use App\Controllers\EquipmentCategoryController;
+
+$hostMiddlewares = [new AuthMiddleware(), new RoleMiddleware('host')];
+
+// Studios
+$router->get('/api/studios/mine', [StudioController::class, 'mine'], $hostMiddlewares);
+$router->post('/api/studios', [StudioController::class, 'create'], $hostMiddlewares);
+$router->patch('/api/studios/{id:\d+}', [StudioController::class, 'update'], $hostMiddlewares);
+
+// Equipment Categories
+$router->get('/api/equipment-categories', [EquipmentCategoryController::class, 'index'], $hostMiddlewares);
+$router->post('/api/equipment-categories', [EquipmentCategoryController::class, 'create'], $hostMiddlewares);
+
+// Rooms
+$router->post('/api/rooms', [RoomController::class, 'create'], $hostMiddlewares);
+$router->patch('/api/rooms/{id:\d+}', [RoomController::class, 'update'], $hostMiddlewares);
+
+// Rates
+$router->post('/api/rooms/{id:\d+}/rates', [RoomController::class, 'createRate'], $hostMiddlewares);
+$router->patch('/api/rooms/{id:\d+}/rates/{rate_id:\d+}', [RoomController::class, 'updateRate'], $hostMiddlewares);
+
+// Images
+$router->post('/api/rooms/{id:\d+}/images', [RoomController::class, 'uploadImage'], $hostMiddlewares);
+
+// Equipments
+$router->post('/api/equipments', [EquipmentController::class, 'create'], $hostMiddlewares);
+$router->patch('/api/equipments/{id:\d+}', [EquipmentController::class, 'update'], $hostMiddlewares);
+
 // Verification routes for Phase 2 Auth/Role/Ownership
 $router->get('/api/test/me', function (Request $req) {
     ApiResponse::success($req->user(), 'Xác thực thành công');

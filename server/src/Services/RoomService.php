@@ -269,5 +269,131 @@ class RoomService
 
         return null;
     }
+
+    /**
+     * Create new room
+     *
+     * @param array $data
+     * @return array Created room
+     * @throws ApiException
+     */
+    public function createRoom(array $data): array
+    {
+        $area = (float) ($data['area'] ?? 0);
+        if ($area <= 0) {
+            throw new ApiException(400, 'invalid_area', 'Diện tích phòng (area) phải lớn hơn 0');
+        }
+
+        $capacity = (int) ($data['capacity'] ?? 0);
+        if ($capacity <= 0) {
+            throw new ApiException(400, 'invalid_capacity', 'Sức chứa phòng (capacity) phải lớn hơn 0');
+        }
+
+        $spaceTypeIds = $data['space_type_ids'] ?? [];
+        if (!is_array($spaceTypeIds) || empty($spaceTypeIds)) {
+            throw new ApiException(400, 'invalid_space_types', 'Phòng phải có ít nhất một loại hình không gian');
+        }
+
+        $amenityIds = $data['amenity_ids'] ?? [];
+        if (!is_array($amenityIds)) {
+            $amenityIds = [];
+        }
+
+        $roomId = $this->roomRepo->createRoom($data, $spaceTypeIds, $amenityIds);
+        $room = $this->roomRepo->findRoomById($roomId);
+        return $room ?: [];
+    }
+
+    /**
+     * Update room
+     *
+     * @param int $roomId
+     * @param array $data
+     * @return array Updated room
+     * @throws ApiException
+     */
+    public function updateRoom(int $roomId, array $data): array
+    {
+        if (array_key_exists('studio_id', $data)) {
+            throw new ApiException(400, 'cannot_change_studio', 'Không được phép thay đổi cơ sở studio của phòng');
+        }
+
+        if (isset($data['area']) && (float) $data['area'] <= 0) {
+            throw new ApiException(400, 'invalid_area', 'Diện tích phòng phải lớn hơn 0');
+        }
+
+        if (isset($data['capacity']) && (int) $data['capacity'] <= 0) {
+            throw new ApiException(400, 'invalid_capacity', 'Sức chứa phòng phải lớn hơn 0');
+        }
+
+        if (isset($data['status']) && !in_array($data['status'], ['active', 'maintenance', 'inactive'], true)) {
+            throw new ApiException(400, 'invalid_status', 'Trạng thái phòng phải là active, maintenance hoặc inactive');
+        }
+
+        $spaceTypeIds = isset($data['space_type_ids']) && is_array($data['space_type_ids'])
+            ? $data['space_type_ids']
+            : null;
+        $amenityIds = isset($data['amenity_ids']) && is_array($data['amenity_ids'])
+            ? $data['amenity_ids']
+            : null;
+
+        $this->roomRepo->updateRoom($roomId, $data, $spaceTypeIds, $amenityIds);
+        $room = $this->roomRepo->findRoomById($roomId);
+        return $room ?: [];
+    }
+
+    /**
+     * Create room rate
+     *
+     * @param int $roomId
+     * @param array $data
+     * @return array
+     */
+    public function createRate(int $roomId, array $data): array
+    {
+        $rateId = $this->roomRepo->createRate($roomId, $data);
+        return [
+            'rate_id' => $rateId,
+            'room_id' => $roomId,
+            'message' => 'Tạo bảng giá thành công',
+        ];
+    }
+
+    /**
+     * Update room rate
+     *
+     * @param int $rateId
+     * @param array $data
+     * @return array
+     */
+    public function updateRate(int $rateId, array $data): array
+    {
+        $this->roomRepo->updateRate($rateId, $data);
+        return [
+            'rate_id' => $rateId,
+            'message' => 'Cập nhật bảng giá thành công',
+        ];
+    }
+
+    /**
+     * Upload room image
+     *
+     * @param int $roomId
+     * @param array $file
+     * @param bool $isPrimary
+     * @return array
+     */
+    public function uploadImage(int $roomId, array $file, bool $isPrimary): array
+    {
+        $imageUrl = UploadService::uploadRoomImage($file);
+        $imageId = $this->roomRepo->addImage($roomId, $imageUrl, $isPrimary);
+
+        return [
+            'image_id'   => $imageId,
+            'room_id'    => $roomId,
+            'image_url'  => $imageUrl,
+            'is_primary' => $isPrimary,
+        ];
+    }
 }
 

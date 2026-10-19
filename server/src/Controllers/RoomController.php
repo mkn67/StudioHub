@@ -58,5 +58,112 @@ class RoomController
         $rates = $this->roomService->getRoomRates($roomId);
         ApiResponse::success($rates, 'Lấy bảng giá của phòng thành công', 200);
     }
+
+    /**
+     * POST /api/rooms
+     * Create room (Host only)
+     */
+    public function create(Request $request): void
+    {
+        $user = $request->user();
+        $body = $request->body();
+
+        \App\Core\Validator::assertValid($body, [
+            'studio_id'       => 'required|int|min:1',
+            'name'            => 'required|min:3|max:150',
+            'area'            => 'required|numeric|min:1',
+            'capacity'        => 'required|int|min:1',
+            'space_type_ids'  => 'required|array|min:1',
+        ]);
+
+        \App\Services\OwnershipGuard::assertOwnsStudio((int) $user['user_id'], (int) $body['studio_id']);
+
+        $room = $this->roomService->createRoom($body);
+        ApiResponse::created($room, 'Tạo phòng thành công');
+    }
+
+    /**
+     * PATCH /api/rooms/{id}
+     * Update room details (Host only)
+     */
+    public function update(Request $request, array $vars): void
+    {
+        $user = $request->user();
+        $roomId = (int) ($vars['id'] ?? 0);
+
+        \App\Services\OwnershipGuard::assertOwnsRoom((int) $user['user_id'], $roomId);
+
+        $body = $request->body();
+        if (empty($body)) {
+            throw new \App\Exceptions\ApiException(400, 'empty_payload', 'Không có dữ liệu cập nhật');
+        }
+
+        $room = $this->roomService->updateRoom($roomId, $body);
+        ApiResponse::success($room, 'Cập nhật phòng thành công');
+    }
+
+    /**
+     * POST /api/rooms/{id}/rates
+     * Create room rate (Host only)
+     */
+    public function createRate(Request $request, array $vars): void
+    {
+        $user = $request->user();
+        $roomId = (int) ($vars['id'] ?? 0);
+
+        \App\Services\OwnershipGuard::assertOwnsRoom((int) $user['user_id'], $roomId);
+
+        $body = $request->body();
+        \App\Core\Validator::assertValid($body, [
+            'rate_unit'     => 'required|in:hour,session,half_day,day,week,month',
+            'unit_price'    => 'required|numeric|min:0',
+            'minimum_units' => 'int|min:1',
+        ]);
+
+        $res = $this->roomService->createRate($roomId, $body);
+        ApiResponse::created($res, 'Tạo bảng giá thành công');
+    }
+
+    /**
+     * PATCH /api/rooms/{id}/rates/{rate_id}
+     * Update room rate (Host only)
+     */
+    public function updateRate(Request $request, array $vars): void
+    {
+        $user = $request->user();
+        $roomId = (int) ($vars['id'] ?? 0);
+        $rateId = (int) ($vars['rate_id'] ?? 0);
+
+        \App\Services\OwnershipGuard::assertOwnsRate((int) $user['user_id'], $roomId, $rateId);
+
+        $body = $request->body();
+        if (empty($body)) {
+            throw new \App\Exceptions\ApiException(400, 'empty_payload', 'Không có dữ liệu cập nhật');
+        }
+
+        $res = $this->roomService->updateRate($rateId, $body);
+        ApiResponse::success($res, 'Cập nhật bảng giá thành công');
+    }
+
+    /**
+     * POST /api/rooms/{id}/images
+     * Upload room image (Host only, multipart/form-data)
+     */
+    public function uploadImage(Request $request, array $vars): void
+    {
+        $user = $request->user();
+        $roomId = (int) ($vars['id'] ?? 0);
+
+        \App\Services\OwnershipGuard::assertOwnsRoom((int) $user['user_id'], $roomId);
+
+        if (empty($_FILES['image'])) {
+            throw new \App\Exceptions\ApiException(400, 'missing_file', 'Vui lòng chọn tập tin ảnh trong trường "image"');
+        }
+
+        $isPrimary = filter_var($request->body('is_primary', false), FILTER_VALIDATE_BOOLEAN);
+
+        $res = $this->roomService->uploadImage($roomId, $_FILES['image'], (bool) $isPrimary);
+        ApiResponse::created($res, 'Tải ảnh lên thành công');
+    }
 }
 

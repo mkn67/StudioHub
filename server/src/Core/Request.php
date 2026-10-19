@@ -98,6 +98,20 @@ class Request
         return $this->jsonBody;
     }
 
+    public function body(?string $key = null, mixed $default = null): mixed
+    {
+        $data = $this->json();
+        if (empty($data) && !empty($_POST)) {
+            $data = $_POST;
+        }
+
+        if ($key === null) {
+            return $data;
+        }
+
+        return $data[$key] ?? $default;
+    }
+
     public function headers(): array
     {
         return $this->headers;
