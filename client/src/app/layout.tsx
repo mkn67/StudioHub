@@ -1,29 +1,40 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import ReportFlowNavigator from '@/components/ReportFlowNavigator';
-import { AuthProvider } from '@/context/AuthContext';
-
+import type { Metadata } from "next";
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/500.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/be-vietnam-pro/700.css";
+import "./globals.css";
+import "./dashboard.css";
+import { Suspense } from "react";
+import { AppProvider } from "@/providers/app-provider";
+import { RouteFrame } from "@/components/layout/navigation";
 export const metadata: Metadata = {
-  title: 'StudioSpace VN | Thuê Studio & Thiết bị Chuyên nghiệp',
-  description: 'Nền tảng tìm kiếm và đặt lịch Studio chụp ảnh, quay phim theo khung giờ time-slot',
+  title: {
+    default: "StudioHub · Tìm studio, đặt theo giờ.",
+    template: "%s | StudioHub",
+  },
+  description:
+    "Tìm không gian chụp ảnh, quay phim và podcast. Trải nghiệm đặt studio theo giờ trong bản demo StudioHub.",
+  metadataBase: new URL("http://localhost:3000"),
 };
-
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="vi">
-      <body className="antialiased min-h-screen bg-[#F4F4F4] text-[#222222] flex flex-col font-sans selection:bg-[#F89C1E] selection:text-white">
-        <AuthProvider>
-          <Navbar />
-          <ReportFlowNavigator />
-          <main className="flex-grow">{children}</main>
-          <Footer />
-        </AuthProvider>
+    <html lang="vi" data-scroll-behavior="smooth">
+      <body>
+        <a href="#main-content" className="skip-link">
+          Đi đến nội dung chính
+        </a>
+        <AppProvider>
+          <Suspense
+            fallback={<div className="container">Đang tải StudioHub…</div>}
+          >
+            <div>
+              <RouteFrame>{children}</RouteFrame>
+            </div>
+          </Suspense>
+        </AppProvider>
       </body>
     </html>
   );
