@@ -28,6 +28,9 @@ use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 use App\Controllers\HealthController;
 use App\Controllers\AuthController;
+use App\Controllers\RoomController;
+use App\Controllers\EquipmentController;
+use App\Controllers\LookupController;
 
 $router = new Router();
 $router->use(new CorsMiddleware());
@@ -42,6 +45,15 @@ $router->post('/api/auth/login', [AuthController::class, 'login']);
 $router->post('/api/auth/logout', [AuthController::class, 'logout'], [new AuthMiddleware()]);
 $router->get('/api/auth/profile', [AuthController::class, 'profile'], [new AuthMiddleware()]);
 $router->patch('/api/auth/profile', [AuthController::class, 'updateProfile'], [new AuthMiddleware()]);
+
+// --- Phase 4: Public Catalog Routes ---
+$router->get('/api/rooms', [RoomController::class, 'index']);
+$router->get('/api/rooms/{id:\d+}', [RoomController::class, 'show']);
+$router->get('/api/rooms/{id:\d+}/calendar', [RoomController::class, 'calendar']);
+$router->get('/api/rooms/{id:\d+}/rates', [RoomController::class, 'rates']);
+$router->get('/api/equipments', [EquipmentController::class, 'index']);
+$router->get('/api/space-types', [LookupController::class, 'spaceTypes']);
+$router->get('/api/amenities', [LookupController::class, 'amenities']);
 
 // Verification routes for Phase 2 Auth/Role/Ownership
 $router->get('/api/test/me', function (Request $req) {
