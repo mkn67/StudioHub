@@ -30,6 +30,17 @@ class ApiResponse
     }
 
     /**
+     * Send 200 OK JSON response (alias for success)
+     *
+     * @param mixed $data
+     * @param string $message
+     */
+    public static function ok(mixed $data = null, string $message = 'Success'): void
+    {
+        self::success($data, $message, 200);
+    }
+
+    /**
      * Send 201 Created JSON response
      *
      * @param mixed $data

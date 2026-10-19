@@ -85,6 +85,12 @@ $router->post('/api/rooms/{id:\d+}/images', [RoomController::class, 'uploadImage
 $router->post('/api/equipments', [EquipmentController::class, 'create'], $hostMiddlewares);
 $router->patch('/api/equipments/{id:\d+}', [EquipmentController::class, 'update'], $hostMiddlewares);
 
+// --- Phase 6: Booking Engine Routes ---
+use App\Controllers\BookingController;
+
+$router->post('/api/bookings/check-availability', [BookingController::class, 'checkAvailability']);
+$router->post('/api/bookings', [BookingController::class, 'create'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+
 // Verification routes for Phase 2 Auth/Role/Ownership
 $router->get('/api/test/me', function (Request $req) {
     ApiResponse::success($req->user(), 'Xác thực thành công');
