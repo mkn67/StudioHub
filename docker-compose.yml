@@ -75,7 +75,7 @@ services:
       bash -c "while true; do php /var/www/html/bin/expire-bookings.php || true; sleep 60; done"
 
   client:
-    image: docker.io/library/node:20-alpine
+    image: docker.io/library/node:24-alpine
     container_name: studio_client
     restart: unless-stopped
     working_dir: /app
@@ -88,7 +88,7 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_API_URL=http://localhost:8000
-    command: npm run dev
+    command: npm run dev -- --hostname 0.0.0.0
     depends_on:
       - api
 

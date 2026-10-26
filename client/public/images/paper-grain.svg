@@ -1,0 +1,2 @@
+<!-- Authored reusable Risograph paper texture; tiled only on editorial paper grounds. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><path fill="#222329" filter="url(#grain)" opacity=".3" d="M0 0h160v160H0z"/></svg>

@@ -1,8 +1,16 @@
 node_modules/
 .next/
-out/
-*.tsbuildinfo
-.env.local
 test-results/
 playwright-report/
 .studiohub-runtime/
+.env.*
+!.env.example
+!.env.local.example
+*.tsbuildinfo
+.impeccable/review/
+
+# Locally installed agent tools and machine-specific state
+.agents/
+.codex/
+.impeccable/config.local.json
+.impeccable/hook.cache.json
