@@ -1,8 +1,8 @@
 .roomEditorial { min-width:0; color:var(--ink); }
 .section { padding:40px 0; border-bottom:1px solid var(--line-strong); }
 .section:first-child { padding-top:0; }
-.eyebrow { display:block; margin-bottom:14px; font:11px/1.5 var(--font-utility); letter-spacing:.07em; color:var(--brand-text); }
-.section h2 { margin:0 0 22px; font-size:clamp(30px,3vw,40px); font-weight:800; line-height:1.12; letter-spacing:-.035em; text-wrap:balance; }
+.eyebrow { display:block; margin-bottom:12px; font:13px/1.5 var(--font-utility); letter-spacing:.025em; color:var(--brand-text); }
+.section h2 { margin:0 0 20px; font-size:clamp(28px,2.5vw,35px); font-weight:700; line-height:1.25; letter-spacing:-.015em; text-wrap:balance; }
 .roomEditorial p { margin:0 0 18px; max-width:60ch; font-size:18px; line-height:1.75; color:var(--muted); }
 .roomEditorial .lead { font-size:20px; color:var(--ink); font-weight:500; }
 .cyan { color:var(--brand-text); }
@@ -19,9 +19,10 @@
 .included { display:flex; flex-wrap:wrap; gap:12px 24px; list-style:none; padding:0; margin:0; }
 .included li { display:flex; align-items:center; gap:8px; font-size:15px; color:var(--muted); }
 .equipment { list-style:none; padding:0; margin:28px 0 0; border-top:2px solid var(--ink); }
-.equipment li { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; padding:22px 0; border-bottom:1px solid var(--line); transition:color .16s; }
+.equipment li { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 16px; padding:20px 0; border-bottom:1px solid var(--line); transition:color .16s; }
 .equipment li:hover .equipmentName { color:var(--brand-text); }
-.equipmentName { display:flex; align-items:center; gap:12px; font-size:18px; line-height:1.4; flex:1 1 210px; }
+.equipmentName { display:flex; flex-direction:column; gap:5px; font-size:18px; line-height:1.4; flex:1 1 150px; min-width:0; }
+.equipmentName strong { font-weight:650; }.equipmentName small { font-size:14px; line-height:1.6; color:var(--muted); }
 .equipmentRate { font-variant-numeric:tabular-nums; white-space:nowrap; }
 .equipmentRate strong { font-size:24px; letter-spacing:-.025em; }
 .equipmentRate small { font-size:14px; color:var(--muted); }
@@ -34,9 +35,10 @@
 .rateAmount strong { font-size:30px; line-height:1.2; letter-spacing:-.035em; white-space:nowrap; }
 .rateAmount > span { font-size:13px; color:var(--muted); white-space:nowrap; }
 .pricingRow[data-featured="true"] { background:var(--brand-wash); border-left:4px solid var(--brand); padding:26px 20px; }
-.pricingRow[data-featured="true"] h3 { font-size:25px; font-weight:800; }
-.pricingRow[data-featured="true"] .rateAmount strong { font-size:36px; color:var(--brand-text); }
-.featuredBadge { display:inline-flex; align-items:center; gap:6px; margin-bottom:10px; font:700 11px/1.4 var(--font-display); letter-spacing:.055em; text-transform:uppercase; color:var(--brand-text); }
+.pricingRow[data-featured="true"] h3 { font-size:22px; font-weight:700; }
+.pricingRow[data-featured="true"] .rateAmount strong { font-size:32px; color:var(--brand-text); }
+.featuredBadge { display:inline-flex; align-items:center; gap:6px; margin-bottom:9px; font:650 13px/1.4 var(--font-display); letter-spacing:.02em; color:var(--brand-text); }
+.rateAmount del { width:100%; font-size:14px; color:var(--muted); }.pricingRow .promotion { color:var(--brand-text); }
 .policies { margin:28px 0 0; }
 .policies > div { display:grid; grid-template-columns:minmax(125px,.8fr) 2fr; gap:20px; padding:22px 0; border-top:1px solid var(--line); }
 .policies dt { font-size:17px; font-weight:700; line-height:1.6; }
@@ -47,7 +49,7 @@
 .studioLocation svg { margin-top:4px; flex-shrink:0; color:var(--brand-text); }
 .manager { padding:24px 0 40px; margin-bottom:30px; border-bottom:2px solid var(--ink); }
 .managerHeading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; }
-.manager .eyebrow { margin-bottom:8px; font-size:10px; }
+.manager .eyebrow { margin-bottom:8px; font-size:12px; }
 .managerHeading h3 { margin:0; font-size:24px; line-height:1.25; letter-spacing:-.025em; }
 .previewLink { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:13px; color:var(--brand-text); text-decoration:underline; text-underline-offset:4px; }
 .managerNote { max-width:75ch; font-size:14px; line-height:1.7; color:var(--muted); margin:14px 0 20px; }
@@ -74,7 +76,7 @@
 }
 @media(max-width:640px) {
   .section { padding:32px 0; }
-  .section h2 { font-size:30px; }
+  .section h2 { font-size:27px; }
   .roomEditorial p { font-size:17px; line-height:1.7; }
   .roomEditorial .lead,.roomEditorial .studioDescription { font-size:19px; }
   .amenities { gap:20px 16px; }
@@ -84,7 +86,7 @@
   .equipmentRate strong { font-size:23px; }
   .rateAmount strong { font-size:28px; }
   .pricingRow[data-featured="true"] { padding:24px 16px; }
-  .pricingRow[data-featured="true"] h3 { font-size:24px; }
+  .pricingRow[data-featured="true"] h3 { font-size:22px; }
   .pricingRow[data-featured="true"] .rateAmount strong { font-size:32px; }
   .managerSettings label { flex-basis:100%; }
   .managerHeading h3 { font-size:22px; }

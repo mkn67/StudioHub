@@ -13,6 +13,54 @@ export type RefundStatus =
   "not_required" | "pending" | "processing" | "refunded" | "failed";
 export type Plan = "hourly" | "session" | "combo3" | "combo5" | "combo10";
 export type FeaturedPricingBadge = "featured" | "recommended";
+export type OperatingHours = { mode: "fixed"; opens: string; closes: string } | { mode: "all_day" };
+export interface TimeSurcharge {
+  enabled: boolean;
+  start: string;
+  end: string;
+  method: "fixed" | "percentage";
+  value: number;
+}
+export interface CrewPolicy {
+  included: number;
+  maximum: number;
+  surchargeEnabled: boolean;
+  unit: "booking" | "hour";
+  amount: number;
+}
+export interface RentalPlanConfig {
+  plan: Plan;
+  title: string;
+  kind: "hourly" | "duration" | "session";
+  price: number;
+  durationMinutes: number;
+  sessionStart?: string;
+  sessionEnd?: string;
+  includedEquipment: Record<string, number>;
+  includedServices: string[];
+  includedCrew?: number;
+  active: boolean;
+  promotion?: { originalPrice: number; startsOn: string; endsOn: string };
+}
+export interface PriceBreakdown {
+  rental: number;
+  discountSavings?: number;
+  equipment: number;
+  timeSurcharge: number;
+  timeSurchargeMinutes: number;
+  crewSurcharge: number;
+  extraPeople: number;
+  total: number;
+  deposit: number;
+}
+export interface RentalSnapshot {
+  plan: RentalPlanConfig;
+  breakdown: PriceBreakdown;
+  totalEquipment: Record<string, number>;
+  crewPolicy?: CrewPolicy;
+  operatingHours?: OperatingHours;
+  timeSurcharge?: TimeSurcharge;
+}
 export interface FeaturedPricing {
   typeId: string;
   plan: Plan;
@@ -47,6 +95,8 @@ export interface Studio {
   description: string;
   active: boolean;
   policy: Policy;
+  operatingHours?: OperatingHours;
+  timeSurcharge?: TimeSurcharge;
 }
 export interface RoomType {
   id: string;
@@ -55,6 +105,8 @@ export interface RoomType {
   category: string;
   hourlyRate: number;
   plans: Plan[];
+  rentalPlans?: RentalPlanConfig[];
+  crewPolicy?: CrewPolicy;
 }
 export interface Room {
   id: string;
@@ -71,6 +123,8 @@ export interface Room {
   active: boolean;
   rateOverride?: number;
   featuredPricing?: FeaturedPricing;
+  rentalPlans?: RentalPlanConfig[];
+  crewPolicy?: CrewPolicy;
 }
 export interface Equipment {
   id: string;
@@ -81,6 +135,7 @@ export interface Equipment {
   hourlyRate: number;
   active: boolean;
   image: string;
+  description?: string;
 }
 export interface Selection {
   roomId: string;
@@ -115,6 +170,7 @@ export interface ChangeRequest {
   at: number;
 }
 export interface Booking extends Selection {
+  rentalSnapshot?: RentalSnapshot;
   id: string;
   customerId: string;
   status: Status;

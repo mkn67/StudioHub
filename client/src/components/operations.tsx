@@ -32,6 +32,9 @@ import {
 } from "@/domain/models";
 import { balance, HOUR, activeStatuses, studioFor } from "@/domain/engine";
 import { FeaturedPricingManager } from "@/features/pricing/components/FeaturedPricingManager";
+import { StudioRentalSettings } from "@/features/pricing/components/StudioRentalSettings";
+import { RentalPackageManager } from "@/features/pricing/components/RentalPackageManager";
+import { EquipmentVisual } from "@/features/pricing/components/EquipmentVisual";
 export const hostLinks = [
   ["", "Tổng quan"],
   ["studios", "Studio của tôi"],
@@ -608,6 +611,7 @@ function StudioManagement() {
           onSubmit={(e) => {
             e.preventDefault();
             const studio: Studio = {
+              ...st,
               id: st?.id ?? crypto.randomUUID(),
               hostId: user.id,
               name,
@@ -670,6 +674,7 @@ function StudioManagement() {
           </p>
         </aside>
       </div>
+      {st && <StudioRentalSettings key={st.id} studio={st} />}
     </>
   );
 }
@@ -996,7 +1001,7 @@ function RoomManagement({ admin = false }: { admin?: boolean }) {
   );
 }
 function EquipmentManagement({ admin = false }: { admin?: boolean }) {
-  const { state, dispatch } = useStore(),
+  const { state, dispatch, notice } = useStore(),
     h = useHostData();
   const list = admin ? state.equipment : h.equipment;
   const [query, setQuery] = useState(""),
@@ -1020,7 +1025,8 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
                   quantity: 1,
                   hourlyRate: 50000,
                   active: true,
-                  image: "/images/cyclorama.jpg",
+                  image: "",
+                  description: "",
                 })
               }
             >
@@ -1081,7 +1087,7 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
                 <tr key={e.id}>
                   <td>
                     <div className="table-title">
-                      <Image width={1400} height={1000} src={e.image} alt="" />
+                      <EquipmentVisual item={e} />
                       {e.name}
                     </div>
                   </td>
@@ -1132,6 +1138,18 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
                 onChange={(e) => setEdit({ ...edit, category: e.target.value })}
               />
             </label>
+            <label>Mô tả công dụng<textarea maxLength={300} value={edit.description ?? ""} onChange={e => setEdit({ ...edit, description: e.target.value })} /></label>
+            <label>Ảnh thiết bị thật · lưu trong trình duyệt
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 100 * 1024) { notice("Chọn PNG/JPEG/WebP tối đa 100 KB cho dữ liệu demo."); return; }
+                const reader = new FileReader(); reader.onload = () => setEdit(current => current ? { ...current, image: String(reader.result) } : current); reader.readAsDataURL(file);
+              }} />
+            </label>
+            <p className="small-text muted">Không có API tải ảnh lên server. Ảnh phòng cũ được thay bằng biểu tượng minh họa khi không có ảnh thiết bị thật.</p>
+            <EquipmentVisual item={edit} />
+            <button type="button" className="text-button" onClick={() => setEdit({ ...edit, image: "" })}>Bỏ ảnh thiết bị</button>
             <div className="form-grid">
               <label>
                 Tổng số lượng
@@ -1184,13 +1202,14 @@ function Rates() {
       />
       {types.map((t) => (
         <div key={t.id}>
-          <RateForm
+          {!t.rentalPlans && <RateForm
             type={t}
             save={(rate, plans) => {
               if (dispatch({ type: "rate", id: t.id, hourlyRate: rate, plans }))
                 notice("Đã cập nhật bảng giá cho các đơn mới.");
             }}
-          />
+          />}
+          <RentalPackageManager typeId={t.id} />
           <FeaturedPricingManager typeId={t.id} />
         </div>
       ))}
@@ -1364,32 +1383,7 @@ function PolicyForm({ studio }: { studio: Studio }) {
               }
             />
           </label>
-          <label>
-            Giờ mở cửa
-            <input
-              required
-              type="number"
-              min="0"
-              max="23"
-              value={policy.openHour}
-              onChange={(e) =>
-                setPolicy({ ...policy, openHour: +e.target.value })
-              }
-            />
-          </label>
-          <label>
-            Giờ đóng cửa
-            <input
-              required
-              type="number"
-              min="1"
-              max="24"
-              value={policy.closeHour}
-              onChange={(e) =>
-                setPolicy({ ...policy, closeHour: +e.target.value })
-              }
-            />
-          </label>
+          <p>Giờ hoạt động và phụ thu khung giờ được quản lý tại <Link href="/host/studios">Studio của tôi</Link>. Không thay đổi các điều khoản đã lưu trong đơn cũ.</p>
         </div>
         <h2>Các mốc hoàn cọc</h2>
         {policy.refundTiers.map((t, i) => (

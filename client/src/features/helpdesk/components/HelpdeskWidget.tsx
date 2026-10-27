@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageCircle, X, Trash2 } from "lucide-react";
 import gsap from "gsap";
@@ -10,19 +10,27 @@ import { helpdeskClient } from "../services/helpdeskClient";
 import type { HelpdeskContext, HelpdeskTransport } from "../types/helpdesk.types";
 import { ChatMessage } from "./ChatMessage";
 import { ChatComposer } from "./ChatComposer";
+import { TypingIndicatorBubble } from "./TypingIndicatorBubble";
 import styles from "../styles/helpdesk.module.css";
 
 gsap.registerPlugin(useGSAP);
 
 export function HelpdeskWidget({ transport = helpdeskClient }: { transport?: HelpdeskTransport }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDialogElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
+  const followLatest = useRef(true);
   const path = usePathname();
   const surface: HelpdeskContext["surface"] = path.startsWith("/host") ? "host" : path.startsWith("/admin") ? "admin" : /^\/(my-bookings|payment|profile)(\/|$)/.test(path) ? "customer" : "public";
   const chat = useHelpdeskChat(transport, { surface });
+  function send(text: string) {
+    const accepted = chat.send(text);
+    if (accepted) setDraft("");
+    return accepted;
+  }
   const last = chat.messages.at(-1);
   const roomDetail = /^\/rooms\/[^/]+\/?$/.test(path);
   const suggestionLabels = ["Cách đặt phòng", "Hủy & hoàn cọc", "Tìm phòng"];
@@ -86,11 +94,11 @@ export function HelpdeskWidget({ transport = helpdeskClient }: { transport?: Hel
     return () => media.revert();
   }, { scope: root, dependencies: [open], revertOnUpdate: true });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !list.current) return;
     // Scroll only the transcript, never the underlying marketplace.
-    list.current.scrollTop = list.current.scrollHeight;
-  }, [chat.messages, chat.pending, open]);
+    if (followLatest.current) list.current.scrollTop = list.current.scrollHeight;
+  }, [chat.messages, chat.pending, open, draft]);
 
   return <div ref={root} className={`${styles.widget} ${roomDetail ? styles.aboveBooking : ""}`} data-helpdesk={transport.mode}>
     <button ref={launcher} type="button" className={styles.launcher} aria-label="Trò chuyện với StudioHub AI"
@@ -119,17 +127,20 @@ export function HelpdeskWidget({ transport = helpdeskClient }: { transport?: Hel
           <span>{transport.mode === "demo" ? "Chế độ demo" : chat.status === "connecting" ? "Đang kết nối" : chat.status === "unavailable" ? "Chưa sẵn sàng" : chat.status === "received" ? "PHP Helpdesk" : "Kênh PHP Helpdesk"}</span>
           <small title={transport.mode === "demo" ? "FAQ định sẵn · Chưa kết nối AI / API" : chat.handoff ? undefined : "Dữ liệu riêng cần xác thực · Chính sách cần duyệt"}>{transport.mode === "demo" ? "FAQ định sẵn · Chưa kết nối AI / API" : chat.handoff ? chat.handoffState === "human_active" ? "Nhân viên đang phụ trách · Trợ lý tự động đã dừng" : chat.handoffState === "resolved" ? "Nhân viên đã đánh dấu xử lý xong" : "Chờ tiếp nhận · Chưa có nhân viên kết nối" : "Cần xác thực · Chính sách chờ duyệt"}</small>
         </div>
-        <div ref={list} className={styles.transcript} role="log" aria-label="Nội dung trò chuyện" aria-live="off" tabIndex={0}>
+        <div ref={list} className={styles.transcript} role="log" aria-label="Nội dung trò chuyện" aria-live="off" tabIndex={0} onScroll={event => {
+          const node = event.currentTarget;
+          followLatest.current = node.scrollHeight - node.scrollTop - node.clientHeight < 48;
+        }}>
           {chat.messages.map(message => <ChatMessage key={message.id} message={message} confirmTicket={chat.confirmTicket} pending={chat.pending} />)}
-          {chat.pending && <p className={styles.processing}>{chat.status === "connecting" ? "Đang tạo kết nối cuộc trò chuyện…" : "Đang chờ Helpdesk xử lý yêu cầu…"}</p>}
+          {chat.pending && <TypingIndicatorBubble />}
         </div>
         <div className={styles.suggestions} aria-label="Câu hỏi gợi ý">
-          {suggestedQuestions.slice(0, 3).map((question, index) => <button type="button" key={question} aria-label={question} title={question} disabled={chat.pending || chat.handoff} onClick={() => void chat.send(question)}>{suggestionLabels[index]}</button>)}
+          {suggestedQuestions.slice(0, 3).map((question, index) => <button type="button" key={question} aria-label={question} title={question} disabled={chat.pending || chat.handoff} onClick={() => send(question)}>{suggestionLabels[index]}</button>)}
         </div>
-        {chat.error && <p className={styles.error} role="alert">{chat.error}</p>}
-        <ChatComposer pending={chat.pending} handoff={chat.handoff} connected={transport.mode === "connected"} send={chat.send} />
+        {chat.error && <p className={styles.error} role="alert">{chat.error}{chat.failedMessage && <button type="button" className={styles.retry} disabled={chat.pending} onClick={chat.retry}>Thử lại tin nhắn</button>}</p>}
+        <ChatComposer pending={chat.pending} handoff={chat.handoff} connected={transport.mode === "connected"} send={send} draft={draft} setDraft={setDraft} />
       </div>
     </dialog>
-    <span className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true">{chat.pending ? "Đang xử lý tin nhắn" : last?.role === "assistant" && last.id !== "welcome" ? last.text : ""}</span>
+    <span className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true">{chat.pending ? "StudioHub AI đang nhập phản hồi" : last?.role === "assistant" && last.id !== "welcome" ? last.text : ""}</span>
   </div>;
 }

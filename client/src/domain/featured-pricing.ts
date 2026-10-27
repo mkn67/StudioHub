@@ -1,23 +1,17 @@
-import type { FeaturedPricing, Plan, State } from "./models";
-import { planLabel } from "./models";
+import type { FeaturedPricing, State } from "./models";
+import { effectiveRentalPlans, planAmount, promotionAt } from "./rental";
+import { localDate } from "./models";
 
 // Durations of the plans already supported by the booking model, not new prices.
-const hours: Record<Plan, number> = { hourly: 1, session: 4, combo3: 3, combo5: 5, combo10: 10 };
 export const featuredPricingLabels = { featured: "Gói nổi bật", recommended: "Host đề xuất" } as const;
 
 export function effectivePricingPlans(state: State, roomId: string) {
-  const room = state.rooms.find(r => r.id === roomId);
-  const type = state.types.find(t => t.id === room?.typeId);
-  const studio = state.studios.find(s => s.id === type?.studioId);
-  if (!room?.active || !type || !studio?.active) return [];
-  const hourlyRate = room.rateOverride ?? type.hourlyRate;
-  if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) return [];
-  return type.plans.filter((plan, index, all) => Object.hasOwn(hours, plan) && all.indexOf(plan) === index).map(plan => ({
-    plan, title: planLabel[plan], hours: hours[plan],
-    amount: Math.round(hourlyRate * hours[plan]),
-    unit: plan === "hourly" ? "/ giờ" : plan === "session" ? "/ buổi" : "/ gói",
-    duration: plan === "hourly" ? "Đơn giá mỗi giờ thuê" : `${hours[plan]} giờ sử dụng`,
-    source: room.rateOverride !== undefined ? "room" as const : "type" as const,
+  return effectiveRentalPlans(state, roomId).map(config => ({
+    ...config, hours: config.durationMinutes / 60,
+    amount: planAmount(config, localDate(state.now)),
+    promotionDisplay: promotionAt(config, localDate(state.now)),
+    unit: config.kind === "hourly" ? "/ giờ" : config.kind === "session" ? "/ buổi" : "/ gói",
+    duration: config.kind === "hourly" ? "Đơn giá mỗi giờ thuê" : config.kind === "session" ? `${config.sessionStart}–${config.sessionEnd}${(config.sessionEnd ?? "") < (config.sessionStart ?? "") ? " · qua đêm" : ""}` : `${config.durationMinutes / 60} giờ sử dụng`,
   }));
 }
 

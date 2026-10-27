@@ -18,6 +18,7 @@ import {
 import { useStore } from "./store";
 import { RoomCard, Modal, PageHeading, Empty, PrintArtwork } from "./ui";
 import { BookingWizard } from "./wizard";
+import { effectivePricingPlans } from "@/domain/featured-pricing";
 import { StudioCategoryIllustration } from "./studio-category-illustration";
 import { RoomEditorialContent } from "@/features/pricing/components/RoomEditorialContent";
 import { money, localDate, atDate } from "@/domain/models";
@@ -559,6 +560,8 @@ export function RoomDetail({ id }: { id: string }) {
     );
   const st = studioFor(state, id)!,
     type = state.types.find((t) => t.id === room.typeId)!;
+  const displayRates = effectivePricingPlans(state, id);
+  const displayRate = displayRates.find(rate => rate.kind === "hourly") ?? displayRates[0];
   return (
     <div className="container detail-page">
       <div className="breadcrumbs">
@@ -605,8 +608,8 @@ export function RoomDetail({ id }: { id: string }) {
         <RoomEditorialContent state={state} roomId={id} />
         <aside className="booking-card">
           <div className="price-large">
-            {money(roomRate(state, id))}
-            <small> / giờ</small>
+            {displayRate ? money(displayRate.amount) : "Chưa có giá"}
+            <small>{displayRate?.unit}</small>
           </div>
           <p className="muted">
             Phòng {room.code} · {room.area} m² · {room.capacity} người
@@ -621,7 +624,7 @@ export function RoomDetail({ id }: { id: string }) {
           </div>
           <button
             className="btn full"
-            disabled={!room.active}
+            disabled={!room.active || !displayRate}
             onClick={() => setWizard(true)}
           >
             Chọn lịch thuê <ArrowRight size={18} />
@@ -636,12 +639,12 @@ export function RoomDetail({ id }: { id: string }) {
       </div>
       <div className="mobile-booking-bar">
         <div>
-          <strong>{money(roomRate(state, id))}</strong>
-          <small> / giờ · {room.code}</small>
+          <strong>{displayRate ? money(displayRate.amount) : "Chưa có giá"}</strong>
+          <small>{displayRate?.unit} · {room.code}</small>
         </div>
         <button
           className="btn"
-          disabled={!room.active}
+          disabled={!room.active || !displayRate}
           onClick={() => setWizard(true)}
         >
           Chọn lịch thuê

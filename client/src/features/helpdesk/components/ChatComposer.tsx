@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import { MAX_MESSAGE_LENGTH } from "../types/helpdesk.types";
 import styles from "../styles/helpdesk.module.css";
@@ -13,8 +13,7 @@ function fitTextarea(element: HTMLTextAreaElement) {
   element.style.overflowY = height > limit ? "auto" : "hidden";
 }
 
-export function ChatComposer({ pending, handoff, connected = false, send }: { pending: boolean; handoff: boolean; connected?: boolean; send: (text: string) => Promise<boolean> }) {
-  const [draft, setDraft] = useState("");
+export function ChatComposer({ pending, handoff, connected = false, send, draft, setDraft }: { pending: boolean; handoff: boolean; connected?: boolean; send: (text: string) => boolean; draft: string; setDraft: (value: string) => void }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
     if (textarea.current) fitTextarea(textarea.current);
@@ -30,9 +29,8 @@ export function ChatComposer({ pending, handoff, connected = false, send }: { pe
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  async function submit() {
-    const value = draft;
-    if (await send(value)) setDraft(current => current === value ? "" : current);
+  function submit() {
+    if (!pending && !handoff && draft.trim()) send(draft);
   }
   return <form className={styles.composer} onSubmit={event => { event.preventDefault(); void submit(); }}>
     <label className={styles.srOnly} htmlFor="helpdesk-message">Tin nhắn của bạn</label>

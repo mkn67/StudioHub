@@ -8,6 +8,7 @@ import { ArrowRight, Check, Clock, AlertTriangle } from "lucide-react";
 import { useStore, useSession } from "./store";
 import { BookingRow, PageHeading, Empty, Modal } from "./ui";
 import { BookingWizard } from "./wizard";
+import { RentalPriceSummary } from "@/features/pricing/components/RentalPriceSummary";
 import { BookingStatusFilters, matchesBookingStatus, type BookingStatusFilter } from "./booking-status-filters";
 import {
   money,
@@ -370,7 +371,7 @@ export function BookingDetail({ id }: { id: string }) {
               ["Mã đơn", b.id],
               ["Khách hàng", customer.name],
               ["Liên hệ", `${customer.phone} · ${customer.email}`],
-              ["Gói thuê", `${planLabel[b.plan]} · ${b.participants} người`],
+              ["Gói thuê", `${b.rentalSnapshot?.plan.title ?? planLabel[b.plan]} · ${b.participants} người`],
               ["Vị trí", room.floor],
               [
                 "Nhận phòng thực tế",
@@ -395,6 +396,12 @@ export function BookingDetail({ id }: { id: string }) {
                 </div>
               ))}
           </div>
+          {b.rentalSnapshot && <section className="detail-section">
+            <h2>Giá & nội dung gói đã lưu</h2>
+            <RentalPriceSummary snapshot={b.rentalSnapshot} />
+            {Object.entries(b.rentalSnapshot.plan.includedEquipment).map(([id, q]) => <p key={id}>{q} × {state.equipment.find(e => e.id === id)?.name ?? id} · Đã bao gồm, không tính thêm</p>)}
+            {b.rentalSnapshot.plan.includedServices.filter(Boolean).map((service, i) => <p key={i}>{service} · Đã bao gồm</p>)}
+          </section>}
           <section className="detail-section">
             <h2>Lịch sử đơn</h2>
             <ol className="timeline">

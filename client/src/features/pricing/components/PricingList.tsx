@@ -19,8 +19,12 @@ export function PricingList({ state, roomId, featuredOnly = false }: { state: St
         <div className={styles.planCopy}>
           {featured && <span className={styles.featuredBadge}><Icon size={15} aria-hidden="true" />{featuredPricingLabels[selected!.badge]}</span>}
           <h3>{rate.title}</h3><p>{rate.duration}</p>
+          {!!Object.keys(rate.includedEquipment).length && <p>Đã bao gồm: {Object.entries(rate.includedEquipment).map(([id, q]) => `${q} × ${state.equipment.find(e => e.id === id)?.name ?? "Thiết bị cần cập nhật"}`).join(" · ")}</p>}
+          {!!rate.includedServices.filter(Boolean).length && <p>{rate.includedServices.filter(Boolean).join(" · ")}</p>}
+          {rate.includedCrew && <p>Giá gói gồm {rate.includedCrew} người · theo giới hạn ekip của phòng.</p>}
+          {rate.promotionDisplay && <p className={styles.promotion}>Ưu đãi · giảm {money(rate.promotionDisplay.savings)} ({rate.promotionDisplay.percent}%) · {rate.promotion?.startsOn.split("-").reverse().join("/")}–{rate.promotion?.endsOn.split("-").reverse().join("/")}</p>}
         </div>
-        <div className={styles.rateAmount}><strong>{money(rate.amount)}</strong><span>{rate.unit}</span></div>
+        <div className={styles.rateAmount}>{rate.promotionDisplay && <del>{money(rate.promotionDisplay.originalPrice)}</del>}<strong>{money(rate.amount)}</strong><span>{rate.unit}</span></div>
       </div>;
     })}
     {!visible.length && <p className={styles.emptyPricing}>{featuredOnly ? "Chưa chọn gói nổi bật cho phòng này." : "Hiện chưa có gói thuê đang áp dụng cho phòng này."}</p>}

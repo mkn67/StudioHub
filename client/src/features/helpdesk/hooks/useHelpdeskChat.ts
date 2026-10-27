@@ -8,6 +8,7 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
   const [messages, setMessages] = useState<HelpdeskMessage[]>([{ id: "welcome", role: "assistant", text: welcomeMessage, createdAt: "" }]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [failedMessage, setFailedMessage] = useState<HelpdeskMessage | null>(null);
   const [handoff, setHandoff] = useState(false);
   const [handoffState, setHandoffState] = useState("");
   const [status, setStatus] = useState<"idle" | "connecting" | "processing" | "received" | "unavailable">("idle");
@@ -35,18 +36,22 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
     return () => { clearInterval(timer); controller.abort(); };
   }, [handoff, transport]);
 
-  async function send(input: string): Promise<boolean> {
+  function send(input: string, retryMessage?: HelpdeskMessage): boolean {
     const text = input.trim();
     if (!text || active.current || handoff) return false;
-    if (text.length > MAX_MESSAGE_LENGTH || messages.length + 2 > MAX_MESSAGES) {
+    if (text.length > MAX_MESSAGE_LENGTH || messages.length + (retryMessage ? 1 : 2) > MAX_MESSAGES) {
       setError("Đã đạt giới hạn cuộc trò chuyện. Bạn có thể xóa cuộc trò chuyện để bắt đầu lại.");
       return false;
     }
     const request = new AbortController();
     active.current = request;
-    setPending(true); setError("");
-    const userMessage: HelpdeskMessage = { id: crypto.randomUUID(), role: "user", text, createdAt: new Date().toISOString() };
-    setMessages(previous => [...previous, userMessage]);
+    setPending(true); setError(""); setFailedMessage(null); setStatus("processing");
+    const userMessage: HelpdeskMessage = retryMessage ?? { id: crypto.randomUUID(), role: "user", text, createdAt: new Date().toISOString() };
+    if (!retryMessage) setMessages(previous => [...previous, userMessage]);
+    void receiveResponse(text, userMessage, request);
+    return true;
+  }
+  async function receiveResponse(text: string, userMessage: HelpdeskMessage, request: AbortController) {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     let onAbort: (() => void) | undefined;
     try {
@@ -58,7 +63,7 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
           timeout = setTimeout(() => request.abort(), transport.timeoutMs ?? 15000);
         }),
       ]);
-      if (request.signal.aborted) return true;
+      if (!mounted.current || request.signal.aborted) return;
       setMessages(previous => [...previous, { id: crypto.randomUUID(), role: "assistant", text: response.text, response, createdAt: new Date().toISOString() }]);
       setHandoff(response.state === "human_handoff");
       setStatus("received");
@@ -67,18 +72,18 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
       if (mounted.current && active.current === request) {
         setError(failure instanceof HelpdeskApiError ? failure.message : "Chưa nhận được phản hồi. Bạn có thể thử lại; không gửi yêu cầu mới nếu thao tác trước chưa rõ kết quả.");
         setStatus("unavailable");
+        setFailedMessage(userMessage);
       }
     } finally {
       clearTimeout(timeout);
       if (onAbort) request.signal.removeEventListener("abort", onAbort);
       if (active.current === request) { active.current = null; if (mounted.current) setPending(false); }
     }
-    return true;
   }
   function clear() {
     if (active.current || handoff) return;
     setMessages([{ id: "welcome", role: "assistant", text: welcomeMessage, createdAt: "" }]);
-    setError(""); setHandoff(false);
+    setError(""); setFailedMessage(null); setHandoff(false);
     setStatus("idle"); transport.reset?.();
   }
   async function confirmTicket(proposalId: string) {
@@ -97,5 +102,8 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
       if (mounted.current) { setError(failure instanceof HelpdeskApiError ? failure.message : "Ticket chưa được xác nhận thành công. Hãy thử lại."); setStatus("unavailable"); }
     } finally { clearTimeout(timer); if (active.current === request) { active.current = null; if (mounted.current) setPending(false); } }
   }
-  return { messages, pending, error, handoff, handoffState, status, send, clear, confirmTicket };
+  function retry() {
+    if (failedMessage) send(failedMessage.text, failedMessage);
+  }
+  return { messages, pending, error, failedMessage, handoff, handoffState, status, send, retry, clear, confirmTicket };
 }
