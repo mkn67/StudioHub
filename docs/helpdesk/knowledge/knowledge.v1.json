@@ -1,0 +1,1305 @@
+{
+  "corpus_version": "1.0.0",
+  "locale": "vi-VN",
+  "prepared_at": "2026-10-27",
+  "release_status": "draft_unpublished",
+  "approval_date": null,
+  "entries": [
+    {
+      "id": "KB-001",
+      "slug": "intro",
+      "title": "StudioHub là gì?",
+      "topic": "introduction",
+      "content": "StudioHub là nền tảng giúp khách tìm, so sánh và đặt thuê phòng Studio thực tế theo thời gian, có thể thuê thêm thiết bị hoặc nội thất.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 1",
+          "version": "1.0"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-002",
+      "slug": "search",
+      "title": "Tôi tìm và so sánh phòng ở đâu?",
+      "topic": "search",
+      "content": "Mở /rooms để tìm từng phòng thực tế, xem ảnh, đặc điểm, tiện ích và thông tin giá; mở chi tiết phòng để kiểm tra lịch và chính sách. Thông tin minh họa không chứng minh giá hay phòng trống hiện tại.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 4.1",
+          "version": "1.0"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-05",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-003",
+      "slug": "room",
+      "title": "Tôi đặt một loại phòng hay một phòng cụ thể?",
+      "topic": "booking",
+      "content": "Bạn chọn đúng một Room Unit, tức một phòng vật lý cụ thể. Hai phòng cùng loại có ảnh, vị trí, đặc điểm và lịch riêng; không mặc định được thay sang phòng khác.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-05",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-004",
+      "slug": "login",
+      "title": "Tôi có cần đăng nhập để tìm phòng không?",
+      "topic": "booking",
+      "content": "Bạn có thể tìm và xem phòng khi chưa đăng nhập. Cần đăng nhập trước bước xác nhận tạo đơn thuê.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-01",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-005",
+      "slug": "flow",
+      "title": "Quy trình đặt phòng gồm những bước nào?",
+      "topic": "booking",
+      "content": "Từ trang chi tiết phòng, chọn thời gian hoặc gói thuê, chọn thiết bị thuê thêm nếu cần, rồi kiểm tra thông tin và chi phí trước khi xác nhận. Cần đăng nhập để tạo đơn. Thanh toán trong bản frontend hiện tại là mô phỏng.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 4.1",
+          "version": "1.0"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-01",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-11",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-006",
+      "slug": "equipment",
+      "title": "Tôi có thể thuê thêm thiết bị của Studio khác không?",
+      "topic": "equipment",
+      "content": "Thiết bị thuê thêm phải thuộc cùng Studio với phòng được đặt và còn đủ số lượng trong thời gian thuê. Thiết bị có sẵn trong phòng khác với thiết bị thuê thêm tính phí.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 2",
+          "version": "1.0"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-07",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-007",
+      "slug": "capacity",
+      "title": "Số người và số lượng thiết bị có giới hạn không?",
+      "topic": "booking",
+      "content": "Số người phải lớn hơn 0 và không vượt sức chứa phòng. Số lượng thiết bị thuê thêm phải lớn hơn 0 và không vượt lượng khả dụng trong thời gian tương ứng.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-07",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-008",
+      "slug": "buffer",
+      "title": "Khoảng đệm 30 phút có phải giờ dùng phòng miễn phí không?",
+      "topic": "availability",
+      "content": "Không. Sau mỗi ca có 30 phút đệm để dọn và chuẩn bị phòng. Ca kết thúc lúc 12:00 có đệm tới 12:30; ca mới bắt đầu 12:30 chỉ có thể hợp lệ nếu đáp ứng các điều kiện khác.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-08",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-009",
+      "slug": "advance",
+      "title": "Tôi phải đặt trước bao lâu?",
+      "topic": "deposit",
+      "content": "Thời điểm tạo đơn phải trước giờ thuê ít nhất 24 giờ cộng thời hạn thanh toán cọc của Host. Thời hạn cọc nằm trong khoảng 15 phút đến 3 giờ; nếu là 3 giờ thì cần đặt trước ít nhất 27 giờ.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-10",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-03"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-010",
+      "slug": "deposit",
+      "title": "Có phải Studio nào cũng yêu cầu cọc 30% không?",
+      "topic": "deposit",
+      "content": "Không có tỷ lệ cọc 30% chung cho mọi Studio. Tỷ lệ áp dụng theo chính sách Studio; giá và chính sách được lưu tại thời điểm tạo đơn. Khoản cọc đã trả được tính vào tiền thuê.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-18",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-19",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-01"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-011",
+      "slug": "hold",
+      "title": "Sau khi tạo đơn tôi giữ phòng đến khi nào?",
+      "topic": "deposit",
+      "content": "Theo chính sách, đơn mới ở trạng thái awaiting_payment và giữ phòng cùng thiết bị tới hạn thanh toán cọc ghi trên đơn. Không suy ra hạn của một đơn cụ thể từ hướng dẫn chung này.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-11",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-02"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-012",
+      "slug": "grace",
+      "title": "Tôi có được bắt đầu trả cọc sau hạn không?",
+      "topic": "deposit",
+      "content": "Không được khởi tạo giao dịch mới sau hạn. Nếu giao dịch bắt đầu trước hạn còn processing, thời gian xử lý thêm tối đa 5 phút sau hạn; kết quả chưa rõ cần đối soát và không được coi là đã thanh toán thành công.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-13",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-013",
+      "slug": "paid",
+      "title": "Trả cọc xong có nghĩa là đơn đã được xác nhận không?",
+      "topic": "confirmation",
+      "content": "Theo chính sách, trả cọc thành công đưa đơn sang pending để chờ Host duyệt. Chỉ khi Host duyệt đơn mới là confirmed. Đã trả cọc không đồng nghĩa đã thanh toán toàn bộ.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-14",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-02"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-014",
+      "slug": "hostdeadline",
+      "title": "Host có bao lâu để duyệt đơn sau khi tôi cọc?",
+      "topic": "confirmation",
+      "content": "Host có đúng 2 giờ từ khi cọc được xác nhận thành công để duyệt hoặc từ chối. Quá hạn không phản hồi thì theo chính sách đơn bị hủy, không tính strike và khởi tạo/xử lý hoàn 100% cọc; không có nghĩa tiền đã về tài khoản.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-15",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-25",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-04"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-015",
+      "slug": "statuses",
+      "title": "Các trạng thái đơn thuê có nghĩa gì?",
+      "topic": "statuses",
+      "content": "Theo chính sách: awaiting_payment là chờ cọc; pending là đã cọc chờ Host; confirmed là đã được Host duyệt; checked_in là Host xác nhận nhận phòng; completed là Host xác nhận trả phòng; cancelled là đã hủy; expired là hết hạn thanh toán; no_show là hết ca mà chưa có check-in xác nhận. Đây không phải kết quả tra cứu đơn.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-16",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 7.1",
+          "version": "1.0"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-02"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-016",
+      "slug": "money",
+      "title": "Đơn đã hủy có nghĩa là cọc đã được hoàn không?",
+      "topic": "refund",
+      "content": "Không. Trạng thái đơn, thanh toán và hoàn tiền độc lập. Một đơn có thể đã hủy, cọc đã thu nhưng hoàn tiền còn chờ; cần dữ liệu hoàn tiền có xác thực để biết tình trạng cụ thể.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-16",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-17",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-017",
+      "slug": "canceldeadline",
+      "title": "Tôi được tự hủy trước giờ thuê bao lâu?",
+      "topic": "cancellation",
+      "content": "Host cấu hình hạn tự hủy là 24, 48 hoặc 72 giờ trước giờ thuê. Qua hạn bạn không tự hủy được, nhưng có thể yêu cầu hỗ trợ ngoại lệ. Hạn hủy và hạn đổi lịch là hai cấu hình riêng.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-22",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-018",
+      "slug": "cancelrefund",
+      "title": "Hủy sau khi cọc có được hoàn toàn bộ không?",
+      "topic": "cancellation",
+      "content": "Nếu đã cọc và hủy trong hạn cho phép, mức hoàn theo chính sách được lưu khi tạo đơn, có thể từ 0% đến 100%; không có bảo đảm hoàn toàn bộ và không tính strike cho nhánh này.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-23",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-06"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-019",
+      "slug": "reject",
+      "title": "Host từ chối đơn sau khi tôi cọc thì sao?",
+      "topic": "refund",
+      "content": "Theo chính sách, đơn bị hủy và bạn được hoàn 100% cọc, không tính strike. Nhánh Host từ chối theo quy trình hoàn thông thường cần Host xác nhận; khác với hoàn tự động khi Host quá hạn phản hồi.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-15",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-24",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-25",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-04"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-020",
+      "slug": "refundtime",
+      "title": "Khi nào tiền hoàn chắc chắn về tài khoản?",
+      "topic": "refund",
+      "content": "Chính sách phân biệt hoàn đang chờ, đang xử lý, thành công và thất bại, nhưng không nêu thời gian tiền chắc chắn về tài khoản. Chỉ xác nhận đã hoàn khi có kết quả được xác minh; trợ lý không thể cam kết ngày tiền về.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-25",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 13",
+          "version": "1.0"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-021",
+      "slug": "snapshot",
+      "title": "Studio đổi chính sách sau khi tôi đặt thì có áp dụng lại không?",
+      "topic": "pricing",
+      "content": "Giá và chính sách hủy/hoàn được lưu khi tạo đơn. Việc Host thay bảng giá hoặc chính sách về sau không sửa hồi tố giá và chính sách đã lưu của đơn đó.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-18",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-23",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-022",
+      "slug": "reschedule",
+      "title": "Tôi có thể đổi lịch hoặc đổi phòng bao nhiêu lần?",
+      "topic": "rescheduling",
+      "content": "Chỉ đơn confirmed, chưa check-in và còn đủ hạn đổi do Host cấu hình 24/48/72 giờ trước giờ bắt đầu gốc mới được gửi yêu cầu. Tối đa một lần thay đổi thành công; yêu cầu bị từ chối, rút lại hoặc chưa hoàn tất không mất lượt. Mỗi đơn chỉ có một yêu cầu đang xử lý.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-30",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-023",
+      "slug": "oldslot",
+      "title": "Gửi yêu cầu đổi lịch có làm mất lịch cũ ngay không?",
+      "topic": "rescheduling",
+      "content": "Không. Host phải duyệt; trong khi xét yêu cầu, đơn và lịch cũ vẫn được giữ. Chỉ thay thế sau khi kiểm tra khả dụng và hoàn tất thay đổi an toàn. Yêu cầu bị từ chối không làm mất đơn gốc.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-31",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-024",
+      "slug": "changedeposit",
+      "title": "Đổi lịch giá cao hơn thì phải cọc thêm ngay không?",
+      "topic": "rescheduling",
+      "content": "Sau thay đổi được duyệt, khoản cọc đã trả được giữ nguyên; tổng giá và công nợ được tính lại, không thu ngay phần tăng cọc. Nếu tổng mới thấp hơn cọc thực thu thì ghi nghĩa vụ hoàn phần dư; đây không phải hủy đơn.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-21",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-32",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-025",
+      "slug": "checkin",
+      "title": "Tới giờ thuê thì đơn tự check-in không?",
+      "topic": "checkin",
+      "content": "Không. Host xác nhận check-in thủ công và lưu giờ nhận phòng thực tế; không bắt buộc QR và không tự chuyển trạng thái theo đồng hồ.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-33",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-026",
+      "slug": "late",
+      "title": "Tôi đến trễ thì được trả phòng muộn tương ứng không?",
+      "topic": "checkin",
+      "content": "Không tự kéo dài giờ thuê, giảm giá hay bù thời gian đến muộn. Giờ kết thúc vẫn theo giờ đặt ban đầu; Host ghi nhận giờ đến thực tế.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-34",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-027",
+      "slug": "checkout",
+      "title": "Chưa trả hết tiền thì đơn có hoàn tất khi trả phòng không?",
+      "topic": "checkout",
+      "content": "Host xác nhận check-out thủ công và lưu giờ trả phòng thực tế. Khi được xác nhận, đơn completed dù còn công nợ hoặc phụ thu; khoản phải thu được theo dõi riêng.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-35",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-028",
+      "slug": "noshow",
+      "title": "Không đến sử dụng phòng thì cọc và strike thế nào?",
+      "topic": "no_show",
+      "content": "Hết ca dự kiến mà chưa có check-in xác nhận thì theo chính sách là no_show: không hoàn cọc và không cộng strike. Không tự coi là completed hay tự thu toàn bộ phần tiền còn lại ngoài quy tắc đã chốt.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-36",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-029",
+      "slug": "overtime",
+      "title": "Quá giờ 31 phút được tính thế nào?",
+      "topic": "overtime",
+      "content": "Phụ thu quá giờ tính theo mỗi block 30 phút, làm tròn lên theo đơn giá Host cấu hình. Quá 31 phút là 2 block; khoảng đệm dọn phòng không phải thời gian dùng miễn phí. Cần đơn giá thực tế để tính số tiền.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-37",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-030",
+      "slug": "nextguest",
+      "title": "Nếu ca trước quá giờ thì hệ thống tự dời ca của tôi không?",
+      "topic": "overtime",
+      "content": "Chính sách yêu cầu cảnh báo và xử lý sự cố khi quá giờ xung đột ca sau; không tự dời hoặc hủy đơn của khách kế tiếp.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-09",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-37",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-031",
+      "slug": "strikes",
+      "title": "Khi nào tôi bị tính strike?",
+      "topic": "restrictions",
+      "content": "Một strike áp dụng khi bạn tự hủy đơn đã tạo nhưng chưa cọc, hoặc bỏ đơn để hết hạn thanh toán. Không tính trùng cho cùng sự cố. Hủy đã cọc đúng hạn, Host từ chối hoặc trễ duyệt, lỗi thanh toán đã xác minh do hệ thống và no-show không thuộc nhánh cộng strike.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-12",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-27",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-032",
+      "slug": "suspension",
+      "title": "Bị 3 strike có mất quyền đăng nhập và nhận hoàn tiền không?",
+      "topic": "restrictions",
+      "content": "Ba strike hiệu lực tạm ngưng quyền tạo đơn trên toàn hệ thống và không cho đổi lịch tới khi Admin khôi phục. Bạn vẫn có thể đăng nhập, xem và tiếp tục đơn hợp lệ có trước, thanh toán công nợ, nhận hoàn và yêu cầu hỗ trợ. Việc này khác khóa đăng nhập vì bảo mật.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-04",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-28",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-033",
+      "slug": "restore",
+      "title": "Khôi phục quyền đặt có xóa lịch sử vi phạm không?",
+      "topic": "restrictions",
+      "content": "Khi Admin khôi phục, số strike hiệu lực về 0; lịch sử vi phạm và audit vẫn được giữ. Đây là quy tắc chung, không xác nhận tài khoản cụ thể đã được mở.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-29",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-034",
+      "slug": "simulation",
+      "title": "Thanh toán ở bản frontend hiện tại có phải chuyển tiền thật không?",
+      "topic": "demo_scope",
+      "content": "Không. Bản frontend hiện tại dùng thao tác mô phỏng thành công hoặc thất bại, chưa phải giao dịch ngân hàng thật. Không chuyển tiền dựa trên câu trả lời của trợ lý.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-11",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 1",
+          "version": "1.0"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "public",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "needs_review",
+      "conflict_ids": [
+        "C-05"
+      ],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-035",
+      "slug": "hostonboard",
+      "title": "Tôi là Host mới, cần chuẩn bị gì?",
+      "topic": "host_guidance",
+      "content": "Đăng ký Host gồm thông tin tài khoản/liên hệ, thông tin Studio rồi xác nhận gửi yêu cầu. Sau khi Admin duyệt, hoàn thiện Studio, Room Type, Room Unit, thiết bị và bảng giá/chính sách trước khi mở nhận đặt thuê. Đây là quy trình mục tiêu, không khẳng định PHP đã có API này.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-02",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 5",
+          "version": "1.0"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "host",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    },
+    {
+      "id": "KB-036",
+      "slug": "hostscope",
+      "title": "Host có được quản lý đơn của Studio khác không?",
+      "topic": "host_guidance",
+      "content": "Host chỉ được xem và sửa nguồn lực, đơn thuộc Studio mình quản lý. Vai trò hoặc trang đang mở ở frontend không cấp quyền truy cập máy chủ.",
+      "sources": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-03",
+          "version": "1.1"
+        }
+      ],
+      "document_version": "1.0.0",
+      "visibility": "host",
+      "studio_scope": {
+        "kind": "platform",
+        "studio_id": null
+      },
+      "publication_status": "ready_for_approval",
+      "conflict_ids": [],
+      "last_review": {
+        "date": "2026-10-27",
+        "reviewer": "Codex source comparison; not business approval"
+      },
+      "approval": {
+        "approved_by": null,
+        "approved_at": null
+      },
+      "effective_from": null,
+      "effective_until": null,
+      "supersedes": null
+    }
+  ]
+}

@@ -31,6 +31,7 @@ import {
   type Studio,
 } from "@/domain/models";
 import { balance, HOUR, activeStatuses, studioFor } from "@/domain/engine";
+import { FeaturedPricingManager } from "@/features/pricing/components/FeaturedPricingManager";
 export const hostLinks = [
   ["", "Tổng quan"],
   ["studios", "Studio của tôi"],
@@ -1182,14 +1183,16 @@ function Rates() {
         description="Giá mặc định theo loại phòng; giá riêng của phòng được cấu hình tại quản lý phòng. Gói minh họa tính theo số giờ, không tự thêm chiết khấu."
       />
       {types.map((t) => (
-        <RateForm
-          key={t.id}
-          type={t}
-          save={(rate, plans) => {
-            if (dispatch({ type: "rate", id: t.id, hourlyRate: rate, plans }))
-              notice("Đã cập nhật bảng giá cho các đơn mới.");
-          }}
-        />
+        <div key={t.id}>
+          <RateForm
+            type={t}
+            save={(rate, plans) => {
+              if (dispatch({ type: "rate", id: t.id, hourlyRate: rate, plans }))
+                notice("Đã cập nhật bảng giá cho các đơn mới.");
+            }}
+          />
+          <FeaturedPricingManager typeId={t.id} />
+        </div>
       ))}
     </>
   );

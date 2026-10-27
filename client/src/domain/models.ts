@@ -12,6 +12,12 @@ export type PaymentStatus = "unpaid" | "processing" | "paid" | "failed";
 export type RefundStatus =
   "not_required" | "pending" | "processing" | "refunded" | "failed";
 export type Plan = "hourly" | "session" | "combo3" | "combo5" | "combo10";
+export type FeaturedPricingBadge = "featured" | "recommended";
+export interface FeaturedPricing {
+  typeId: string;
+  plan: Plan;
+  badge: FeaturedPricingBadge;
+}
 export interface User {
   id: string;
   name: string;
@@ -64,6 +70,7 @@ export interface Room {
   images: string[];
   active: boolean;
   rateOverride?: number;
+  featuredPricing?: FeaturedPricing;
 }
 export interface Equipment {
   id: string;

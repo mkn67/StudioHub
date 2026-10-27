@@ -8,6 +8,7 @@ import "./editorial.css";
 import "./motion.css";
 import { motionTokenCSS } from "@/components/motion/tokens";
 import { Provider } from "@/components/store";
+import { HelpdeskWidget } from "@/features/helpdesk";
 export const metadata: Metadata = {
   title: "StudioHub — Không gian cho ý tưởng của bạn",
   description:
@@ -23,6 +24,7 @@ export default function RootLayout({
       <head><style id="studiohub-motion-tokens">{motionTokenCSS}</style></head>
       <body>
         <Provider>{children}</Provider>
+        <HelpdeskWidget />
       </body>
     </html>
   );

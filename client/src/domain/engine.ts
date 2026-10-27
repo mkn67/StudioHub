@@ -1,5 +1,6 @@
 import type { State, Selection, Booking, Role, Status, Policy } from "./models";
 import { localHour } from "./models";
+import { clearIneligibleFeaturedPricing, setFeaturedPricing } from "./featured-pricing";
 export const MIN = 60000,
   HOUR = 60 * MIN,
   BUFFER = 30 * MIN;
@@ -146,6 +147,7 @@ export function validateSelection(
   return null;
 }
 export type Command =
+  | { type: "featured_pricing"; roomId: string; selection: Pick<NonNullable<State["rooms"][number]["featuredPricing"]>, "plan" | "badge"> | null }
   | { type: "request_restore"; reason: string }
   | { type: "login"; userId: string | null }
   | { type: "register"; name: string; email: string; phone: string }
@@ -326,6 +328,13 @@ export function execute(input: State, command: Command): State {
     requireRole("host");
     return owned(id);
   };
+  if (command.type === "featured_pricing") {
+    const u = requireRole("host");
+    const before = s.rooms.find(room => room.id === command.roomId)?.featuredPricing;
+    setFeaturedPricing(s, command.roomId, command.selection, u.id);
+    event(s, "pricing.featured", command.roomId, "Nổi bật bảng giá; không thay đổi giá.", JSON.stringify(before), JSON.stringify(s.rooms.find(room => room.id === command.roomId)?.featuredPricing));
+    return s;
+  }
   if (command.type === "login") {
     if (
       command.userId &&
@@ -806,6 +815,7 @@ export function execute(input: State, command: Command): State {
     if (!r || (u.role === "host" && st?.hostId !== u.id))
       throw Error("Không có quyền sửa phòng.");
     r.active = command.active;
+    clearIneligibleFeaturedPricing(s);
     event(
       s,
       "room.status",
@@ -859,6 +869,7 @@ export function execute(input: State, command: Command): State {
     if (!studio || !command.reason.trim())
       throw Error("Cần Studio hợp lệ và lý do giám sát.");
     studio.active = command.active;
+    clearIneligibleFeaturedPricing(s);
     event(s, "studio.moderated", studio.id, command.reason);
     return s;
   }
@@ -894,6 +905,7 @@ export function execute(input: State, command: Command): State {
     const old = s.types.find((x) => x.id === t.id);
     if (old) Object.assign(old, t);
     else s.types.push(t);
+    clearIneligibleFeaturedPricing(s);
     event(s, "room_type.saved", t.id);
     return s;
   }
@@ -921,6 +933,7 @@ export function execute(input: State, command: Command): State {
     const old = s.rooms.find((x) => x.id === r.id);
     if (old) Object.assign(old, r);
     else s.rooms.push(r);
+    clearIneligibleFeaturedPricing(s);
     event(s, "room.saved", r.id);
     return s;
   }
@@ -937,6 +950,7 @@ export function execute(input: State, command: Command): State {
       throw Error("Bảng giá không hợp lệ.");
     t.hourlyRate = command.hourlyRate;
     t.plans = command.plans;
+    clearIneligibleFeaturedPricing(s);
     event(s, "rate.updated", t.id);
     return s;
   }

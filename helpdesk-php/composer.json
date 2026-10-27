@@ -1,0 +1,23 @@
+{
+  "name": "studiohub/helpdesk",
+  "description": "Isolated PHP agentic Helpdesk; no business backend dependencies",
+  "type": "project",
+  "require": {
+    "php": ">=8.2",
+    "ext-json": "*",
+    "ext-curl": "*",
+    "ext-pdo": "*",
+    "ext-mbstring": "*",
+    "ext-iconv": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "StudioHub\\Helpdesk\\": "src/"
+    }
+  },
+  "scripts": {
+    "test": "php tests/run.php",
+    "smoke": "php bin/gateway-smoke.php",
+    "evaluate": "php bin/evaluate.php"
+  }
+}
