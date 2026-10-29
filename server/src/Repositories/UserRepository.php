@@ -121,5 +121,81 @@ class UserRepository
 
         return $stmt->execute($params);
     }
-}
 
+    /**
+     * Find role ID by role name
+     */
+    public function findRoleIdByName(string $roleName): ?int
+    {
+        $stmt = $this->pdo->prepare('SELECT role_id FROM roles WHERE role_name = ? LIMIT 1');
+        $stmt->execute([$roleName]);
+        $id = $stmt->fetchColumn();
+        return $id !== false ? (int) $id : null;
+    }
+
+    /**
+     * List users with filtering and pagination
+     */
+    public function listUsers(array $filters, int $page = 1, int $limit = 12): array
+    {
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['role'])) {
+            $where[] = 'r.role_name = :role';
+            $params['role'] = $filters['role'];
+        }
+
+        if (!empty($filters['status'])) {
+            $where[] = 'u.status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        if (!empty($filters['search'])) {
+            $where[] = '(u.full_name LIKE :search OR u.email LIKE :search OR u.phone LIKE :search)';
+            $params['search'] = '%' . $filters['search'] . '%';
+        }
+
+        $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        // Count total
+        $countStmt = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM users u
+            JOIN roles r ON u.role_id = r.role_id
+            {$whereSql}
+        ");
+        $countStmt->execute($params);
+        $totalItems = (int) $countStmt->fetchColumn();
+
+        $offset = ($page - 1) * $limit;
+        $totalPages = $totalItems > 0 ? (int) ceil($totalItems / $limit) : 1;
+
+        $stmt = $this->pdo->prepare("
+            SELECT u.user_id, u.role_id, r.role_name AS role, u.full_name, u.email,
+                   u.phone, u.avatar_url, u.status, u.created_at, u.updated_at
+            FROM users u
+            JOIN roles r ON u.role_id = r.role_id
+            {$whereSql}
+            ORDER BY u.user_id ASC
+            LIMIT :limit OFFSET :offset
+        ");
+
+        foreach ($params as $k => $v) {
+            $stmt->bindValue(":{$k}", $v);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'items'       => $items,
+            'total_items' => $totalItems,
+            'total_pages' => $totalPages,
+            'page'        => $page,
+            'limit'       => $limit,
+        ];
+    }
+}

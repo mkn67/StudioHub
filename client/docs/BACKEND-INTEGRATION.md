@@ -66,3 +66,9 @@ The following areas do not yet have corresponding PHP API endpoints in `server/p
 - **Rental Units:** Frontend demo uses `half-day`, mapped cleanly to the backend database enum `half_day`.
 - **Deposit Policy:** Backend default is 30% required deposit, calculated automatically during step 3 of the booking wizard.
 - **Image Uploads:** Uploads route through `POST /api/rooms/{id}/images` storing files in `/uploads/` and returning absolute/relative URLs.
+
+- **Identifiers:** Backend routes use numeric IDs (`1`, `2`), while frontend demo mode uses string slugs (`studio-aurora`, `room-echo`). The frontend routes dynamically handle both.
+- **Rental Units:** Frontend demo uses `half-day`, mapped cleanly to the backend database enum `half_day`.
+- **Deposit Policy:** Backend default is 30% required deposit, calculated automatically during step 3 of the booking wizard.
+- **Image Uploads:** Uploads route through `POST /api/rooms/{id}/images` storing files in `/uploads/` and returning absolute/relative URLs.
+

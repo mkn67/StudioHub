@@ -148,6 +148,12 @@ class Request
         return $this->attributes[$key] ?? $default;
     }
 
+    public function param(string $name, ?string $default = null): ?string
+    {
+        $params = $this->getAttribute('params', []);
+        return isset($params[$name]) ? (string) $params[$name] : $default;
+    }
+
     public function user(): ?array
     {
         return $this->getAttribute('user');

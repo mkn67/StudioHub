@@ -31,6 +31,11 @@ use App\Controllers\AuthController;
 use App\Controllers\RoomController;
 use App\Controllers\EquipmentController;
 use App\Controllers\LookupController;
+use App\Controllers\StudioController;
+use App\Controllers\EquipmentCategoryController;
+use App\Controllers\BookingController;
+use App\Controllers\AdminController;
+use App\Controllers\HostController;
 
 $router = new Router();
 $router->use(new CorsMiddleware());
@@ -56,9 +61,6 @@ $router->get('/api/space-types', [LookupController::class, 'spaceTypes']);
 $router->get('/api/amenities', [LookupController::class, 'amenities']);
 
 // --- Phase 5: Host Management Routes ---
-use App\Controllers\StudioController;
-use App\Controllers\EquipmentCategoryController;
-
 $hostMiddlewares = [new AuthMiddleware(), new RoleMiddleware('host')];
 
 // Studios
@@ -86,10 +88,25 @@ $router->post('/api/equipments', [EquipmentController::class, 'create'], $hostMi
 $router->patch('/api/equipments/{id:\d+}', [EquipmentController::class, 'update'], $hostMiddlewares);
 
 // --- Phase 6: Booking Engine Routes ---
-use App\Controllers\BookingController;
-
 $router->post('/api/bookings/check-availability', [BookingController::class, 'checkAvailability']);
 $router->post('/api/bookings', [BookingController::class, 'create'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+
+// --- Phase 7: Booking Lifecycle & Payments Routes ---
+$router->get('/api/bookings', [BookingController::class, 'index'], [new AuthMiddleware()]);
+$router->get('/api/bookings/{id:\d+}', [BookingController::class, 'show'], [new AuthMiddleware()]);
+$router->patch('/api/bookings/{id:\d+}/status', [BookingController::class, 'updateStatus'], $hostMiddlewares);
+$router->post('/api/bookings/{id:\d+}/cancel', [BookingController::class, 'cancel'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->post('/api/bookings/{id:\d+}/payments', [BookingController::class, 'pay'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+
+// --- Phase 8: Administration & Statistics Routes ---
+$adminMiddlewares = [new AuthMiddleware(), new RoleMiddleware('admin')];
+
+$router->get('/api/admin/users', [AdminController::class, 'users'], $adminMiddlewares);
+$router->patch('/api/admin/users/{id:\d+}/status', [AdminController::class, 'updateUserStatus'], $adminMiddlewares);
+$router->patch('/api/admin/users/{id:\d+}/role', [AdminController::class, 'updateUserRole'], $adminMiddlewares);
+$router->get('/api/admin/statistics', [AdminController::class, 'statistics'], $adminMiddlewares);
+
+$router->get('/api/host/statistics', [HostController::class, 'statistics'], $hostMiddlewares);
 
 // Verification routes for Phase 2 Auth/Role/Ownership
 $router->get('/api/test/me', function (Request $req) {

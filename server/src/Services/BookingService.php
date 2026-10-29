@@ -93,19 +93,13 @@ class BookingService
                 $this->pdo->beginTransaction();
 
                 // Steps 3 to 7: Evaluate booking with locking=true
-                // 3. Lock room (FOR UPDATE) & verify party_size
-                // 4. Verify studio active & rate active at DATE(start_time)
-                // 5. Consolidate equipments, sort by ID asc, lock (FOR UPDATE)
-                // 6. Check room schedule conflict -> 409 room_occupied
-                // 7. Check peak usage equipment stock -> 409 equipment_insufficient
-                // 8. Pricing calculation via PricingService
                 $eval = $this->availabilityService->evaluate($request, true, $this->pdo);
 
                 $pricing = $eval['pricing'];
                 $startDt = new DateTimeImmutable($eval['start_time']);
                 $nowDt = new DateTimeImmutable('now');
 
-                // Step 8 (cont): Determine expires_at = LEAST(created_at + HOLD_MINUTES, start_time)
+                // Step 8: Determine expires_at = LEAST(created_at + HOLD_MINUTES, start_time)
                 $holdMinutes = (int) ($_ENV['HOLD_MINUTES'] ?? 15);
                 $holdExpiry = $nowDt->modify("+{$holdMinutes} minutes");
                 $finalExpiry = $holdExpiry < $startDt ? $holdExpiry : $startDt;
@@ -162,7 +156,6 @@ class BookingService
                 }
 
                 // Update booking_code = 'BK-YYYYMMDD-' + booking_id (padded to 4 digits)
-                // Date formatted from start_time
                 $datePart = date('Ymd', strtotime($eval['start_time']));
                 $finalBookingCode = 'BK-' . $datePart . '-' . str_pad((string) $bookingId, 4, '0', STR_PAD_LEFT);
                 $this->bookingRepo->updateBookingCode($bookingId, $finalBookingCode, $this->pdo);
@@ -242,13 +235,11 @@ class BookingService
 
                 $errCode = $e->errorInfo[1] ?? (int) $e->getCode();
 
-                // Check for MySQL deadlock (1213) or lock wait timeout (1205)
                 if (in_array($errCode, [1205, 1213], true) && $attempts < $maxAttempts) {
-                    usleep(50000); // 50ms before retry
+                    usleep(50000);
                     continue;
                 }
 
-                // Check for trigger SQLSTATE 45000 ROOM_OCCUPIED
                 if (($e->errorInfo[0] ?? '') === '45000' || str_contains($e->getMessage(), 'ROOM_OCCUPIED')) {
                     throw new ApiException(
                         409,
@@ -276,5 +267,378 @@ class BookingService
         }
 
         throw new ApiException(500, 'concurrency_timeout', 'Không thể hoàn tất đặt phòng do xung đột tài nguyên, vui lòng thử lại');
+    }
+
+    /**
+     * Expire a booking if it is pending and past expires_at (Section 5.5)
+     * Handles single-booking transaction and records refund_due in audit_logs.
+     *
+     * @param int $bookingId
+     * @param PDO|null $pdo
+     * @return bool True if expired, false if not due or already non-pending
+     */
+    public function expireIfDue(int $bookingId, ?PDO $pdo = null): bool
+    {
+        $ownTx = false;
+        $db = $pdo ?? $this->pdo;
+
+        if (!$db->inTransaction()) {
+            $db->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+            $db->beginTransaction();
+            $ownTx = true;
+        }
+
+        try {
+            $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $db);
+            if (!$booking) {
+                if ($ownTx) {
+                    $db->commit();
+                }
+                return false;
+            }
+
+            if ($booking['status'] !== 'pending') {
+                if ($ownTx) {
+                    $db->commit();
+                }
+                return false;
+            }
+
+            $expiresAt = $booking['expires_at'];
+            if ($expiresAt === null || strtotime($expiresAt) > time()) {
+                if ($ownTx) {
+                    $db->commit();
+                }
+                return false;
+            }
+
+            // Booking is past expires_at -> expire it
+            $payments = $this->bookingRepo->getSuccessfulPayments($bookingId, $db);
+            $paidTotal = 0;
+            $paymentRecords = [];
+
+            foreach ($payments as $p) {
+                $amt = (int) $p['amount'];
+                $paidTotal += $amt;
+                $paymentRecords[] = [
+                    'payment_id'       => (int) $p['payment_id'],
+                    'payment_type'     => $p['payment_type'],
+                    'amount'           => $amt,
+                    'transaction_code' => $p['transaction_code'],
+                ];
+            }
+
+            $reason = $paidTotal > 0 ? 'host_no_response' : 'unpaid_hold_timeout';
+            $refundDue = $paidTotal;
+
+            $this->bookingRepo->updateBookingStatus($bookingId, 'expired', null, null, $db);
+
+            $this->bookingRepo->insertAuditLog(
+                null,
+                'booking_expired',
+                'bookings',
+                $bookingId,
+                [
+                    'from'          => 'pending',
+                    'to'            => 'expired',
+                    'reason'        => $reason,
+                    'paid_total'    => $paidTotal,
+                    'refund_due'    => $refundDue,
+                    'refund_status' => 'recorded_only',
+                    'payments'      => $paymentRecords,
+                ],
+                $db
+            );
+
+            if ($ownTx) {
+                $db->commit();
+            }
+
+            return true;
+        } catch (Throwable $e) {
+            if ($ownTx && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log("[BookingService::expireIfDue] Error expiring booking {$bookingId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Update booking status by Host (Section 5.4, 5.5)
+     *
+     * @param int $bookingId
+     * @param string $newStatus
+     * @param array $authUser
+     * @return array
+     * @throws ApiException
+     */
+    public function updateStatus(int $bookingId, string $newStatus, array $authUser): array
+    {
+        $allowedHostStatuses = ['confirmed', 'rejected', 'checked_in', 'completed', 'cancelled'];
+        if (!in_array($newStatus, $allowedHostStatuses, true)) {
+            throw new ApiException(
+                400,
+                'invalid_status',
+                "Trạng thái '{$newStatus}' không hợp lệ cho thao tác của host"
+            );
+        }
+
+        $this->pdo->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+        $this->pdo->beginTransaction();
+
+        try {
+            $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $this->pdo);
+            if (!$booking) {
+                throw new ApiException(404, 'booking_not_found', 'Đơn đặt phòng không tồn tại');
+            }
+
+            // Ownership check: must belong to host's studio
+            if ((int) $booking['host_id'] !== (int) $authUser['user_id']) {
+                throw new ApiException(403, 'forbidden', 'Bạn không có quyền quản lý đơn đặt phòng này');
+            }
+
+            // Expire on access check
+            if ($booking['status'] === 'pending') {
+                $didExpire = $this->expireIfDue($bookingId, $this->pdo);
+                if ($didExpire) {
+                    throw new ApiException(400, 'booking_expired', 'Đơn đặt phòng đã hết hạn');
+                }
+                $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $this->pdo);
+            }
+
+            // State machine validation
+            BookingStateMachine::assertCanTransition($booking['status'], $newStatus);
+
+            $completedAt = null;
+            $payments = $this->bookingRepo->getSuccessfulPayments($bookingId, $this->pdo);
+            $paidTotal = 0;
+            $paymentRecords = [];
+
+            foreach ($payments as $p) {
+                $amt = (int) $p['amount'];
+                $paidTotal += $amt;
+                $paymentRecords[] = [
+                    'payment_id'       => (int) $p['payment_id'],
+                    'payment_type'     => $p['payment_type'],
+                    'amount'           => $amt,
+                    'transaction_code' => $p['transaction_code'],
+                ];
+            }
+
+            // Specific requirements per target status
+            if ($newStatus === 'confirmed') {
+                $hasValidPayment = false;
+                foreach ($payments as $p) {
+                    if (in_array($p['payment_type'], ['deposit', 'full'], true)) {
+                        $hasValidPayment = true;
+                        break;
+                    }
+                }
+
+                if (!$hasValidPayment) {
+                    throw new ApiException(400, 'deposit_required', 'Đơn đặt phòng chưa được thanh toán cọc hoặc trả đủ');
+                }
+
+                if ($booking['expires_at'] && strtotime($booking['expires_at']) <= time()) {
+                    throw new ApiException(400, 'booking_expired', 'Đơn đặt phòng đã hết hạn giữ chỗ');
+                }
+            } elseif ($newStatus === 'completed') {
+                $totalAmount = (int) $booking['total_amount'];
+                if ($paidTotal < $totalAmount) {
+                    throw new ApiException(400, 'payment_incomplete', 'Đơn đặt phòng chưa thanh toán đủ tổng tiền thuê');
+                }
+                $completedAt = date('Y-m-d H:i:s');
+            }
+
+            // Update status in DB
+            $this->bookingRepo->updateBookingStatus($bookingId, $newStatus, $completedAt, null, $this->pdo);
+
+            // Audit log
+            if (in_array($newStatus, ['rejected', 'cancelled'], true) && $paidTotal > 0) {
+                $auditMeta = [
+                    'from'          => $booking['status'],
+                    'to'            => $newStatus,
+                    'reason'        => $newStatus === 'rejected' ? 'host_rejected' : 'host_cancelled',
+                    'paid_total'    => $paidTotal,
+                    'refund_due'    => $paidTotal,
+                    'refund_status' => 'recorded_only',
+                    'payments'      => $paymentRecords,
+                ];
+            } else {
+                $auditMeta = [
+                    'from'         => $booking['status'],
+                    'to'           => $newStatus,
+                    'booking_code' => $booking['booking_code'],
+                ];
+                if ($completedAt !== null) {
+                    $auditMeta['completed_at'] = $completedAt;
+                }
+            }
+
+            $this->bookingRepo->insertAuditLog(
+                (int) $authUser['user_id'],
+                'booking_status_updated',
+                'bookings',
+                $bookingId,
+                $auditMeta,
+                $this->pdo
+            );
+
+            $this->pdo->commit();
+
+            return $this->getBookingDetail($bookingId, $authUser);
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Cancel booking by Customer (Section 5.4, 5.5)
+     *
+     * @param int $bookingId
+     * @param array $authUser
+     * @return array
+     * @throws ApiException
+     */
+    public function cancelByCustomer(int $bookingId, array $authUser): array
+    {
+        $this->pdo->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+        $this->pdo->beginTransaction();
+
+        try {
+            $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $this->pdo);
+            if (!$booking) {
+                throw new ApiException(404, 'booking_not_found', 'Đơn đặt phòng không tồn tại');
+            }
+
+            if ((int) $booking['customer_id'] !== (int) $authUser['user_id']) {
+                throw new ApiException(403, 'forbidden', 'Bạn không có quyền hủy đơn đặt phòng của người khác');
+            }
+
+            if ($booking['status'] === 'pending') {
+                $didExpire = $this->expireIfDue($bookingId, $this->pdo);
+                if ($didExpire) {
+                    throw new ApiException(400, 'booking_expired', 'Đơn đặt phòng đã hết hạn');
+                }
+                $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $this->pdo);
+            }
+
+            BookingStateMachine::assertCanTransition($booking['status'], 'cancelled');
+
+            $payments = $this->bookingRepo->getSuccessfulPayments($bookingId, $this->pdo);
+            $paidTotal = 0;
+            $paymentRecords = [];
+
+            foreach ($payments as $p) {
+                $amt = (int) $p['amount'];
+                $paidTotal += $amt;
+                $paymentRecords[] = [
+                    'payment_id'       => (int) $p['payment_id'],
+                    'payment_type'     => $p['payment_type'],
+                    'amount'           => $amt,
+                    'transaction_code' => $p['transaction_code'],
+                ];
+            }
+
+            $this->bookingRepo->updateBookingStatus($bookingId, 'cancelled', null, null, $this->pdo);
+
+            $this->bookingRepo->insertAuditLog(
+                (int) $authUser['user_id'],
+                'booking_cancelled',
+                'bookings',
+                $bookingId,
+                [
+                    'from'          => $booking['status'],
+                    'to'            => 'cancelled',
+                    'reason'        => 'customer_cancelled',
+                    'paid_total'    => $paidTotal,
+                    'refund_due'    => $paidTotal,
+                    'refund_status' => 'recorded_only',
+                    'payments'      => $paymentRecords,
+                ],
+                $this->pdo
+            );
+
+            $this->pdo->commit();
+
+            return $this->getBookingDetail($bookingId, $authUser);
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * List bookings with role scoping and status filtering
+     *
+     * @param array $query
+     * @param array $authUser
+     * @return array
+     */
+    public function listBookings(array $query, array $authUser): array
+    {
+        $role = $authUser['role'] ?? 'customer';
+        $page = max(1, (int) ($query['page'] ?? 1));
+        $limit = min(50, max(1, (int) ($query['limit'] ?? 12)));
+
+        $filters = [];
+        if ($role === 'customer') {
+            $filters['customer_id'] = (int) $authUser['user_id'];
+        } elseif ($role === 'host') {
+            $filters['host_id'] = (int) $authUser['user_id'];
+        }
+
+        if (!empty($query['status'])) {
+            $filters['status'] = trim((string) $query['status']);
+        }
+
+        return $this->bookingRepo->listBookings($filters, $page, $limit, $this->pdo);
+    }
+
+    /**
+     * Get booking detail with permission check and expire on access
+     *
+     * @param int $bookingId
+     * @param array $authUser
+     * @return array
+     * @throws ApiException
+     */
+    public function getBookingDetail(int $bookingId, array $authUser): array
+    {
+        $booking = $this->bookingRepo->findBookingById($bookingId, $this->pdo);
+        if (!$booking) {
+            throw new ApiException(404, 'booking_not_found', 'Đơn đặt phòng không tồn tại');
+        }
+
+        $role = $authUser['role'] ?? 'customer';
+        $userId = (int) $authUser['user_id'];
+
+        if ($role === 'customer' && (int) $booking['customer_id'] !== $userId) {
+            throw new ApiException(403, 'forbidden', 'Bạn không có quyền xem đơn đặt phòng của người khác');
+        }
+
+        if ($role === 'host' && (int) $booking['host_id'] !== $userId) {
+            throw new ApiException(403, 'forbidden', 'Bạn không có quyền xem đơn đặt phòng của studio khác');
+        }
+
+        // Expire on access if pending and expired
+        if ($booking['status'] === 'pending' && $booking['expires_at'] && strtotime($booking['expires_at']) <= time()) {
+            $this->expireIfDue($bookingId, $this->pdo);
+            $booking = $this->bookingRepo->findBookingById($bookingId, $this->pdo);
+        }
+
+        $equipments = $this->bookingRepo->getBookingDetails($bookingId, $this->pdo);
+        $payments = $this->bookingRepo->getAllPayments($bookingId, $this->pdo);
+
+        return array_merge($booking, [
+            'equipments' => $equipments,
+            'payments'   => $payments,
+        ]);
     }
 }
