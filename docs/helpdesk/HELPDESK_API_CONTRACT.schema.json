@@ -1,0 +1,671 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Proposed StudioHub Helpdesk API v1 (not implemented)",
+  "description": "Validate the relevant $defs fragment named by HELPDESK_API_CONTRACT.md. Enforce UUID/date-time formats and semantic constraints server-side.",
+  "$defs": {
+    "Context": {
+      "type": "object",
+      "properties": {
+        "surface": {
+          "enum": [
+            "public",
+            "customer",
+            "host",
+            "admin"
+          ]
+        }
+      },
+      "required": [
+        "surface"
+      ],
+      "additionalProperties": false
+    },
+    "CreateConversationRequest": {
+      "type": "object",
+      "properties": {
+        "locale": {
+          "enum": [
+            "vi-VN",
+            "en"
+          ]
+        },
+        "context": {
+          "$ref": "#/$defs/Context"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "MessageRequest": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "clientMessageId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "context": {
+          "$ref": "#/$defs/Context"
+        }
+      },
+      "required": [
+        "text",
+        "clientMessageId"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryQuery": {
+      "type": "object",
+      "properties": {
+        "cursor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Source": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 250
+        }
+      },
+      "required": [
+        "title",
+        "reference"
+      ],
+      "additionalProperties": false
+    },
+    "Citation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "chunkId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 250
+        },
+        "documentVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "corpusVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "scope": {
+          "enum": [
+            "platform",
+            "studio"
+          ]
+        },
+        "studioId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "documentId",
+        "chunkId",
+        "title",
+        "reference",
+        "documentVersion",
+        "corpusVersion",
+        "scope",
+        "studioId"
+      ],
+      "additionalProperties": false
+    },
+    "WidgetResponse": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "mode": {
+          "enum": [
+            "demo",
+            "connected"
+          ]
+        },
+        "state": {
+          "enum": [
+            "answered",
+            "unavailable",
+            "unauthorized",
+            "human_handoff"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "maxItems": 3,
+          "minItems": 0
+        }
+      },
+      "required": [
+        "text",
+        "mode",
+        "state",
+        "sources"
+      ],
+      "additionalProperties": false
+    },
+    "Capabilities": {
+      "type": "object",
+      "properties": {
+        "publicFaq": {
+          "type": "boolean"
+        },
+        "liveBooking": {
+          "const": false
+        },
+        "livePayment": {
+          "const": false
+        },
+        "liveRefund": {
+          "const": false
+        },
+        "businessActions": {
+          "const": false
+        },
+        "tickets": {
+          "const": false
+        },
+        "humanHandoff": {
+          "const": false
+        }
+      },
+      "required": [
+        "publicFaq",
+        "liveBooking",
+        "livePayment",
+        "liveRefund",
+        "businessActions",
+        "tickets",
+        "humanHandoff"
+      ],
+      "additionalProperties": false
+    },
+    "Conversation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ownerMode": {
+          "enum": [
+            "guest",
+            "authenticated"
+          ]
+        },
+        "state": {
+          "enum": [
+            "bot",
+            "closed"
+          ]
+        },
+        "mode": {
+          "const": "connected"
+        },
+        "locale": {
+          "enum": [
+            "vi-VN",
+            "en"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities"
+        }
+      },
+      "required": [
+        "id",
+        "ownerMode",
+        "state",
+        "mode",
+        "locale",
+        "createdAt",
+        "expiresAt",
+        "capabilities"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryMessage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "clientMessageId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "response": {
+          "$ref": "#/$defs/WidgetResponse"
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "maxItems": 3,
+          "minItems": 0
+        },
+        "reasonCode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "text",
+        "createdAt"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "assistant"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "response",
+              "citations",
+              "reasonCode"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "user"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "clientMessageId"
+            ],
+            "properties": {
+              "response": false,
+              "citations": false,
+              "reasonCode": false
+            }
+          }
+        }
+      ]
+    },
+    "ReasonCode": {
+      "enum": [
+        "unsupported_question",
+        "missing_information",
+        "policy_conflict",
+        "policy_not_approved",
+        "live_api_unavailable",
+        "private_data_unavailable",
+        "action_unavailable"
+      ]
+    },
+    "CreateConversationData": {
+      "type": "object",
+      "properties": {
+        "conversation": {
+          "$ref": "#/$defs/Conversation"
+        }
+      },
+      "required": [
+        "conversation"
+      ],
+      "additionalProperties": false
+    },
+    "MessageData": {
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "userMessageId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "messageId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "clientMessageId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "role": {
+          "const": "assistant"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "response": {
+          "$ref": "#/$defs/WidgetResponse"
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "maxItems": 3,
+          "minItems": 0
+        },
+        "reasonCode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "answerKind": {
+          "enum": [
+            "faq",
+            "rag",
+            "abstention"
+          ]
+        },
+        "corpusVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        }
+      },
+      "required": [
+        "conversationId",
+        "userMessageId",
+        "messageId",
+        "clientMessageId",
+        "role",
+        "createdAt",
+        "response",
+        "citations",
+        "reasonCode",
+        "answerKind",
+        "corpusVersion"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryData": {
+      "type": "object",
+      "properties": {
+        "conversation": {
+          "$ref": "#/$defs/Conversation"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HistoryMessage"
+          },
+          "maxItems": 60,
+          "minItems": 0
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "conversation",
+        "messages",
+        "nextCursor"
+      ],
+      "additionalProperties": false
+    },
+    "FieldError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "field",
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "error"
+        },
+        "code": {
+          "enum": [
+            400,
+            401,
+            403,
+            404,
+            409,
+            410,
+            413,
+            415,
+            422,
+            429,
+            500,
+            502,
+            503,
+            504
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FieldError"
+          },
+          "maxItems": 10,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "status",
+        "code",
+        "message",
+        "errors"
+      ],
+      "additionalProperties": false
+    },
+    "CreateConversationSuccess": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "success"
+        },
+        "code": {
+          "const": 201
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "data": {
+          "$ref": "#/$defs/CreateConversationData"
+        }
+      },
+      "required": [
+        "status",
+        "code",
+        "message",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "MessageSuccess": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "success"
+        },
+        "code": {
+          "const": 200
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "data": {
+          "$ref": "#/$defs/MessageData"
+        }
+      },
+      "required": [
+        "status",
+        "code",
+        "message",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "HistorySuccess": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "success"
+        },
+        "code": {
+          "const": 200
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "data": {
+          "$ref": "#/$defs/HistoryData"
+        }
+      },
+      "required": [
+        "status",
+        "code",
+        "message",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

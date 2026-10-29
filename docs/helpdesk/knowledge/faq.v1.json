@@ -1,0 +1,1148 @@
+{
+  "dataset_version": "1.0.0",
+  "corpus_version": "1.0.0",
+  "release_status": "draft_unpublished",
+  "policy_questions": [
+    {
+      "id": "FAQ-001",
+      "question": "StudioHub là gì?",
+      "canonical_answer": "StudioHub là nền tảng giúp khách tìm, so sánh và đặt thuê phòng Studio thực tế theo thời gian, có thể thuê thêm thiết bị hoặc nội thất.",
+      "knowledge_ids": [
+        "KB-001"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 1",
+          "version": "1.0"
+        }
+      ],
+      "topic": "introduction",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-002",
+      "question": "Tôi tìm và so sánh phòng ở đâu?",
+      "canonical_answer": "Mở /rooms để tìm từng phòng thực tế, xem ảnh, đặc điểm, tiện ích và thông tin giá; mở chi tiết phòng để kiểm tra lịch và chính sách. Thông tin minh họa không chứng minh giá hay phòng trống hiện tại.",
+      "knowledge_ids": [
+        "KB-002"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 4.1",
+          "version": "1.0"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-05",
+          "version": "1.1"
+        }
+      ],
+      "topic": "search",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No current inventory, price or availability guarantee.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-003",
+      "question": "Tôi đặt một loại phòng hay một phòng cụ thể?",
+      "canonical_answer": "Bạn chọn đúng một Room Unit, tức một phòng vật lý cụ thể. Hai phòng cùng loại có ảnh, vị trí, đặc điểm và lịch riêng; không mặc định được thay sang phòng khác.",
+      "knowledge_ids": [
+        "KB-003"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-05",
+          "version": "1.1"
+        }
+      ],
+      "topic": "booking",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-004",
+        "FAQ-005",
+        "FAQ-007"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-004",
+      "question": "Tôi có cần đăng nhập để tìm phòng không?",
+      "canonical_answer": "Bạn có thể tìm và xem phòng khi chưa đăng nhập. Cần đăng nhập trước bước xác nhận tạo đơn thuê.",
+      "knowledge_ids": [
+        "KB-004"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-01",
+          "version": "1.1"
+        }
+      ],
+      "topic": "booking",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-003",
+        "FAQ-005",
+        "FAQ-007"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-005",
+      "question": "Quy trình đặt phòng gồm những bước nào?",
+      "canonical_answer": "Từ trang chi tiết phòng, chọn thời gian hoặc gói thuê, chọn thiết bị thuê thêm nếu cần, rồi kiểm tra thông tin và chi phí trước khi xác nhận. Cần đăng nhập để tạo đơn. Thanh toán trong bản frontend hiện tại là mô phỏng.",
+      "knowledge_ids": [
+        "KB-005"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 4.1",
+          "version": "1.0"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-01",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-11",
+          "version": "1.1"
+        }
+      ],
+      "topic": "booking",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-003",
+        "FAQ-004",
+        "FAQ-007"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-006",
+      "question": "Tôi có thể thuê thêm thiết bị của Studio khác không?",
+      "canonical_answer": "Thiết bị thuê thêm phải thuộc cùng Studio với phòng được đặt và còn đủ số lượng trong thời gian thuê. Thiết bị có sẵn trong phòng khác với thiết bị thuê thêm tính phí.",
+      "knowledge_ids": [
+        "KB-006"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 2",
+          "version": "1.0"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-07",
+          "version": "1.1"
+        }
+      ],
+      "topic": "equipment",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-007",
+      "question": "Số người và số lượng thiết bị có giới hạn không?",
+      "canonical_answer": "Số người phải lớn hơn 0 và không vượt sức chứa phòng. Số lượng thiết bị thuê thêm phải lớn hơn 0 và không vượt lượng khả dụng trong thời gian tương ứng.",
+      "knowledge_ids": [
+        "KB-007"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-07",
+          "version": "1.1"
+        }
+      ],
+      "topic": "booking",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-003",
+        "FAQ-004",
+        "FAQ-005"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-008",
+      "question": "Khoảng đệm 30 phút có phải giờ dùng phòng miễn phí không?",
+      "canonical_answer": "Không. Sau mỗi ca có 30 phút đệm để dọn và chuẩn bị phòng. Ca kết thúc lúc 12:00 có đệm tới 12:30; ca mới bắt đầu 12:30 chỉ có thể hợp lệ nếu đáp ứng các điều kiện khác.",
+      "knowledge_ids": [
+        "KB-008"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-08",
+          "version": "1.1"
+        }
+      ],
+      "topic": "availability",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No current inventory, price or availability guarantee.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-009",
+      "question": "Tôi phải đặt trước bao lâu?",
+      "canonical_answer": "Thời điểm tạo đơn phải trước giờ thuê ít nhất 24 giờ cộng thời hạn thanh toán cọc của Host. Thời hạn cọc nằm trong khoảng 15 phút đến 3 giờ; nếu là 3 giờ thì cần đặt trước ít nhất 27 giờ.",
+      "knowledge_ids": [
+        "KB-009"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-10",
+          "version": "1.1"
+        }
+      ],
+      "topic": "deposit",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-010",
+        "FAQ-011",
+        "FAQ-012"
+      ],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-010",
+      "question": "Có phải Studio nào cũng yêu cầu cọc 30% không?",
+      "canonical_answer": "Không có tỷ lệ cọc 30% chung cho mọi Studio. Tỷ lệ áp dụng theo chính sách Studio; giá và chính sách được lưu tại thời điểm tạo đơn. Khoản cọc đã trả được tính vào tiền thuê.",
+      "knowledge_ids": [
+        "KB-010"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-18",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-19",
+          "version": "1.1"
+        }
+      ],
+      "topic": "deposit",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-009",
+        "FAQ-011",
+        "FAQ-012"
+      ],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-011",
+      "question": "Sau khi tạo đơn tôi giữ phòng đến khi nào?",
+      "canonical_answer": "Theo chính sách, đơn mới ở trạng thái awaiting_payment và giữ phòng cùng thiết bị tới hạn thanh toán cọc ghi trên đơn. Không suy ra hạn của một đơn cụ thể từ hướng dẫn chung này.",
+      "knowledge_ids": [
+        "KB-011"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-11",
+          "version": "1.1"
+        }
+      ],
+      "topic": "deposit",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-009",
+        "FAQ-010",
+        "FAQ-012"
+      ],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-012",
+      "question": "Tôi có được bắt đầu trả cọc sau hạn không?",
+      "canonical_answer": "Không được khởi tạo giao dịch mới sau hạn. Nếu giao dịch bắt đầu trước hạn còn processing, thời gian xử lý thêm tối đa 5 phút sau hạn; kết quả chưa rõ cần đối soát và không được coi là đã thanh toán thành công.",
+      "knowledge_ids": [
+        "KB-012"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-13",
+          "version": "1.1"
+        }
+      ],
+      "topic": "deposit",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-009",
+        "FAQ-010",
+        "FAQ-011"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-013",
+      "question": "Trả cọc xong có nghĩa là đơn đã được xác nhận không?",
+      "canonical_answer": "Theo chính sách, trả cọc thành công đưa đơn sang pending để chờ Host duyệt. Chỉ khi Host duyệt đơn mới là confirmed. Đã trả cọc không đồng nghĩa đã thanh toán toàn bộ.",
+      "knowledge_ids": [
+        "KB-013"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-14",
+          "version": "1.1"
+        }
+      ],
+      "topic": "confirmation",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-014"
+      ],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-014",
+      "question": "Host có bao lâu để duyệt đơn sau khi tôi cọc?",
+      "canonical_answer": "Host có đúng 2 giờ từ khi cọc được xác nhận thành công để duyệt hoặc từ chối. Quá hạn không phản hồi thì theo chính sách đơn bị hủy, không tính strike và khởi tạo/xử lý hoàn 100% cọc; không có nghĩa tiền đã về tài khoản.",
+      "knowledge_ids": [
+        "KB-014"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-15",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-25",
+          "version": "1.1"
+        }
+      ],
+      "topic": "confirmation",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-013"
+      ],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-015",
+      "question": "Các trạng thái đơn thuê có nghĩa gì?",
+      "canonical_answer": "Theo chính sách: awaiting_payment là chờ cọc; pending là đã cọc chờ Host; confirmed là đã được Host duyệt; checked_in là Host xác nhận nhận phòng; completed là Host xác nhận trả phòng; cancelled là đã hủy; expired là hết hạn thanh toán; no_show là hết ca mà chưa có check-in xác nhận. Đây không phải kết quả tra cứu đơn.",
+      "knowledge_ids": [
+        "KB-015"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-16",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 7.1",
+          "version": "1.0"
+        }
+      ],
+      "topic": "statuses",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-016",
+      "question": "Đơn đã hủy có nghĩa là cọc đã được hoàn không?",
+      "canonical_answer": "Không. Trạng thái đơn, thanh toán và hoàn tiền độc lập. Một đơn có thể đã hủy, cọc đã thu nhưng hoàn tiền còn chờ; cần dữ liệu hoàn tiền có xác thực để biết tình trạng cụ thể.",
+      "knowledge_ids": [
+        "KB-016"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-16",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-17",
+          "version": "1.1"
+        }
+      ],
+      "topic": "refund",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No booking-specific entitlement, amount or settlement promise.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-019",
+        "FAQ-020"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-017",
+      "question": "Tôi được tự hủy trước giờ thuê bao lâu?",
+      "canonical_answer": "Host cấu hình hạn tự hủy là 24, 48 hoặc 72 giờ trước giờ thuê. Qua hạn bạn không tự hủy được, nhưng có thể yêu cầu hỗ trợ ngoại lệ. Hạn hủy và hạn đổi lịch là hai cấu hình riêng.",
+      "knowledge_ids": [
+        "KB-017"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-22",
+          "version": "1.1"
+        }
+      ],
+      "topic": "cancellation",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No booking-specific entitlement, amount or settlement promise.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-018"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-018",
+      "question": "Hủy sau khi cọc có được hoàn toàn bộ không?",
+      "canonical_answer": "Nếu đã cọc và hủy trong hạn cho phép, mức hoàn theo chính sách được lưu khi tạo đơn, có thể từ 0% đến 100%; không có bảo đảm hoàn toàn bộ và không tính strike cho nhánh này.",
+      "knowledge_ids": [
+        "KB-018"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-23",
+          "version": "1.1"
+        }
+      ],
+      "topic": "cancellation",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No booking-specific entitlement, amount or settlement promise.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-017"
+      ],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-019",
+      "question": "Host từ chối đơn sau khi tôi cọc thì sao?",
+      "canonical_answer": "Theo chính sách, đơn bị hủy và bạn được hoàn 100% cọc, không tính strike. Nhánh Host từ chối theo quy trình hoàn thông thường cần Host xác nhận; khác với hoàn tự động khi Host quá hạn phản hồi.",
+      "knowledge_ids": [
+        "KB-019"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-15",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-24",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-25",
+          "version": "1.1"
+        }
+      ],
+      "topic": "refund",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No booking-specific entitlement, amount or settlement promise.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-016",
+        "FAQ-020"
+      ],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-020",
+      "question": "Khi nào tiền hoàn chắc chắn về tài khoản?",
+      "canonical_answer": "Chính sách phân biệt hoàn đang chờ, đang xử lý, thành công và thất bại, nhưng không nêu thời gian tiền chắc chắn về tài khoản. Chỉ xác nhận đã hoàn khi có kết quả được xác minh; trợ lý không thể cam kết ngày tiền về.",
+      "knowledge_ids": [
+        "KB-020"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-25",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 13",
+          "version": "1.0"
+        }
+      ],
+      "topic": "refund",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No booking-specific entitlement, amount or settlement promise.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-016",
+        "FAQ-019"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-021",
+      "question": "Studio đổi chính sách sau khi tôi đặt thì có áp dụng lại không?",
+      "canonical_answer": "Giá và chính sách hủy/hoàn được lưu khi tạo đơn. Việc Host thay bảng giá hoặc chính sách về sau không sửa hồi tố giá và chính sách đã lưu của đơn đó.",
+      "knowledge_ids": [
+        "KB-021"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-18",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-23",
+          "version": "1.1"
+        }
+      ],
+      "topic": "pricing",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-022",
+      "question": "Tôi có thể đổi lịch hoặc đổi phòng bao nhiêu lần?",
+      "canonical_answer": "Chỉ đơn confirmed, chưa check-in và còn đủ hạn đổi do Host cấu hình 24/48/72 giờ trước giờ bắt đầu gốc mới được gửi yêu cầu. Tối đa một lần thay đổi thành công; yêu cầu bị từ chối, rút lại hoặc chưa hoàn tất không mất lượt. Mỗi đơn chỉ có một yêu cầu đang xử lý.",
+      "knowledge_ids": [
+        "KB-022"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-30",
+          "version": "1.1"
+        }
+      ],
+      "topic": "rescheduling",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-023",
+        "FAQ-024"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-023",
+      "question": "Gửi yêu cầu đổi lịch có làm mất lịch cũ ngay không?",
+      "canonical_answer": "Không. Host phải duyệt; trong khi xét yêu cầu, đơn và lịch cũ vẫn được giữ. Chỉ thay thế sau khi kiểm tra khả dụng và hoàn tất thay đổi an toàn. Yêu cầu bị từ chối không làm mất đơn gốc.",
+      "knowledge_ids": [
+        "KB-023"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-31",
+          "version": "1.1"
+        }
+      ],
+      "topic": "rescheduling",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-022",
+        "FAQ-024"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-024",
+      "question": "Đổi lịch giá cao hơn thì phải cọc thêm ngay không?",
+      "canonical_answer": "Sau thay đổi được duyệt, khoản cọc đã trả được giữ nguyên; tổng giá và công nợ được tính lại, không thu ngay phần tăng cọc. Nếu tổng mới thấp hơn cọc thực thu thì ghi nghĩa vụ hoàn phần dư; đây không phải hủy đơn.",
+      "knowledge_ids": [
+        "KB-024"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-21",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-32",
+          "version": "1.1"
+        }
+      ],
+      "topic": "rescheduling",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-022",
+        "FAQ-023"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-025",
+      "question": "Tới giờ thuê thì đơn tự check-in không?",
+      "canonical_answer": "Không. Host xác nhận check-in thủ công và lưu giờ nhận phòng thực tế; không bắt buộc QR và không tự chuyển trạng thái theo đồng hồ.",
+      "knowledge_ids": [
+        "KB-025"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-33",
+          "version": "1.1"
+        }
+      ],
+      "topic": "checkin",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-026"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-026",
+      "question": "Tôi đến trễ thì được trả phòng muộn tương ứng không?",
+      "canonical_answer": "Không tự kéo dài giờ thuê, giảm giá hay bù thời gian đến muộn. Giờ kết thúc vẫn theo giờ đặt ban đầu; Host ghi nhận giờ đến thực tế.",
+      "knowledge_ids": [
+        "KB-026"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-34",
+          "version": "1.1"
+        }
+      ],
+      "topic": "checkin",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-025"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-027",
+      "question": "Chưa trả hết tiền thì đơn có hoàn tất khi trả phòng không?",
+      "canonical_answer": "Host xác nhận check-out thủ công và lưu giờ trả phòng thực tế. Khi được xác nhận, đơn completed dù còn công nợ hoặc phụ thu; khoản phải thu được theo dõi riêng.",
+      "knowledge_ids": [
+        "KB-027"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-35",
+          "version": "1.1"
+        }
+      ],
+      "topic": "checkout",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-028",
+      "question": "Không đến sử dụng phòng thì cọc và strike thế nào?",
+      "canonical_answer": "Hết ca dự kiến mà chưa có check-in xác nhận thì theo chính sách là no_show: không hoàn cọc và không cộng strike. Không tự coi là completed hay tự thu toàn bộ phần tiền còn lại ngoài quy tắc đã chốt.",
+      "knowledge_ids": [
+        "KB-028"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-36",
+          "version": "1.1"
+        }
+      ],
+      "topic": "no_show",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-029",
+      "question": "Quá giờ 31 phút được tính thế nào?",
+      "canonical_answer": "Phụ thu quá giờ tính theo mỗi block 30 phút, làm tròn lên theo đơn giá Host cấu hình. Quá 31 phút là 2 block; khoảng đệm dọn phòng không phải thời gian dùng miễn phí. Cần đơn giá thực tế để tính số tiền.",
+      "knowledge_ids": [
+        "KB-029"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-37",
+          "version": "1.1"
+        }
+      ],
+      "topic": "overtime",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-030"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-030",
+      "question": "Nếu ca trước quá giờ thì hệ thống tự dời ca của tôi không?",
+      "canonical_answer": "Chính sách yêu cầu cảnh báo và xử lý sự cố khi quá giờ xung đột ca sau; không tự dời hoặc hủy đơn của khách kế tiếp.",
+      "knowledge_ids": [
+        "KB-030"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-09",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-37",
+          "version": "1.1"
+        }
+      ],
+      "topic": "overtime",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-029"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-031",
+      "question": "Khi nào tôi bị tính strike?",
+      "canonical_answer": "Một strike áp dụng khi bạn tự hủy đơn đã tạo nhưng chưa cọc, hoặc bỏ đơn để hết hạn thanh toán. Không tính trùng cho cùng sự cố. Hủy đã cọc đúng hạn, Host từ chối hoặc trễ duyệt, lỗi thanh toán đã xác minh do hệ thống và no-show không thuộc nhánh cộng strike.",
+      "knowledge_ids": [
+        "KB-031"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-12",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-27",
+          "version": "1.1"
+        }
+      ],
+      "topic": "restrictions",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-032",
+        "FAQ-033"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-032",
+      "question": "Bị 3 strike có mất quyền đăng nhập và nhận hoàn tiền không?",
+      "canonical_answer": "Ba strike hiệu lực tạm ngưng quyền tạo đơn trên toàn hệ thống và không cho đổi lịch tới khi Admin khôi phục. Bạn vẫn có thể đăng nhập, xem và tiếp tục đơn hợp lệ có trước, thanh toán công nợ, nhận hoàn và yêu cầu hỗ trợ. Việc này khác khóa đăng nhập vì bảo mật.",
+      "knowledge_ids": [
+        "KB-032"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-04",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-28",
+          "version": "1.1"
+        }
+      ],
+      "topic": "restrictions",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-031",
+        "FAQ-033"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-033",
+      "question": "Khôi phục quyền đặt có xóa lịch sử vi phạm không?",
+      "canonical_answer": "Khi Admin khôi phục, số strike hiệu lực về 0; lịch sử vi phạm và audit vẫn được giữ. Đây là quy tắc chung, không xác nhận tài khoản cụ thể đã được mở.",
+      "knowledge_ids": [
+        "KB-033"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-29",
+          "version": "1.1"
+        }
+      ],
+      "topic": "restrictions",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Source-grounded policy guidance; not proof of deployed behavior.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [
+        "FAQ-031",
+        "FAQ-032"
+      ],
+      "publication_status": "ready_for_approval",
+      "answer_kind": "static_policy"
+    },
+    {
+      "id": "FAQ-034",
+      "question": "Thanh toán ở bản frontend hiện tại có phải chuyển tiền thật không?",
+      "canonical_answer": "Không. Bản frontend hiện tại dùng thao tác mô phỏng thành công hoặc thất bại, chưa phải giao dịch ngân hàng thật. Không chuyển tiền dựa trên câu trả lời của trợ lý.",
+      "knowledge_ids": [
+        "KB-034"
+      ],
+      "source_references": [
+        {
+          "document": "client/docs/references/StudioHub_Business_Policy_VI_v1.1.md",
+          "reference": "BP-11",
+          "version": "1.1"
+        },
+        {
+          "document": "client/docs/references/StudioHub_Design_Business_Specification_v1.0.md",
+          "reference": "section 1",
+          "version": "1.0"
+        }
+      ],
+      "topic": "demo_scope",
+      "audience": [
+        "public",
+        "customer"
+      ],
+      "policy_constraints": [
+        "Candidate only; source conflict requires review before release.",
+        "No action performed; no live data accessed."
+      ],
+      "related_questions": [],
+      "publication_status": "needs_review",
+      "answer_kind": "static_policy"
+    }
+  ],
+  "live_data_questions": [
+    {
+      "id": "LIVE-001",
+      "question": "Has my booking been confirmed?",
+      "kind": "private_booking",
+      "required_capability": "authenticated_booking_reader",
+      "expected_state": "unavailable",
+      "reason": "No booking endpoint exists; never infer confirmation from a booking code.",
+      "canonical_answer": null
+    },
+    {
+      "id": "LIVE-002",
+      "question": "Tiền hoàn đơn SH-123 đã về chưa?",
+      "kind": "private_refund",
+      "required_capability": "authenticated_refund_reader",
+      "expected_state": "unavailable",
+      "reason": "Refund API and ledger missing; never infer money state from cancelled.",
+      "canonical_answer": null
+    },
+    {
+      "id": "LIVE-003",
+      "question": "Phòng này còn trống ngày mai không?",
+      "kind": "live_availability",
+      "required_capability": "verified_availability_reader",
+      "expected_state": "unavailable",
+      "reason": "Busy calendar alone does not prove bookability.",
+      "canonical_answer": null
+    },
+    {
+      "id": "LIVE-004",
+      "question": "Giá phòng A101 hôm nay bao nhiêu?",
+      "kind": "live_price",
+      "required_capability": "scoped_current_rates_reader",
+      "expected_state": "unavailable",
+      "reason": "Need resolved real room ID, effective rates and timestamp; no mock quote.",
+      "canonical_answer": null
+    },
+    {
+      "id": "LIVE-005",
+      "question": "Hủy đơn giúp tôi ngay.",
+      "kind": "booking_mutation",
+      "required_capability": "authorized_confirmed_business_workflow",
+      "expected_state": "unavailable",
+      "reason": "H1 has no business write capability.",
+      "canonical_answer": null
+    },
+    {
+      "id": "LIVE-006",
+      "question": "Tài khoản tôi có bị ngưng đặt thuê không?",
+      "kind": "private_restriction",
+      "required_capability": "authenticated_restriction_reader",
+      "expected_state": "unavailable",
+      "reason": "Client persona and security locked status cannot establish booking restrictions.",
+      "canonical_answer": null
+    }
+  ]
+}

@@ -12,16 +12,15 @@ import {
   SlidersHorizontal,
   MapPin,
   Maximize,
-  Users,
-  Sun,
-  Check,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useStore } from "./store";
 import { RoomCard, Modal, PageHeading, Empty, PrintArtwork } from "./ui";
 import { BookingWizard } from "./wizard";
+import { effectivePricingPlans } from "@/domain/featured-pricing";
 import { StudioCategoryIllustration } from "./studio-category-illustration";
+import { RoomEditorialContent } from "@/features/pricing/components/RoomEditorialContent";
 import { money, localDate, atDate } from "@/domain/models";
 import {
   roomRate,
@@ -561,6 +560,8 @@ export function RoomDetail({ id }: { id: string }) {
     );
   const st = studioFor(state, id)!,
     type = state.types.find((t) => t.id === room.typeId)!;
+  const displayRates = effectivePricingPlans(state, id);
+  const displayRate = displayRates.find(rate => rate.kind === "hourly") ?? displayRates[0];
   return (
     <div className="container detail-page">
       <div className="breadcrumbs">
@@ -577,7 +578,7 @@ export function RoomDetail({ id }: { id: string }) {
           </h1>
           <p className="muted">
             <MapPin size={15} />
-            {st.address} · {room.floor}
+            {st.address}
           </p>
         </div>
         <span className="tag">{type.category}</span>
@@ -604,123 +605,11 @@ export function RoomDetail({ id }: { id: string }) {
         ))}
       </div>
       <div className="detail-layout">
-        <div>
-          <div className="detail-summary">
-            <span>
-              <Maximize size={20} />
-              {room.area} m²
-            </span>
-            <span>
-              <Users size={20} />
-              Tối đa {room.capacity} người
-            </span>
-            <span>
-              <Sun size={20} />
-              {room.feature}
-            </span>
-          </div>
-          <section className="detail-section">
-            <h2>Một khoảng riêng cho sáng tạo.</h2>
-            <p className="muted">
-              {room.name} là không gian dành cho những buổi làm việc tập trung,
-              những khung hình chỉn chu và ý tưởng của riêng bạn. {room.feature}
-              . {room.floor}. Bạn đặt đúng phòng <strong>{room.code}</strong>,
-              không được tự động xếp sang phòng cùng loại.
-            </p>
-            <p className="image-note">
-              Thông tin, giá và hình ảnh trên trang này là dữ liệu minh họa.
-            </p>
-          </section>
-          <section className="detail-section">
-            <h2>Tiện ích trong phòng</h2>
-            <div className="amenities-grid">
-              {room.amenities.map((x) => (
-                <span key={x}>
-                  <Check size={17} />
-                  {x}
-                </span>
-              ))}
-            </div>
-            <h3>Đã bao gồm</h3>
-            <p className="muted">{room.included.join(" · ")}</p>
-          </section>
-          <section className="detail-section">
-            <h2>Thêm công cụ, thêm khả năng.</h2>
-            <p className="muted">
-              Thiết bị tính phí riêng, dùng chung kho Studio. Số lượng được kiểm
-              tra theo thời gian thuê.
-            </p>
-            {state.equipment
-              .filter((e) => e.studioId === st.id && e.active)
-              .map((e) => (
-                <div className="line-item" key={e.id}>
-                  <span>{e.name}</span>
-                  <span className="mono">{money(e.hourlyRate)} / giờ</span>
-                </div>
-              ))}
-          </section>
-          <section className="detail-section">
-            <h2>Giá thuê & chính sách</h2>
-            {type.plans.map((p) => (
-              <div className="line-item" key={p}>
-                <span>
-                  {p === "hourly"
-                    ? "Theo giờ"
-                    : p === "session"
-                      ? "Buổi sáng · 08–12h"
-                      : `Combo ${p.slice(5)} giờ`}
-                </span>
-                <span className="mono">
-                  {money(
-                    roomRate(state, id) *
-                      (p === "hourly"
-                        ? 1
-                        : p === "session"
-                          ? 4
-                          : Number(p.slice(5))),
-                  )}
-                </span>
-              </div>
-            ))}
-            <ul className="policy-list">
-              <li>
-                Giờ mở cửa: {st.policy.openHour}:00–{st.policy.closeHour}:00.
-                Sau mỗi ca có 30 phút chuẩn bị, không phải giờ sử dụng miễn phí.
-              </li>
-              <li>
-                Đặt trước ít nhất 24 giờ + {st.policy.paymentMinutes} phút thanh
-                toán. Cọc {st.policy.depositPercent}% tổng giá.
-              </li>
-              <li>
-                Tự hủy trước ít nhất {st.policy.cancelHours} giờ.{" "}
-                {st.policy.refundTiers
-                  .map((t) => `Trước ${t.hours} giờ: hoàn ${t.percent}% cọc`)
-                  .join("; ")}
-                .
-              </li>
-              <li>
-                Gửi đổi lịch trước ít nhất {st.policy.changeHours} giờ; tối đa
-                một lần đổi thành công, cần chủ Studio duyệt.
-              </li>
-              <li>
-                Quá giờ: {money(st.policy.overtimePerBlock)} / 30 phút, làm tròn
-                lên. Đến muộn không kéo dài giờ trả.
-              </li>
-            </ul>
-          </section>
-          <section className="detail-section">
-            <h2>{st.name}</h2>
-            <p className="muted">{st.description}</p>
-            <p>
-              <MapPin size={16} />
-              {st.address}
-            </p>
-          </section>
-        </div>
+        <RoomEditorialContent state={state} roomId={id} />
         <aside className="booking-card">
           <div className="price-large">
-            {money(roomRate(state, id))}
-            <small> / giờ</small>
+            {displayRate ? money(displayRate.amount) : "Chưa có giá"}
+            <small>{displayRate?.unit}</small>
           </div>
           <p className="muted">
             Phòng {room.code} · {room.area} m² · {room.capacity} người
@@ -735,7 +624,7 @@ export function RoomDetail({ id }: { id: string }) {
           </div>
           <button
             className="btn full"
-            disabled={!room.active}
+            disabled={!room.active || !displayRate}
             onClick={() => setWizard(true)}
           >
             Chọn lịch thuê <ArrowRight size={18} />
@@ -750,12 +639,12 @@ export function RoomDetail({ id }: { id: string }) {
       </div>
       <div className="mobile-booking-bar">
         <div>
-          <strong>{money(roomRate(state, id))}</strong>
-          <small> / giờ · {room.code}</small>
+          <strong>{displayRate ? money(displayRate.amount) : "Chưa có giá"}</strong>
+          <small>{displayRate?.unit} · {room.code}</small>
         </div>
         <button
           className="btn"
-          disabled={!room.active}
+          disabled={!room.active || !displayRate}
           onClick={() => setWizard(true)}
         >
           Chọn lịch thuê

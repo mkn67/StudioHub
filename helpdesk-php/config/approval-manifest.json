@@ -1,0 +1,6 @@
+{
+  "manifest_version": "1.0.0",
+  "corpus_version": "1.0.0",
+  "notice": "No entries approved. Run bin/approval-manifest.php to produce candidates; only the project owner records approval decisions, validity and reviewer identity.",
+  "approvals": {}
+}

@@ -1,5 +1,6 @@
 import type { State, Selection, Booking, Role, Status, Policy } from "./models";
-import { localHour } from "./models";
+import { bookingEquipment, effectiveCrew, effectiveRentalPlans, quoteRental, rentalSelectionError, validateCrewPolicy, validateOperatingHours, validateRentalPlans, validateTimeSurcharge } from "./rental";
+import { clearIneligibleFeaturedPricing, setFeaturedPricing } from "./featured-pricing";
 export const MIN = 60000,
   HOUR = 60 * MIN,
   BUFFER = 30 * MIN;
@@ -24,7 +25,8 @@ export const balance = (b: Booking) =>
 export function roomRate(s: State, roomId: string) {
   const r = s.rooms.find((r) => r.id === roomId);
   const t = s.types.find((t) => t.id === r?.typeId);
-  return r?.rateOverride ?? t?.hourlyRate ?? 0;
+  const plans = effectiveRentalPlans(s, roomId), hourly = plans.find(p => p.kind === "hourly");
+  return hourly?.price ?? (plans[0] ? Math.round(plans[0].price * 60 / plans[0].durationMinutes) : r?.rateOverride ?? t?.hourlyRate ?? 0);
 }
 export function studioFor(s: State, roomId: string) {
   const r = s.rooms.find((r) => r.id === roomId);
@@ -32,16 +34,7 @@ export function studioFor(s: State, roomId: string) {
   return s.studios.find((x) => x.id === t?.studioId);
 }
 export function price(s: State, x: Selection) {
-  const hours = (x.end - x.start) / HOUR;
-  return Math.round(
-    (roomRate(s, x.roomId) +
-      Object.entries(x.equipment).reduce(
-        (sum, [id, q]) =>
-          sum + (s.equipment.find((e) => e.id === id)?.hourlyRate ?? 0) * q,
-        0,
-      )) *
-      hours,
-  );
+  return quoteRental(s, x).breakdown.total;
 }
 export function validatePolicy(p: Policy) {
   if (
@@ -78,74 +71,13 @@ export function validateSelection(
   x: Selection,
   ignoreId?: string,
 ): string | null {
-  const room = s.rooms.find((r) => r.id === x.roomId),
-    type = s.types.find((t) => t.id === room?.typeId),
-    studio = studioFor(s, x.roomId);
-  if (!room?.active || !studio?.active || !type)
-    return "Phòng hiện không nhận đặt thuê.";
-  if (!Number.isFinite(x.start) || !Number.isFinite(x.end) || x.end <= x.start)
-    return "Chọn thời gian thuê hợp lệ.";
-  if (x.start < s.now + 24 * HOUR + studio.policy.paymentMinutes * MIN)
-    return `Cần đặt trước ít nhất 24 giờ + ${studio.policy.paymentMinutes} phút thanh toán.`;
-  if (
-    !Number.isInteger(x.participants) ||
-    x.participants < 1 ||
-    x.participants > room.capacity
-  )
-    return `Số người phải từ 1 đến ${room.capacity}.`;
-  if (!type.plans.includes(x.plan)) return "Gói thuê không được hỗ trợ.";
-  const duration = (x.end - x.start) / HOUR;
-  if (
-    (x.plan.startsWith("combo") && duration !== Number(x.plan.slice(5))) ||
-    (x.plan === "session" && (localHour(x.start) !== 8 || duration !== 4)) ||
-    (x.plan === "hourly" && (!Number.isInteger(duration) || duration < 1))
-  )
-    return "Thời lượng không phù hợp với gói thuê.";
-  const begin = new Date(x.start + 7 * HOUR),
-    end = new Date(x.end + 7 * HOUR);
-  if (
-    begin.toISOString().slice(0, 10) !== end.toISOString().slice(0, 10) ||
-    localHour(x.start) < studio.policy.openHour ||
-    localHour(x.end) > studio.policy.closeHour ||
-    (localHour(x.end) === studio.policy.closeHour && end.getUTCMinutes() > 0)
-  )
-    return "Thời gian thuê phải nằm trong giờ mở cửa.";
-  const active = s.bookings.filter(
-    (b) => b.id !== ignoreId && activeStatuses.includes(b.status),
-  );
-  if (active.some((b) => b.roomId === x.roomId && overlaps(x, b)))
-    return "Phòng đã được giữ trong khoảng thuê hoặc 30 phút chuẩn bị.";
-  for (const [id, q] of Object.entries(x.equipment)) {
-    if (!Number.isInteger(q) || q < 0) return "Số lượng thiết bị không hợp lệ.";
-    if (!q) continue;
-    const e = s.equipment.find((e) => e.id === id);
-    if (!e?.active || e.studioId !== studio.id)
-      return "Thiết bị không khả dụng tại Studio này.";
-    // Sweep interval boundaries: summing all intersecting reservations would overcount sequential rentals.
-    const relevant = active.filter(
-      (b) => overlaps(x, b) && (b.equipment[id] ?? 0) > 0,
-    );
-    const points = [
-      x.start,
-      ...relevant
-        .flatMap((b) => [b.start, b.end + BUFFER])
-        .filter((t) => t >= x.start && t < x.end + BUFFER),
-    ];
-    if (
-      points.some(
-        (t) =>
-          q +
-            relevant
-              .filter((b) => b.start <= t && t < b.end + BUFFER)
-              .reduce((n, b) => n + (b.equipment[id] ?? 0), 0) >
-          e.quantity,
-      )
-    )
-      return `${e.name}: không đủ số lượng trong khoảng thuê và chuẩn bị.`;
-  }
-  return null;
+  return rentalSelectionError(s, x, ignoreId);
 }
 export type Command =
+  | { type: "rental_settings"; studioId: string; operatingHours: NonNullable<State["studios"][number]["operatingHours"]>; timeSurcharge?: State["studios"][number]["timeSurcharge"] }
+  | { type: "rental_plans"; target: "type" | "room"; id: string; plans: NonNullable<State["rooms"][number]["rentalPlans"]> | null }
+  | { type: "crew_policy"; roomId: string; policy: State["rooms"][number]["crewPolicy"] }
+  | { type: "featured_pricing"; roomId: string; selection: Pick<NonNullable<State["rooms"][number]["featuredPricing"]>, "plan" | "badge"> | null }
   | { type: "request_restore"; reason: string }
   | { type: "login"; userId: string | null }
   | { type: "register"; name: string; email: string; phone: string }
@@ -326,6 +258,49 @@ export function execute(input: State, command: Command): State {
     requireRole("host");
     return owned(id);
   };
+  if (command.type === "featured_pricing") {
+    const u = requireRole("host");
+    const before = s.rooms.find(room => room.id === command.roomId)?.featuredPricing;
+    setFeaturedPricing(s, command.roomId, command.selection, u.id);
+    event(s, "pricing.featured", command.roomId, "Nổi bật bảng giá; không thay đổi giá.", JSON.stringify(before), JSON.stringify(s.rooms.find(room => room.id === command.roomId)?.featuredPricing));
+    return s;
+  }
+  if (command.type === "rental_settings") {
+    const u = requireRole("host"), studio = s.studios.find(st => st.id === command.studioId && st.hostId === u.id);
+    if (!studio) throw Error("Bạn không quản lý Studio này.");
+    validateOperatingHours(command.operatingHours); validateTimeSurcharge(command.timeSurcharge);
+    studio.operatingHours = structuredClone(command.operatingHours);
+    studio.timeSurcharge = structuredClone(command.timeSurcharge);
+    event(s, "rental.settings", studio.id, "Giờ hoạt động và phụ thu chỉ áp dụng cho đơn mới");
+    return s;
+  }
+  if (command.type === "rental_plans") {
+    const u = requireRole("host");
+    const room = command.target === "room" ? s.rooms.find(r => r.id === command.id) : undefined;
+    const type = s.types.find(t => t.id === (room?.typeId ?? command.id));
+    if (!type || !s.studios.some(st => st.id === type.studioId && st.hostId === u.id) || (command.target === "room" && !room)) throw Error("Bạn không quản lý bảng giá này.");
+    if (command.plans !== null) {
+      const rooms = room ? [room] : s.rooms.filter(r => r.typeId === type.id && !r.rentalPlans);
+      for (const r of rooms) validateRentalPlans(s, type.studioId, command.plans, r.capacity, effectiveCrew(s, r.id));
+      if (!rooms.length) validateRentalPlans(s, type.studioId, command.plans, 1000, type.crewPolicy);
+    }
+    const target = room ?? type;
+    if (command.plans === null) delete target.rentalPlans; else target.rentalPlans = structuredClone(command.plans);
+    clearIneligibleFeaturedPricing(s);
+    event(s, "rental.plans", command.id, "Cấu hình gói; giữ nguyên snapshot các đơn đã tạo");
+    return s;
+  }
+  if (command.type === "crew_policy") {
+    const u = requireRole("host"), room = s.rooms.find(r => r.id === command.roomId);
+    if (!room || studioFor(s, room.id)?.hostId !== u.id) throw Error("Bạn không quản lý phòng này.");
+    validateCrewPolicy(command.policy, room.capacity);
+    room.crewPolicy = structuredClone(command.policy);
+    const type = s.types.find(t => t.id === room.typeId)!;
+    const plans = room.rentalPlans ?? type.rentalPlans;
+    if (plans) validateRentalPlans(s, type.studioId, plans, room.capacity, command.policy ?? type.crewPolicy);
+    event(s, "rental.crew", room.id, "Chỉ áp dụng cho đơn mới");
+    return s;
+  }
   if (command.type === "login") {
     if (
       command.userId &&
@@ -429,10 +404,12 @@ export function execute(input: State, command: Command): State {
     const policy = structuredClone(
       studioFor(s, command.selection.roomId)!.policy,
     );
-    const total = price(s, command.selection);
+    const rentalSnapshot = quoteRental(s, command.selection);
+    const total = rentalSnapshot.breakdown.total;
     const id = uid(s, "SH");
     s.bookings.push({
       ...command.selection,
+      rentalSnapshot,
       id,
       customerId: u.id,
       status: "awaiting_payment",
@@ -697,7 +674,7 @@ export function execute(input: State, command: Command): State {
         end: b.end,
         total: b.total,
       });
-      Object.assign(b, change.selection, { total });
+      Object.assign(b, change.selection, { total, rentalSnapshot: quoteRental(s, change.selection) });
       change.status = "approved";
       if (total < b.deposit) refund(b, b.deposit - total, "excess_deposit");
       b.history.push({
@@ -806,6 +783,7 @@ export function execute(input: State, command: Command): State {
     if (!r || (u.role === "host" && st?.hostId !== u.id))
       throw Error("Không có quyền sửa phòng.");
     r.active = command.active;
+    clearIneligibleFeaturedPricing(s);
     event(
       s,
       "room.status",
@@ -823,13 +801,15 @@ export function execute(input: State, command: Command): State {
       !command.equipment.name.trim() ||
       !Number.isInteger(command.equipment.quantity) ||
       command.equipment.quantity < 0 ||
-      command.equipment.hourlyRate < 0
+      !Number.isSafeInteger(command.equipment.hourlyRate) || command.equipment.hourlyRate < 0 ||
+      (command.equipment.description?.length ?? 0) > 300 ||
+      typeof command.equipment.image !== "string" || command.equipment.image.length > 150000
     )
       throw Error("Thiết bị không hợp lệ.");
     const reservations = s.bookings.filter(
       (b) =>
         activeStatuses.includes(b.status) &&
-        (b.equipment[command.equipment.id] ?? 0) > 0,
+        (bookingEquipment(b)[command.equipment.id] ?? 0) > 0,
     );
     if (
       reservations.some(
@@ -837,7 +817,7 @@ export function execute(input: State, command: Command): State {
           reservations
             .filter((x) => x.start <= b.start && b.start < x.end + BUFFER)
             .reduce(
-              (sum, x) => sum + (x.equipment[command.equipment.id] ?? 0),
+              (sum, x) => sum + (bookingEquipment(x)[command.equipment.id] ?? 0),
               0,
             ) > command.equipment.quantity,
       )
@@ -859,6 +839,7 @@ export function execute(input: State, command: Command): State {
     if (!studio || !command.reason.trim())
       throw Error("Cần Studio hợp lệ và lý do giám sát.");
     studio.active = command.active;
+    clearIneligibleFeaturedPricing(s);
     event(s, "studio.moderated", studio.id, command.reason);
     return s;
   }
@@ -874,6 +855,8 @@ export function execute(input: State, command: Command): State {
     )
       throw Error("Thông tin Studio không hợp lệ.");
     validatePolicy(command.studio.policy);
+    if (command.studio.operatingHours) validateOperatingHours(command.studio.operatingHours);
+    validateTimeSurcharge(command.studio.timeSurcharge);
     const st = s.studios.find((st) => st.id === command.studio.id);
     if (st) Object.assign(st, command.studio);
     else s.studios.push(command.studio);
@@ -894,6 +877,7 @@ export function execute(input: State, command: Command): State {
     const old = s.types.find((x) => x.id === t.id);
     if (old) Object.assign(old, t);
     else s.types.push(t);
+    clearIneligibleFeaturedPricing(s);
     event(s, "room_type.saved", t.id);
     return s;
   }
@@ -919,8 +903,13 @@ export function execute(input: State, command: Command): State {
     )
       throw Error("Phòng không hợp lệ hoặc mã phòng bị trùng.");
     const old = s.rooms.find((x) => x.id === r.id);
+    const crewPolicy = r.crewPolicy ?? old?.crewPolicy ?? t.crewPolicy;
+    validateCrewPolicy(crewPolicy, r.capacity);
+    const rentalPlans = r.rentalPlans ?? old?.rentalPlans ?? t.rentalPlans;
+    if (rentalPlans) validateRentalPlans(s, t.studioId, rentalPlans, r.capacity, crewPolicy);
     if (old) Object.assign(old, r);
     else s.rooms.push(r);
+    clearIneligibleFeaturedPricing(s);
     event(s, "room.saved", r.id);
     return s;
   }
@@ -937,6 +926,7 @@ export function execute(input: State, command: Command): State {
       throw Error("Bảng giá không hợp lệ.");
     t.hourlyRate = command.hourlyRate;
     t.plans = command.plans;
+    clearIneligibleFeaturedPricing(s);
     event(s, "rate.updated", t.id);
     return s;
   }

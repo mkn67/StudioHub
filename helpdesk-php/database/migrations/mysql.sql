@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS helpdesk_conversations (id VARCHAR(36) PRIMARY KEY, owner VARCHAR(80) NOT NULL, payload JSON NOT NULL, expires BIGINT NOT NULL, INDEX helpdesk_conversations_owner(owner)) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS helpdesk_tickets (id VARCHAR(36) PRIMARY KEY, owner VARCHAR(80) NOT NULL, conversation_id VARCHAR(36) NOT NULL, proposal_id VARCHAR(36) NOT NULL UNIQUE, payload JSON NOT NULL, expires BIGINT NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS helpdesk_records (id VARCHAR(160) PRIMARY KEY, kind VARCHAR(40) NOT NULL, payload JSON NOT NULL, expires BIGINT NOT NULL) ENGINE=InnoDB;
