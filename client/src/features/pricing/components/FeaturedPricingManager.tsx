@@ -8,10 +8,10 @@ import { effectiveFeaturedPricing, effectivePricingPlans, featuredPricingLabels 
 import { PricingList } from "./PricingList";
 import styles from "../styles/editorial.module.css";
 
-export function FeaturedPricingManager({ typeId }: { typeId: string }) {
+export function FeaturedPricingManager({ typeId, initialRoomId, lockRoom = false }: { typeId: string; initialRoomId?: string; lockRoom?: boolean }) {
   const { state, dispatch, notice } = useStore();
-  const rooms = state.rooms.filter(room => room.typeId === typeId);
-  const [roomId, setRoomId] = useState(rooms[0]?.id ?? "");
+  const rooms = state.rooms.filter(room => room.typeId === typeId && (!lockRoom || room.id === initialRoomId));
+  const [roomId, setRoomId] = useState(initialRoomId ?? rooms[0]?.id ?? "");
   const [draftBadge, setDraftBadge] = useState<FeaturedPricingBadge>("featured");
   const room = rooms.find(r => r.id === roomId) ?? rooms[0];
   if (!room) return null;

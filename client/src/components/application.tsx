@@ -8,7 +8,7 @@ import { useSession, useStore, DemoTools } from "./store";
 import { Home, SearchRooms, RoomDetail } from "./marketplace";
 import { Auth, Profile, Support } from "./accounts";
 import { CustomerBookings, Payment, BookingDetail } from "./bookings";
-import { Operations, hostLinks, adminLinks } from "./operations";
+import { Operations } from "./operations";
 import { Empty, Modal } from "./ui";
 export default function Application() {
   const path = usePathname(),
@@ -84,7 +84,7 @@ export default function Application() {
       <a className="skip-link" href="#main-content">
         Đến nội dung chính
       </a>
-      <header className={`site-header ${hero ? "over-hero" : ""}`}>
+      {!ops && <header className={`site-header ${hero ? "over-hero" : ""}`}>
         <Link className="brand" href="/">
           StudioHub<span>®</span>
         </Link>
@@ -149,8 +149,8 @@ export default function Application() {
             {menu ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
-      </header>
-      <Presence>{menu && (
+      </header>}
+      <Presence>{!ops && menu && (
         <Modal title="Điều hướng StudioHub" onClose={() => setMenu(false)} className="navigation-drawer">
         <nav
           className="mobile-nav"
@@ -162,12 +162,6 @@ export default function Application() {
           <Link href="/register/host">Dành cho chủ Studio</Link>
           {!ops && user?.role === "host" && <Link href="/host">Quản lý Studio</Link>}
           {!ops && user?.role === "admin" && <Link href="/admin">Quản trị</Link>}
-          {ops &&
-            (segments[0] === "host" ? hostLinks : adminLinks).map(([p, l]) => (
-              <Link key={p} href={`/${segments[0]}${p ? "/" + p : ""}`}>
-                {l}
-              </Link>
-            ))}
           <Link href={user ? "/profile" : "/login"}>
             {user ? "Hồ sơ" : "Đăng nhập"}
           </Link>

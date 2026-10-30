@@ -7,11 +7,13 @@ import { effectiveRentalPlans } from "@/domain/rental";
 import { PricingList } from "./PricingList";
 import styles from "../styles/rental.module.css";
 
-export function RentalPackageManager({ typeId }: { typeId: string }) {
+export function RentalPackageManager({ typeId, scopeId, onScopeChange }: { typeId: string; scopeId?: string; onScopeChange?: (id: string) => void }) {
   const { state } = useStore();
   const type = state.types.find(t => t.id === typeId)!;
   const rooms = state.rooms.filter(r => r.typeId === typeId);
-  const [targetId, setTargetId] = useState(typeId);
+  const [localTargetId, setLocalTargetId] = useState(typeId);
+  const targetId = scopeId ?? localTargetId;
+  const setTargetId = onScopeChange ?? setLocalTargetId;
   if (!rooms.length) return <p>Tạo phòng thực tế trước khi cấu hình gói và ekip.</p>;
   const target = rooms.find(r => r.id === targetId);
   return <section className={styles.settings} data-package-manager={typeId}>

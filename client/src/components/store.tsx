@@ -17,15 +17,25 @@ import {
   type DemoScenario,
 } from "@/data/fixtures";
 import { browserRepository } from "@/data/repository";
+import { applyHostPricing, type HostPricingCommand } from "@/domain/host-pricing";
 type Context = {
   state: State;
   ready: boolean;
   dispatch: (command: Command) => State | null;
+  saveHostPricing: (commands: HostPricingCommand[]) => State | null;
   reset: () => void;
   loadScenario: (name: DemoScenario) => void;
   notice: (text: string) => void;
 };
 const Store = createContext<Context | null>(null);
+// Host editor uses the same context/engine with a temporary draft, never a
+// second persistent repository. Other consumers keep the original provider.
+export function HostPricingDraftProvider({ children, state, dispatch, notice }: {
+  children: ReactNode; state: State; dispatch: Context["dispatch"]; notice: Context["notice"];
+}) {
+  const parent = useStore();
+  return <Store.Provider value={{ ...parent, state, dispatch, notice }}>{children}</Store.Provider>;
+}
 export function Provider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(initialState),
     [ready, setReady] = useState(false),
@@ -81,6 +91,17 @@ export function Provider({ children }: { children: ReactNode }) {
         state,
         ready,
         dispatch,
+        saveHostPricing: commands => {
+          try {
+            const next = applyHostPricing(ref.current, commands);
+            browserRepository.save(next);
+            ref.current = next; setState(next);
+            return next;
+          } catch (error) {
+            notice(error instanceof Error ? error.message : "Không lưu được bảng giá. Bản nháp vẫn được giữ để thử lại.");
+            return null;
+          }
+        },
         reset: () => persist(browserRepository.reset()),
         loadScenario: (name) => persist(scenarioState(name)),
         notice,

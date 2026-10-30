@@ -23,6 +23,15 @@ try {
     await operating.getByRole("button", { name: "Lưu giờ hoạt động & phụ thu", exact: true }).click();
     expect((await stateOf(page)).studios[0].operatingHours.mode).toBe("all_day"); checks++;
     await page.goto(base + "/host/rates");
+    const openPricing = async (tab = "Gói thuê & ekip") => {
+      await page.getByRole("button", { name: "Chỉnh sửa bảng giá Daylight Studio", exact: true }).click();
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+    };
+    const savePricing = async () => {
+      await page.getByRole("dialog", { name: "Chỉnh sửa bảng giá · Daylight Studio", exact: true }).getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+    };
+    await openPricing();
     const manager = page.locator('[data-package-manager="daylight"]');
     await manager.getByLabel("Gói đang chỉnh").selectOption("combo3");
     await manager.getByLabel("Tên gói", { exact: true }).fill("Gói chụp 3 giờ");
@@ -31,23 +40,26 @@ try {
     await manager.getByRole("checkbox", { name: /Đèn LED Aputure/ }).check();
     await manager.getByRole("checkbox", { name: /Softbox Light Dome/ }).check();
     await manager.getByLabel("Dịch vụ gồm trong giá (mỗi dòng một mục)").fill("Chuẩn bị phông cơ bản");
-    await manager.getByRole("button", { name: "Lưu gói thuê", exact: true }).click();
+    await savePricing();
     expect((await stateOf(page)).types[0].rentalPlans.find(p => p.plan === "combo3").includedEquipment).toEqual({ light: 1, softbox: 1 }); checks++;
+    await openPricing();
     await manager.getByLabel("Thiết lập giới hạn ekip và số người gồm trong giá").check();
     await manager.getByLabel("Số người gồm trong giá", { exact: true }).fill("5");
     await manager.getByLabel("Ekip tối đa cho phép").fill("10");
     await manager.getByLabel("Tính phụ thu người vượt mức").check();
     await manager.getByLabel("Phụ thu (VND)", { exact: true }).fill("50000");
-    await manager.getByRole("button", { name: "Lưu chính sách ekip", exact: true }).click();
+    await savePricing();
     expect((await stateOf(page)).rooms[0].crewPolicy.maximum).toBe(10); checks++;
+    await openPricing("Gói nổi bật");
     const featured = page.locator('[data-featured-manager="daylight"]');
     await featured.locator('[data-plan="combo3"]').filter({ has: page.getByRole("button") }).getByRole("button").click();
-    await page.reload(); await expect(manager.getByLabel("Gói đang chỉnh")).toBeVisible();
+    await savePricing();
+    await page.reload(); await expect(page.locator(".host-pricing-overview")).toBeVisible();
     expect((await stateOf(page)).rooms[0].featuredPricing.plan).toBe("combo3"); checks++;
     for (const width of [360, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 1050 }); await settle(page);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true); checks++;
-      if (width === 390 || width === 1440) await manager.screenshot({ path: `${output}/host-${reducedMotion}-${width}.png` });
+      if (width === 390 || width === 1440) await page.locator(".host-pricing-overview").screenshot({ path: `${output}/host-${reducedMotion}-${width}.png` });
     }
     await page.goto(base + "/host/equipments");
     await page.getByRole("button", { name: "Chỉnh sửa", exact: true }).first().click();
@@ -113,9 +125,10 @@ try {
     await operating.getByLabel("Giờ đóng cửa", { exact: true }).fill("22:00");
     await operating.getByRole("button", { name: "Lưu giờ hoạt động & phụ thu", exact: true }).click();
     await page.goto(base + "/host/rates");
+    await openPricing();
     await manager.getByLabel("Gói đang chỉnh").selectOption("combo3");
     await manager.getByLabel("Giá trọn gói (VND)", { exact: true }).fill("650000");
-    await manager.getByRole("button", { name: "Lưu gói thuê", exact: true }).click();
+    await savePricing();
     const old = (await stateOf(page)).bookings.at(-1);
     expect(old.total).toBe(1290000); expect(old.rentalSnapshot.plan.price).toBe(600000); checks += 2;
     await page.goto(base + "/rooms/a101");

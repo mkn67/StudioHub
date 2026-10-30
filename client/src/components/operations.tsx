@@ -1,18 +1,33 @@
 "use client";
-import { Presence, MotionSurface, useContentMotion } from "./motion/system";
+import { Presence, MotionSurface } from "./motion/system";
 import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/500.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/be-vietnam-pro/700.css";
 import {
   Plus,
   ArrowRight,
-  ChevronLeft,
   ChevronRight,
   ArrowUpRight,
   LayoutDashboard, Building2, DoorOpen, Boxes, Tag, CalendarDays,
   ClipboardList, BarChart3, Settings, Users, UserCheck, ShieldCheck,
   ReceiptText, ScrollText, PanelLeftClose, PanelLeftOpen,
+  Clock3, Wallet, CircleDollarSign, Layers3, RotateCcw,
+  Menu, LogOut, UserRound, ChevronDown,
 } from "lucide-react";
+import { DashboardKpis, DashboardKpi, DashboardPanel, BookingAnalytics } from "@/features/dashboard/components/DashboardUi";
+import "@/features/dashboard/styles/dashboard.css";
+import { HostDeadline, UpcomingAgenda, RoomPopularity } from "@/features/dashboard/components/HostInsights";
+import { HostPricing } from "@/features/dashboard/components/HostPricing";
+import { HostCalendar } from "@/features/dashboard/components/HostCalendar";
+import "@/features/dashboard/styles/host-operations.css";
+import "@/features/dashboard/styles/workspace-refinement.css";
+import "@/features/dashboard/styles/colored-refinement.css";
+import { bookingRentalTime, bookingStatusTokenCSS } from "@/features/dashboard/booking-status";
 import { useStore, useSession } from "./store";
 import { PageHeading, Empty, Modal } from "./ui";
 import { BookingDetail } from "./bookings";
@@ -21,19 +36,14 @@ import {
   dateTime,
   statusLabel,
   localDate,
-  atDate,
-  planLabel,
   type Equipment,
   type Room,
   type RoomType,
   type Policy,
-  type Plan,
   type Studio,
 } from "@/domain/models";
-import { balance, HOUR, activeStatuses, studioFor } from "@/domain/engine";
-import { FeaturedPricingManager } from "@/features/pricing/components/FeaturedPricingManager";
+import { balance, studioFor } from "@/domain/engine";
 import { StudioRentalSettings } from "@/features/pricing/components/StudioRentalSettings";
-import { RentalPackageManager } from "@/features/pricing/components/RentalPackageManager";
 import { EquipmentVisual } from "@/features/pricing/components/EquipmentVisual";
 export const hostLinks = [
   ["", "Tổng quan"],
@@ -74,8 +84,12 @@ export function Operations({
   segments: string[];
 }) {
   const user = useSession(),
-    { state } = useStore();
-  const [collapsed, setCollapsed] = useState(false);
+    { state, dispatch } = useStore();
+  const router = useRouter();
+  const [menu, setMenu] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("studiohub.ops.sidebar.collapsed") === "true"; } catch { return false; }
+  });
   if (!user || user.role !== role || user.locked)
     return (
       <Empty
@@ -86,16 +100,29 @@ export function Operations({
       />
     );
   const path = segments[0] ?? "";
+  const links = role === "host" ? hostLinks : adminLinks;
+  function logout() {
+    dispatch({ type: "login", userId: null });
+    router.push("/");
+  }
   return (
-    <div className={`ops-shell ${collapsed ? "nav-collapsed" : ""}`}>
+    <div className={`ops-shell ${collapsed ? "nav-collapsed" : ""}`} data-role={role} data-page={path || "overview"}>
+      <style>{bookingStatusTokenCSS}</style>
       <aside className="ops-nav">
         <div className="ops-title">
-          <span>{role === "host" ? "Không gian làm việc" : "Quản trị hệ thống"}</span>
-          <button className="icon-button nav-collapse" aria-label={collapsed ? "Mở rộng điều hướng" : "Thu gọn điều hướng"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>
+          <Link href={`/${role}`} className="ops-logo" aria-label={role === "host" ? "StudioHub · Tổng quan Host" : "StudioHub · Tổng quan Admin"}>
+            <span className="ops-logo-mark"><Layers3 size={20} aria-hidden="true" /></span>
+            <span className="ops-logo-copy"><strong>StudioHub</strong><small>{role === "host" ? "Host workspace" : "Admin console"}</small></span>
+          </Link>
+          <button className="icon-button nav-collapse" aria-label={collapsed ? "Mở rộng điều hướng" : "Thu gọn điều hướng"} aria-expanded={!collapsed} onClick={() => {
+            const next = !collapsed; setCollapsed(next);
+            try { localStorage.setItem("studiohub.ops.sidebar.collapsed", String(next)); } catch { /* Session state still works when storage is unavailable. */ }
+          }}>
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
-        <nav>
+        <nav aria-label={role === "host" ? "Điều hướng Host" : "Điều hướng Admin"}>
+          <p className="ops-nav-caption">{role === "host" ? "Quản lý Studio" : "Quản trị"}</p>
           {(role === "host" ? hostLinks : adminLinks).map(([p, l]) => (
             <Link
               className={path === p ? "active" : ""}
@@ -108,7 +135,7 @@ export function Operations({
               <NavigationIcon path={p} />
               <span className="nav-label">{l}</span>
               {p === "bookings" && (
-                <span>
+                <span className="ops-nav-count">
                   {
                     state.bookings.filter(
                       (b) =>
@@ -122,14 +149,24 @@ export function Operations({
           ))}
         </nav>
         <div className="ops-nav-bottom">
-          <p>{user.name}</p>
-          <small>Dữ liệu minh họa</small>
+          <div className="ops-account"><span className="ops-avatar" aria-hidden="true">{user.name.split(" ").map(word => word[0]).slice(-2).join("")}</span><div><p>{user.name}</p><small>{role === "host" ? "Chủ Studio" : "Quản trị viên"}</small></div></div>
           <Link href="/rooms">
             Xem marketplace <ArrowUpRight size={14} />
           </Link>
         </div>
       </aside>
-      <main id="main-content" className="ops-main" tabIndex={-1}><MotionSurface operational>
+      <main id="main-content" className="ops-main" tabIndex={-1}>
+        <div className="ops-workspace-bar">
+          <button type="button" className="icon-button ops-menu-toggle" aria-label="Mở điều hướng" aria-expanded={menu} aria-controls="workspace-mobile-nav" onClick={() => setMenu(true)}><Menu size={21} aria-hidden="true" /></button>
+          <div className="ops-breadcrumb"><Link href={`/${role}`}>{role === "host" ? "Không gian làm việc" : "Quản trị hệ thống"}</Link><ChevronRight size={13} aria-hidden="true" /><strong>{(role === "host" ? hostLinks : adminLinks).find(([key]) => key === path)?.[1] ?? "Chi tiết đơn"}</strong></div>
+          <div className="ops-workspace-context"><span className="dashboard-tag">Dữ liệu minh họa</span><time dateTime={localDate(state.now)}>{new Date(state.now).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" })}</time>
+            <details className="ops-account-menu" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+              <summary aria-label={`Tài khoản ${user.name}`}><span className="ops-avatar" aria-hidden="true">{user.name.split(" ").at(-1)?.slice(0, 1)}</span><span className="ops-account-name">{user.name.split(" ").at(-1)}</span><ChevronDown size={13} aria-hidden="true" /></summary>
+              <div className="ops-account-popover"><strong>{user.name}</strong><Link href="/profile"><UserRound size={16} aria-hidden="true" /> Hồ sơ</Link><Link href="/rooms"><ArrowUpRight size={16} aria-hidden="true" /> Xem marketplace</Link><button type="button" onClick={logout}><LogOut size={16} aria-hidden="true" /> Đăng xuất</button></div>
+            </details>
+          </div>
+        </div>
+        <MotionSurface operational>
         {segments[0] === "bookings" && segments[1] ? (
           <BookingDetail id={segments[1]} />
         ) : role === "host" ? (
@@ -138,6 +175,12 @@ export function Operations({
           <AdminSurface path={path} />
         )}
       </MotionSurface></main>
+      <Presence>{menu && <Modal title="Điều hướng StudioHub" onClose={() => setMenu(false)} className="navigation-drawer ops-navigation-drawer">
+        <nav id="workspace-mobile-nav" className="ops-drawer-links" aria-label="Điều hướng di động" onClick={event => { if ((event.target as HTMLElement).closest("a")) setMenu(false); }}>
+          {links.map(([key, label]) => <Link key={key} href={`/${role}${key ? "/" + key : ""}`} aria-current={path === key ? "page" : undefined}><NavigationIcon path={key} /><span>{label}</span></Link>)}
+        </nav>
+        <div className="ops-drawer-account"><strong>{user.name}</strong><Link href="/profile" onClick={() => setMenu(false)}>Hồ sơ</Link><Link href="/rooms" onClick={() => setMenu(false)}>Xem marketplace</Link><button type="button" className="text-button" onClick={() => { setMenu(false); logout(); }}>Đăng xuất</button></div>
+      </Modal>}</Presence>
     </div>
   );
 }
@@ -177,8 +220,8 @@ function HostSurface({ path }: { path: string }) {
 }
 function HostOverview() {
   const { state } = useStore(),
-    { studios, bookings } = useHostData();
-  const pending = bookings.filter((b) => b.status === "pending"),
+    { studios, bookings, rooms } = useHostData();
+  const pending = bookings.filter((b) => b.status === "pending").sort((a, b) => (a.paidAt ?? Infinity) - (b.paidAt ?? Infinity)),
     today = bookings.filter(
       (b) =>
         localDate(b.start) === localDate(state.now) &&
@@ -196,22 +239,19 @@ function HostOverview() {
   return (
     <>
       <PageHeading
-        title="Một ngày sáng tạo mới."
+        title="Tổng quan Studio"
         description={`${new Date(state.now).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", weekday: "long", day: "numeric", month: "long" })} · ${studios[0].name}`}
         action={
           <Link className="btn secondary" href="/host/calendar">
-            Xem lịch phòng
+            Xem lịch đặt phòng
             <ArrowRight size={16} />
           </Link>
         }
       />
-      <div className="metrics">
-        {[
-          ["Chờ xác nhận", String(pending.length)],
-          ["Ca thuê hôm nay", String(today.length)],
-          [
-            "Đã thu trong tháng",
-            money(
+      <DashboardKpis>
+        <DashboardKpi label="Chờ xác nhận" value={pending.length} hint="Ưu tiên phản hồi trong 2 giờ" icon={Clock3} accent="yellow" href="/host/bookings" />
+        <DashboardKpi label="Ca thuê hôm nay" value={today.length} hint="Đã xác nhận & đang sử dụng" icon={CalendarDays} accent="blue" href="/host/calendar" />
+        <DashboardKpi label="Đã thu trong tháng" value={money(
               bookings
                 .filter(
                   (b) =>
@@ -226,32 +266,20 @@ function HostOverview() {
                     (b.refund.status === "refunded" ? b.refund.amount : 0),
                   0,
                 ),
-            ),
-          ],
-          [
-            "Công nợ đã sử dụng",
-            money(
+            )} hint="Theo tháng thuê · đã trừ hoàn" icon={Wallet} accent="mint" href="/host/reports" />
+        <DashboardKpi label="Công nợ đã sử dụng" value={money(
               bookings
                 .filter((b) => ["completed", "checked_in"].includes(b.status))
                 .reduce((s, b) => s + balance(b), 0),
-            ),
-          ],
-        ].map(([l, v]) => (
-          <div key={l}>
-            <span className="muted">{l}</span>
-            <strong>{v}</strong>
-          </div>
-        ))}
-      </div>
+            )} hint="Ca đang dùng hoặc đã hoàn thành" icon={CircleDollarSign} accent="coral" href="/host/reports" />
+      </DashboardKpis>
       <div className="ops-columns">
-        <section>
-          <div className="section-head compact">
-            <h2>Cần bạn xác nhận</h2>
+        <DashboardPanel title="Cần bạn xác nhận" eyebrow={`${pending.length} đơn cần phản hồi`} action={
             <Link className="text-link" href="/host/bookings">
               Tất cả đơn
               <ArrowRight size={15} />
             </Link>
-          </div>
+          }>
           {pending.map((b) => (
             <Link
               className="task-row"
@@ -260,63 +288,26 @@ function HostOverview() {
             >
               <div>
                 <span className="mono">{b.id}</span>
+                <span className={`status ${b.status}`} data-booking-status={b.status}>{statusLabel[b.status]}</span>
                 <h3>
-                  {b.roomId.toUpperCase()} ·{" "}
+                  {rooms.find(room => room.id === b.roomId)?.code ?? b.roomId} ·{" "}
                   {state.users.find((u) => u.id === b.customerId)?.name}
                 </h3>
                 <small>
                   {dateTime(b.start)} — {dateTime(b.end)}
                 </small>
               </div>
-              <div>
-                <small>Phản hồi trước</small>
-                <strong className="mono">
-                  {dateTime((b.paidAt ?? 0) + 2 * HOUR)}
-                </strong>
-              </div>
+              <HostDeadline booking={b} now={state.now} />
               <ArrowUpRight size={18} />
             </Link>
           ))}
           {!pending.length && (
-            <p className="muted">Bạn đã xử lý hết đơn chờ duyệt.</p>
+            <p className="dashboard-empty">Bạn đã xử lý hết đơn chờ duyệt.</p>
           )}
-          <h2 className="subheading">Ca thuê hôm nay</h2>
-          {today.map((b) => (
-            <Link
-              className="task-row"
-              href={`/host/bookings/${b.id}`}
-              key={b.id}
-            >
-              <div>
-                <h3>
-                  {b.roomId.toUpperCase()} · {statusLabel[b.status]}
-                </h3>
-                <span>
-                  {dateTime(b.start)} — {dateTime(b.end)}
-                </span>
-              </div>
-              <ArrowRight size={18} />
-            </Link>
-          ))}
-          {!today.length && <p className="muted">Hôm nay chưa có ca thuê.</p>}
-        </section>
-        <section className="note">
-          <h3>Việc vận hành cần nhớ</h3>
-          <p>
-            Phản hồi trong 2 giờ từ khi nhận cọc. Quá hạn, đơn tự hủy và hoàn
-            100% cọc.
-          </p>
-          <p>
-            Check-in và trả phòng được xác nhận thủ công. Đơn đã trả có thể còn
-            công nợ.
-          </p>
-          <Link className="text-link" href="/host/settings">
-            Xem chính sách Studio
-            <ArrowRight size={15} />
-          </Link>
-        </section>
+        </DashboardPanel>
+        <UpcomingAgenda bookings={bookings} now={state.now} rooms={rooms} />
       </div>
-      <Calendar compact />
+      <BookingAnalytics bookings={bookings} now={state.now} />
     </>
   );
 }
@@ -325,7 +316,6 @@ function Kanban() {
     { bookings } = useHostData();
   const [history, setHistory] = useState(false),
     [query, setQuery] = useState("");
-  const boardRef = useContentMotion(`${history}|${query}|${bookings.map(b=>`${b.id}:${b.status}`).join()}`);
   const statuses = history
     ? (["awaiting_payment", "cancelled", "expired", "no_show"] as const)
     : (["pending", "confirmed", "checked_in", "completed"] as const);
@@ -348,12 +338,12 @@ function Kanban() {
           {history ? "Xem đơn đang vận hành" : "Chờ cọc & lịch sử"}
         </button>
       </div>
-      <div ref={boardRef} className="kanban">
+      <div className="kanban">
         {statuses.map((status) => (
-          <section className="kanban-column" key={status}>
+          <section className="kanban-column" data-status={status} key={status}>
             <h3>
               {statusLabel[status]}
-              <span>{bookings.filter((b) => b.status === status).length}</span>
+              <span>{bookings.filter((b) => b.status === status && (b.id + b.roomId).toLowerCase().includes(query.toLowerCase())).length}</span>
             </h3>
             {bookings
               .filter(
@@ -367,21 +357,18 @@ function Kanban() {
                   key={b.id}
                   href={`/host/bookings/${b.id}`}
                 >
-                  <span className="mono muted">{b.id}</span>
+                  <span className="mono muted kanban-reference">{b.id}</span>
                   <h3>
-                    {b.roomId.toUpperCase()} ·{" "}
+                    {state.rooms.find((r) => r.id === b.roomId)?.code ?? b.roomId} ·{" "}
                     {state.rooms.find((r) => r.id === b.roomId)?.name}
                   </h3>
-                  <p>{state.users.find((u) => u.id === b.customerId)?.name}</p>
-                  <p className="mono small-text">
-                    {dateTime(b.start)}
-                    <br />
-                    {dateTime(b.end)}
-                  </p>
+                  <p className="kanban-customer">{state.users.find((u) => u.id === b.customerId)?.name}</p>
+                  <p className="kanban-rental-time">{bookingRentalTime(b.start, b.end)}</p>
                   <div className="line-item">
-                    <span>Cọc</span>
+                    <span>{b.payment === "paid" ? "Cọc đã nhận" : b.payment === "processing" ? "Cọc đang xử lý" : "Cọc yêu cầu"}</span>
                     <strong>{money(b.deposit)}</strong>
                   </div>
+                  {b.status === "pending" && <HostDeadline booking={b} now={state.now} />}
                   {b.status === "completed" && balance(b) > 0 && (
                     <small className="warning">
                       Còn phải thu {money(balance(b))}
@@ -389,7 +376,7 @@ function Kanban() {
                   )}
                 </Link>
               ))}
-            {!bookings.some((b) => b.status === status) && (
+            {!bookings.some((b) => b.status === status && (b.id + b.roomId).toLowerCase().includes(query.toLowerCase())) && (
               <p className="muted small-text">Chưa có đơn</p>
             )}
           </section>
@@ -398,199 +385,10 @@ function Kanban() {
     </>
   );
 }
-function Calendar({ compact = false }: { compact?: boolean }) {
-  const { state } = useStore(),
-    { rooms, bookings, types } = useHostData();
-  const [view, setView] = useState("week"),
-    [date, setDate] = useState(localDate(state.now)),
-    [room, setRoom] = useState(rooms[0]?.id ?? ""),
-    [status, setStatus] = useState("all"),
-    [typeId, setTypeId] = useState("");
-  const gridRef = useContentMotion<HTMLDivElement>(`${view}|${date}|${room}|${status}|${typeId}`);
-  const day = atDate(date, 0),
-    dow = (new Date(day + 7 * HOUR).getUTCDay() + 6) % 7;
-  const columns =
-    view === "week"
-      ? Array.from({ length: 7 }, (_, i) => ({
-          key: String(i),
-          title: new Date(day + (i - dow) * 24 * HOUR).toLocaleDateString(
-            "vi-VN",
-            {
-              timeZone: "Asia/Ho_Chi_Minh",
-              weekday: "short",
-              day: "2-digit",
-              month: "2-digit",
-            },
-          ),
-          start: day + (i - dow) * 24 * HOUR,
-          roomId: room,
-        }))
-      : rooms
-          .filter((r) => !typeId || r.typeId === typeId)
-          .map((r) => ({
-            key: r.id,
-            title: r.code,
-            start: day,
-            roomId: r.id,
-          }));
-  return (
-    <section className={compact ? "calendar-preview" : ""}>
-      {!compact && (
-        <PageHeading
-          title="Lịch đặt phòng"
-          description="Thời gian thực tế của từng phòng · vùng gạch là 30 phút chuẩn bị."
-        />
-      )}
-      <div className="toolbar">
-        <div className="actions">
-          <label>
-            <span className="sr-only">Loại phòng</span>
-            <select
-              value={typeId}
-              onChange={(e) => {
-                setTypeId(e.target.value);
-                const first = rooms.find(
-                  (r) => !e.target.value || r.typeId === e.target.value,
-                );
-                if (first) setRoom(first.id);
-              }}
-            >
-              <option value="">Mọi loại phòng</option>
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            aria-label="Kỳ trước"
-            className="icon-button"
-            onClick={() =>
-              setDate(localDate(day - (view === "week" ? 7 : 1) * 24 * HOUR))
-            }
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <label>
-            <span className="sr-only">Ngày xem lịch</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </label>
-          <button
-            aria-label="Kỳ tiếp"
-            className="icon-button"
-            onClick={() =>
-              setDate(localDate(day + (view === "week" ? 7 : 1) * 24 * HOUR))
-            }
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-        <div className="actions">
-          <label>
-            <span className="sr-only">Chế độ lịch</span>
-            <select value={view} onChange={(e) => setView(e.target.value)}>
-              <option value="week">Tuần</option>
-              <option value="day">Ngày</option>
-            </select>
-          </label>
-          {view === "week" && (
-            <label>
-              <span className="sr-only">Phòng</span>
-              <select value={room} onChange={(e) => setRoom(e.target.value)}>
-                {rooms
-                  .filter((r) => !typeId || r.typeId === typeId)
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.code} · {r.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          )}
-          <label>
-            <span className="sr-only">Trạng thái đơn</span>
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="all">Mọi trạng thái giữ chỗ</option>
-              {activeStatuses.map((s) => (
-                <option key={s} value={s}>
-                  {statusLabel[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
-      <div className="table-scroll">
-        <div
-          ref={gridRef}
-          className="timetable"
-          style={{
-            minWidth: Math.max(750, columns.length * 130),
-            gridTemplateColumns: `56px repeat(${columns.length}, 1fr)`,
-          }}
-        >
-          <div className="time-axis">
-            <div className="calendar-column-title">Giờ</div>
-            {Array.from({ length: 15 }, (_, i) => (
-              <span key={i} style={{ top: 42 + i * 48 }}>
-                {String(i + 8).padStart(2, "0")}:00
-              </span>
-            ))}
-          </div>
-          {columns.map((c) => (
-            <div className="calendar-day" key={c.key}>
-              <div className="calendar-column-title">{c.title}</div>
-              <div className="calendar-hours">
-                {Array.from({ length: 14 }, (_, i) => (
-                  <div className="calendar-hour" key={i} />
-                ))}
-                {bookings
-                  .filter(
-                    (b) =>
-                      b.roomId === c.roomId &&
-                      localDate(b.start) === localDate(c.start) &&
-                      activeStatuses.includes(b.status) &&
-                      (status === "all" || status === b.status),
-                  )
-                  .map((b) => (
-                    <Link
-                      key={b.id}
-                      href={`/host/bookings/${b.id}`}
-                      className={`calendar-event ${b.status}`}
-                      style={{
-                        top: ((b.start - (c.start + 8 * HOUR)) / HOUR) * 48,
-                        height: ((b.end - b.start) / HOUR) * 48,
-                      }}
-                    >
-                      <strong>{b.roomId.toUpperCase()}</strong>
-                      <small>
-                        {new Date(b.start).toLocaleTimeString("vi-VN", {
-                          timeZone: "Asia/Ho_Chi_Minh",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                        —
-                        {new Date(b.end).toLocaleTimeString("vi-VN", {
-                          timeZone: "Asia/Ho_Chi_Minh",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </small>
-                      <span className="calendar-buffer" />
-                    </Link>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+function Calendar() {
+  const { state } = useStore();
+  const { rooms, types, bookings } = useHostData();
+  return <HostCalendar state={state} rooms={rooms} types={types} bookings={bookings} />;
 }
 function StudioManagement() {
   const { studios } = useHostData(),
@@ -785,6 +583,7 @@ function RoomManagement({ admin = false }: { admin?: boolean }) {
                     width={1400}
                     height={1000}
                     src={r.images[0]}
+                    sizes={admin ? undefined : "108px"}
                     alt={`Phòng ${r.code}`}
                   />
                   <div>
@@ -1094,7 +893,7 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
                   <td>{e.category}</td>
                   <td className="mono">{e.quantity}</td>
                   <td className="mono">{money(e.hourlyRate)}</td>
-                  <td>{e.active ? "Đang cho thuê" : "Tạm ngưng"}</td>
+                  <td><span className={`status ${e.active ? "confirmed" : "pending"}`}>{e.active ? "Đang cho thuê" : "Tạm ngưng"}</span></td>
                   <td>
                     {admin ? (
                       state.studios.find((s) => s.id === e.studioId)?.name
@@ -1192,84 +991,8 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
   );
 }
 function Rates() {
-  const { types } = useHostData(),
-    { dispatch, notice } = useStore();
-  return (
-    <>
-      <PageHeading
-        title="Bảng giá thuê"
-        description="Giá mặc định theo loại phòng; giá riêng của phòng được cấu hình tại quản lý phòng. Gói minh họa tính theo số giờ, không tự thêm chiết khấu."
-      />
-      {types.map((t) => (
-        <div key={t.id}>
-          {!t.rentalPlans && <RateForm
-            type={t}
-            save={(rate, plans) => {
-              if (dispatch({ type: "rate", id: t.id, hourlyRate: rate, plans }))
-                notice("Đã cập nhật bảng giá cho các đơn mới.");
-            }}
-          />}
-          <RentalPackageManager typeId={t.id} />
-          <FeaturedPricingManager typeId={t.id} />
-        </div>
-      ))}
-    </>
-  );
-}
-function RateForm({
-  type,
-  save,
-}: {
-  type: RoomType;
-  save: (rate: number, plans: Plan[]) => void;
-}) {
-  const [rate, setRate] = useState(type.hourlyRate),
-    [plans, setPlans] = useState(type.plans);
-  return (
-    <form
-      className="rate-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        save(rate, plans);
-      }}
-    >
-      <div>
-        <h2>{type.name}</h2>
-        <label>
-          Đơn giá theo giờ (VND)
-          <input
-            required
-            type="number"
-            min="1"
-            value={rate}
-            onChange={(e) => setRate(+e.target.value)}
-          />
-        </label>
-      </div>
-      <fieldset>
-        <legend>Gói cho phép</legend>
-        <div className="plan-checks">
-          {(Object.keys(planLabel) as Plan[]).map((p) => (
-            <label className="checkbox-label" key={p}>
-              <input
-                type="checkbox"
-                checked={plans.includes(p)}
-                onChange={(e) =>
-                  setPlans(
-                    e.target.checked
-                      ? [...plans, p]
-                      : plans.filter((x) => x !== p),
-                  )
-                }
-              />
-              {planLabel[p]}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <button className="btn secondary">Lưu bảng giá</button>
-    </form>
-  );
+  const { types } = useHostData();
+  return <HostPricing types={types} />;
 }
 function PolicySettings() {
   const { studios } = useHostData();
@@ -1443,14 +1166,15 @@ function PolicyForm({ studio }: { studio: Studio }) {
   );
 }
 function Reports() {
-  const { bookings } = useHostData();
+  const { bookings, rooms } = useHostData();
+  const { state } = useStore();
   return (
     <>
       <PageHeading
         title="Hoạt động & công nợ"
         description="Số liệu tính từ cùng bộ đơn minh họa. Cọc, khoản thu và hoàn tiền được ghi nhận riêng."
       />
-      <div className="metrics">
+      <DashboardKpis>
         {[
           [
             "Tiền cọc đã nhận",
@@ -1477,14 +1201,16 @@ function Reports() {
               .filter((b) => ["completed", "checked_in"].includes(b.status))
               .reduce((s, b) => s + balance(b), 0),
           ],
-        ].map(([l, v]) => (
-          <div key={l}>
-            <span className="muted">{l}</span>
-            <strong>{money(Number(v))}</strong>
-          </div>
+        ].map(([l, v], index) => (
+          <DashboardKpi key={l} label={String(l)} value={money(Number(v))}
+            icon={[Wallet, CircleDollarSign, RotateCcw, CircleDollarSign][index]}
+            accent={(["cyan", "blue", "lilac", "yellow"] as const)[index]}
+            hint={["Khoản cọc của đơn đã thanh toán", "Các khoản thu bổ sung đã ghi nhận", "Khoản hoàn đã thực hiện", "Ca đang dùng hoặc đã hoàn thành"][index]} />
         ))}
-      </div>
-      <h2>Đối soát theo đơn</h2>
+      </DashboardKpis>
+      <BookingAnalytics bookings={bookings} now={state.now} />
+      <RoomPopularity state={state} rooms={rooms} />
+      <h2 id="host-reconciliation">Đối soát theo đơn</h2>
       <div className="table-scroll">
         <table>
           <thead>
@@ -1510,7 +1236,7 @@ function Reports() {
                   <Link href={`/host/bookings/${b.id}`}>{b.id}</Link>
                 </td>
                 <td>{b.roomId.toUpperCase()}</td>
-                <td>{statusLabel[b.status]}</td>
+                <td><span className="status" data-booking-status={b.status}>{statusLabel[b.status]}</span></td>
                 <td>{money(b.total)}</td>
                 <td>{money(b.payment === "paid" ? b.deposit : 0)}</td>
                 <td>
@@ -1595,28 +1321,14 @@ function AdminOverview() {
         title="Tổng quan hệ thống"
         description="Giám sát vận hành, đối tác và các trường hợp cần xử lý · Dữ liệu minh họa."
       />
-      <div className="metrics">
-        {[
-          ["Tài khoản", state.users.length],
-          ["Studio", state.studios.length],
-          [
-            "Hồ sơ chờ duyệt",
-            state.applications.filter((a) => a.status === "pending").length,
-          ],
-          [
-            "Tạm ngưng đặt thuê",
-            state.users.filter((u) => u.restricted).length,
-          ],
-        ].map(([l, v]) => (
-          <div key={l}>
-            <span className="muted">{l}</span>
-            <strong>{v}</strong>
-          </div>
-        ))}
-      </div>
+      <DashboardKpis>
+        <DashboardKpi label="Hồ sơ chờ duyệt" value={state.applications.filter(a => a.status === "pending").length} hint="Kiểm tra hồ sơ trước khi cấp quyền" icon={UserCheck} accent="yellow" href="/admin/host-requests" />
+        <DashboardKpi label="Studio" value={state.studios.length} hint={`${state.studios.filter(s => s.active).length} cơ sở đang hoạt động`} icon={Building2} accent="blue" href="/admin/studios" />
+        <DashboardKpi label="Tài khoản" value={state.users.length} hint="Khách hàng, chủ Studio & quản trị" icon={Users} accent="lilac" href="/admin/users" />
+        <DashboardKpi label="Tạm ngưng đặt thuê" value={state.users.filter(u => u.restricted).length} hint="Quản lý riêng với khóa đăng nhập" icon={ShieldCheck} accent="coral" href="/admin/users" />
+      </DashboardKpis>
       <div className="ops-columns">
-        <section>
-          <h2>Cần xem xét</h2>
+        <DashboardPanel title="Cần xem xét" eyebrow="Hàng đợi quản trị">
           <Link className="task-row" href="/admin/host-requests">
             <div>
               <h3>Hồ sơ đối tác</h3>
@@ -1644,9 +1356,8 @@ function AdminOverview() {
             </div>
             <ArrowUpRight size={20} />
           </Link>
-        </section>
-        <section>
-          <h2>Đơn đặt thuê toàn hệ thống</h2>
+        </DashboardPanel>
+        <DashboardPanel title="Đơn đặt thuê toàn hệ thống" eyebrow={`${state.bookings.length} đơn trong dữ liệu minh họa`}>
           {state.bookings.map((b) => (
             <Link
               className="task-row"
@@ -1656,14 +1367,19 @@ function AdminOverview() {
               <div>
                 <span className="mono">{b.id}</span>
                 <p>
-                  {b.roomId.toUpperCase()} · {statusLabel[b.status]}
+                  {state.rooms.find(room => room.id === b.roomId)?.code ?? b.roomId} · <span className="status" data-booking-status={b.status}>{statusLabel[b.status]}</span>
                 </p>
               </div>
               <ArrowRight size={18} />
             </Link>
           ))}
-        </section>
+        </DashboardPanel>
       </div>
+      <BookingAnalytics bookings={state.bookings} now={state.now} />
+      <DashboardPanel title="Hoạt động gần đây" eyebrow="Nhật ký chỉ đọc" action={<Link className="text-link" href="/admin/audit-logs">Xem nhật ký <ArrowRight size={15} /></Link>}>
+        {state.audit.slice(-4).reverse().map(event => <div key={event.id} className="dashboard-audit-row"><time className="mono" dateTime={new Date(event.at).toISOString()}>{dateTime(event.at)}</time><strong>{event.action}</strong><span>{state.users.find(user => user.id === event.actorId)?.name ?? "Hệ thống"}</span><span className="mono muted">{event.target}</span></div>)}
+        {!state.audit.length && <p className="dashboard-empty">Chưa có hoạt động được ghi nhận.</p>}
+      </DashboardPanel>
     </>
   );
 }
@@ -1740,14 +1456,14 @@ function HostApprovals() {
                   <button
                     className="btn secondary"
                     disabled={!reason.trim()}
-                    onClick={() =>
-                      dispatch({
+                    onClick={() => {
+                      if (window.confirm(`Từ chối hồ sơ ${app.studioName}?`)) dispatch({
                         type: "review_application",
                         id: app.id,
                         approved: false,
                         reason,
-                      })
-                    }
+                      });
+                    }}
                   >
                     Từ chối hồ sơ
                   </button>
@@ -1864,8 +1580,8 @@ function UsersTable() {
                     <small>{u.email}</small>
                   </td>
                   <td>{u.role}</td>
-                  <td>{u.restricted ? "Tạm ngưng" : "Được phép"}</td>
-                  <td>{u.locked ? "Đã khóa" : "Hoạt động"}</td>
+                  <td><span className={`status ${u.restricted ? "pending" : "confirmed"}`}>{u.restricted ? "Tạm ngưng" : "Được phép"}</span></td>
+                  <td><span className={`status ${u.locked ? "cancelled" : "confirmed"}`}>{u.locked ? "Đã khóa" : "Hoạt động"}</span></td>
                   <td className="mono">
                     {u.strikes.filter((s) => s.active).length} / 3{" "}
                     <small>{u.strikes.length} trong lịch sử</small>
