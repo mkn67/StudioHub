@@ -1,0 +1,76 @@
+{
+  "info": {
+    "_postman_id": "7a483a8a-344d-45b7-89e4-1a73980db203",
+    "name": "Studio Rental API",
+    "description": "API smoke collection. Set base_url and token in the environment. Seed IDs: room 1, rate 1, studio 1, customer account from server/README.md. Requests that create data should use a disposable development database.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:8000"},
+    {"key": "token", "value": ""},
+    {"key": "room_id", "value": "1"},
+    {"key": "rate_id", "value": "1"},
+    {"key": "booking_id", "value": "1"},
+    {"key": "studio_id", "value": "1"}
+  ],
+  "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+  "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+    "pm.test('Response is JSON API envelope', function () {",
+    "  const body = pm.response.json();",
+    "  pm.expect(body).to.have.property('status');",
+    "  pm.expect(body).to.have.property('code');",
+    "  pm.expect(body).to.have.property('message');",
+    "  if (body.status === 'success') pm.expect(body).to.have.property('data');",
+    "  if (body.status === 'error') pm.expect(body.errors).to.be.an('array');",
+    "});"
+  ]}}],
+  "item": [
+    {"name":"Health and authentication","item":[
+      {"name":"Health check","request":{"method":"GET","url":"{{base_url}}/api/health"}},
+      {"name":"Register customer (use a new email)","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"email\":\"smoke-{{$timestamp}}@example.test\",\"password\":\"password123\",\"full_name\":\"API Smoke User\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/auth/register"}},
+      {"name":"Login (save data.token as environment token)","event":[{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Login succeeds', function () { pm.response.to.have.status(200); });","if (pm.response.code === 200) pm.environment.set('token', pm.response.json().data.token);"]}}],"request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"email\":\"customer@studio.local\",\"password\":\"password123\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/auth/login"}},
+      {"name":"Get profile","request":{"method":"GET","url":"{{base_url}}/api/auth/profile"}},
+      {"name":"Update profile","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"full_name\":\"Smoke Customer\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/auth/profile"}},
+      {"name":"Logout","request":{"method":"POST","url":"{{base_url}}/api/auth/logout"}}
+    ]},
+    {"name":"Public catalog","item":[
+      {"name":"Search rooms","request":{"method":"GET","url":"{{base_url}}/api/rooms?rate_unit=hour&page=1&limit=12"}},
+      {"name":"Room details","request":{"method":"GET","url":"{{base_url}}/api/rooms/{{room_id}}"}},
+      {"name":"Room calendar","request":{"method":"GET","url":"{{base_url}}/api/rooms/{{room_id}}/calendar"}},
+      {"name":"Room rates","request":{"method":"GET","url":"{{base_url}}/api/rooms/{{room_id}}/rates"}},
+      {"name":"Studio equipment","request":{"method":"GET","url":"{{base_url}}/api/equipments?studio_id={{studio_id}}"}},
+      {"name":"Space types","request":{"method":"GET","url":"{{base_url}}/api/space-types"}},
+      {"name":"Amenities","request":{"method":"GET","url":"{{base_url}}/api/amenities"}},
+      {"name":"Check availability","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"room_id\":{{room_id}},\"rate_id\":{{rate_id}},\"start_time\":\"2027-06-10 09:00:00\",\"end_time\":\"2027-06-10 11:00:00\",\"party_size\":2}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/bookings/check-availability"}}
+    ]},
+    {"name":"Host management (host token required; create/update requests are examples)","item":[
+      {"name":"My studios","request":{"method":"GET","url":"{{base_url}}/api/studios/mine"}},
+      {"name":"Create studio","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"name\":\"Smoke Studio\",\"address\":\"Development\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/studios"}},
+      {"name":"Update studio","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"name\":\"Updated Studio\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/studios/{{studio_id}}"}},
+      {"name":"Equipment categories","request":{"method":"GET","url":"{{base_url}}/api/equipment-categories?studio_id={{studio_id}}"}},
+      {"name":"Create equipment category","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studio_id\":{{studio_id}},\"name\":\"Smoke category\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/equipment-categories"}},
+      {"name":"Create room","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studio_id\":{{studio_id}},\"name\":\"Smoke Room\",\"area\":30,\"capacity\":4,\"space_type_ids\":[1],\"amenity_ids\":[]}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/rooms"}},
+      {"name":"Update room","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"status\":\"active\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/rooms/{{room_id}}"}},
+      {"name":"Create room rate","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"rate_unit\":\"hour\",\"unit_price\":350000,\"minimum_units\":1,\"maximum_units\":12,\"effective_from\":\"2026-01-01\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/rooms/{{room_id}}/rates"}},
+      {"name":"Update room rate","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"status\":\"inactive\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/rooms/{{room_id}}/rates/{{rate_id}}"}},
+      {"name":"Upload room image","request":{"method":"POST","body":{"mode":"formdata","formdata":[{"key":"image","type":"file","src":""},{"key":"is_primary","value":"false","type":"text"}]},"url":"{{base_url}}/api/rooms/{{room_id}}/images"}},
+      {"name":"Create equipment","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studio_id\":{{studio_id}},\"name\":\"Smoke equipment\",\"total_quantity\":2,\"pricing_unit\":\"hour\",\"unit_price\":50000}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/equipments"}},
+      {"name":"Update equipment","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"status\":\"active\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/equipments/1"}}
+    ]},
+    {"name":"Bookings and payments","item":[
+      {"name":"Create booking","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"room_id\":{{room_id}},\"rate_id\":{{rate_id}},\"start_time\":\"2027-06-11 09:00:00\",\"end_time\":\"2027-06-11 11:00:00\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/bookings"}},
+      {"name":"List my bookings","request":{"method":"GET","url":"{{base_url}}/api/bookings?page=1&limit=12"}},
+      {"name":"Booking detail","request":{"method":"GET","url":"{{base_url}}/api/bookings/{{booking_id}}"}},
+      {"name":"Host update booking status","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"status\":\"confirmed\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/bookings/{{booking_id}}/status"}},
+      {"name":"Cancel own booking","request":{"method":"POST","url":"{{base_url}}/api/bookings/{{booking_id}}/cancel"}},
+      {"name":"Pay booking deposit","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"payment_type\":\"deposit\",\"payment_method\":\"sandbox_qr\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/bookings/{{booking_id}}/payments"}}
+    ]},
+    {"name":"Administration and statistics (admin token required)","item":[
+      {"name":"List users","request":{"method":"GET","url":"{{base_url}}/api/admin/users?page=1&limit=12"}},
+      {"name":"Update user status","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"status\":\"locked\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/admin/users/2/status"}},
+      {"name":"Update user role","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"role\":\"host\"}","options":{"raw":{"language":"json"}}},"url":"{{base_url}}/api/admin/users/4/role"}},
+      {"name":"Admin statistics","request":{"method":"GET","url":"{{base_url}}/api/admin/statistics?from=2026-10-01&to=2026-11-01"}},
+      {"name":"Host statistics","request":{"method":"GET","url":"{{base_url}}/api/host/statistics?from=2026-10-01&to=2026-11-01"}}
+    ]}
+  ]
+}

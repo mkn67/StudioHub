@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/vendor/autoload.php';
+
 /**
  * Phase 6 Integration Test Suite
  * Covers check-availability, booking creation, pricing, buffering, stock peak usage,
  * and scenarios T3, T4, T10, T11, T14, T18, T23, T25, T27.
  */
 
-$baseUrl = 'http://localhost:80'; // Inside docker container
+$baseUrl = getenv('API_BASE_URL') ?: 'http://localhost:80';
 $passed = 0;
 $failed = 0;
 
@@ -90,6 +92,18 @@ $resPublicCheck = makeRequest('POST', '/api/bookings/check-availability', [
     'end_time'   => '2026-11-20 12:00:00',
 ]);
 assertTest($resPublicCheck['code'] === 200, "POST /api/bookings/check-availability works publicly without auth (HTTP 200)");
+$availabilityCountBefore = (int) \App\Core\Db::getConnection()->query('SELECT COUNT(*) FROM bookings')->fetchColumn();
+$resPublicCheckAgain = makeRequest('POST', '/api/bookings/check-availability', [
+    'room_id' => 1,
+    'rate_id' => 1,
+    'start_time' => '2026-11-22 09:00:00',
+    'end_time' => '2026-11-22 11:00:00',
+]);
+$availabilityCountAfter = (int) \App\Core\Db::getConnection()->query('SELECT COUNT(*) FROM bookings')->fetchColumn();
+assertTest(
+    $resPublicCheckAgain['code'] === 200 && $availabilityCountAfter === $availabilityCountBefore,
+    'T23: availability evaluation succeeds without adding a booking row'
+);
 
 // --- 3. T23: check-availability does not modify DB & enforces party_size ---
 echo "\n--- 3. T23: check-availability ---\n";
@@ -164,6 +178,29 @@ assertTest($bData['status'] === 'pending', "Booking status is 'pending'");
 assertTest(!empty($bData['expires_at']), "T25: pending booking has expires_at set ({$bData['expires_at']})");
 assertTest($bData['total_amount'] === 1210000, "Total amount is 350k*3 + 160k = 1,210,000 VND");
 assertTest($bData['deposit_amount'] === 363000, "Deposit amount (30%) is 363,000 VND");
+
+// T25: a pending hold whose expires_at has passed no longer blocks availability.
+$expireHold = \App\Core\Db::getConnection()->prepare(
+    "UPDATE bookings SET expires_at = DATE_SUB(NOW(), INTERVAL 1 MINUTE) WHERE booking_id = ?"
+);
+$resStaleHold = makeRequest('POST', '/api/bookings', [
+    'room_id' => 1,
+    'rate_id' => 1,
+    'start_time' => '2026-11-03 09:00:00',
+    'end_time' => '2026-11-03 12:00:00',
+], $customerToken);
+$staleBookingId = (int) ($resStaleHold['data']['data']['booking_id'] ?? 0);
+$expireHold->execute([$staleBookingId]);
+$resExpiredHoldAvailability = makeRequest('POST', '/api/bookings/check-availability', [
+    'room_id' => 1,
+    'rate_id' => 1,
+    'start_time' => '2026-11-03 09:00:00',
+    'end_time' => '2026-11-03 12:00:00',
+]);
+assertTest(
+    $resStaleHold['code'] === 201 && $resExpiredHoldAvailability['code'] === 200,
+    'T25: pending booking past expires_at no longer blocks check-availability'
+);
 
 // --- 6. T3 & T4: Schedule Overlap & Buffer (Section 5.1) ---
 echo "\n--- 6. T3 & T4: Buffer & Overlap Rules ---\n";
@@ -284,6 +321,22 @@ $resPromoValid = makeRequest('POST', '/api/bookings', [
     'end_time'   => '2026-11-19 12:00:00',
 ], $customerToken);
 assertTest($resPromoValid['code'] === 201, "T27: Booking starting on 2026-11-19 accepted with 201");
+$promoBookingId = (int) ($resPromoValid['data']['data']['booking_id'] ?? 0);
+$promoSnapshot = $resPromoValid['data']['data'] ?? [];
+
+$resPromoUpdate = makeRequest('PATCH', "/api/rooms/2/rates/{$promoRateId}", [
+    'unit_price' => 300000,
+    'status' => 'inactive',
+], $hostToken);
+$resPromoBookingDetail = makeRequest('GET', "/api/bookings/{$promoBookingId}", null, $customerToken);
+$promoDetail = $resPromoBookingDetail['data']['data'] ?? [];
+assertTest($resPromoUpdate['code'] === 200, "T27: Host changed and deactivated the rate after booking");
+assertTest(
+    $resPromoBookingDetail['code'] === 200
+        && (int) $promoDetail['room_unit_price'] === (int) $promoSnapshot['room_unit_price']
+        && (int) $promoDetail['total_amount'] === (int) $promoSnapshot['total_amount'],
+    'T27: Existing booking retains its original rate and total amount snapshot'
+);
 
 // Booking starting 2026-11-21 (after effective_to 2026-11-20) -> 400 rate_expired
 $resPromoExpired = makeRequest('POST', '/api/bookings', [

@@ -23,7 +23,10 @@ class Database
             $port = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: '3306';
             $dbName = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?: 'studio_dev';
             $user = $_ENV['DB_USER'] ?? getenv('DB_USER') ?: 'studio_user';
-            $password = $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? getenv('DB_PASS') ?: getenv('DB_PASSWORD') ?: 'studio_password';
+            $password = $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? getenv('DB_PASS') ?: getenv('DB_PASSWORD') ?: '';
+            if ($password === '') {
+                throw new RuntimeException('DB_PASS must be configured');
+            }
 
             $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset=utf8mb4";
 

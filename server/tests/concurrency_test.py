@@ -48,6 +48,26 @@ def send_booking_request(token, payload):
         return {"code": 500, "error": str(e)}
 
 
+def send_payment_request(token, booking_id):
+    url = f"{BASE_URL}/api/bookings/{booking_id}/payments"
+    req_data = json.dumps({"payment_type": "deposit"}).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=req_data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return {"code": resp.getcode(), "body": json.loads(resp.read().decode("utf-8"))}
+    except urllib.error.HTTPError as e:
+        return {"code": e.code, "body": json.loads(e.read().decode("utf-8"))}
+    except Exception as e:
+        return {"code": 500, "error": str(e)}
+
+
 def test_t1_concurrent_room_booking(token):
     print("\n--- Testing T1: 2 Concurrent Booking Requests for Same Room & Time ---")
     barrier = threading.Barrier(2)
@@ -213,8 +233,57 @@ def test_t15_concurrent_distinct_bookings(token):
         return False
 
 
+def test_t16_concurrent_deposit(token):
+    print("\n--- Testing T16: Two Concurrent Deposit Payments for One Booking ---")
+    created = send_booking_request(token, {
+        "room_id": 1,
+        "rate_id": 1,
+        "start_time": "2027-03-20 09:00:00",
+        "end_time": "2027-03-20 11:00:00",
+    })
+    booking_id = created.get("body", {}).get("data", {}).get("booking_id")
+    if created.get("code") != 201 or not booking_id:
+        print(f"  [FAIL] Could not create the payment test booking: {created}")
+        return False
+
+    barrier = threading.Barrier(2)
+    results = [None, None]
+
+    def worker(idx):
+        barrier.wait()
+        results[idx] = send_payment_request(token, booking_id)
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    codes = [result["code"] for result in results]
+    error_codes = []
+    for result in results:
+        errors = result.get("body", {}).get("errors", [])
+        if result["code"] == 409 and errors:
+            error_codes.append(errors[0].get("code"))
+    detail_req = urllib.request.Request(
+        f"{BASE_URL}/api/bookings/{booking_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    with urllib.request.urlopen(detail_req) as response:
+        detail = json.loads(response.read().decode("utf-8"))
+    payments = detail.get("data", {}).get("payments", [])
+    ok = codes.count(201) == 1 and codes.count(409) == 1 and \
+        "payment_duplicate" in error_codes and len(payments) == 1 and \
+        payments[0].get("status") == "success"
+    if ok:
+        print("  [PASS] T16: One payment succeeded, one returned 409 payment_duplicate, and one success payment is stored")
+        return True
+    print(f"  [FAIL] T16: codes={codes}, errors={error_codes}, stored_success_payments={len(payments)}")
+    return False
+
+
 def main():
-    print("=== STARTING CONCURRENCY TESTS (T1, T2, T15) ===")
+    print("=== STARTING CONCURRENCY TESTS (T1, T2, T15, T16) ===")
     print(f"Target: {BASE_URL}")
 
     token = login("customer@studio.local", "password123")
@@ -223,9 +292,10 @@ def main():
     t1_ok = test_t1_concurrent_room_booking(token)
     t2_ok = test_t2_concurrent_equipment_stock(token)
     t15_ok = test_t15_concurrent_distinct_bookings(token)
+    t16_ok = test_t16_concurrent_deposit(token)
 
     print("\n==============================================")
-    if t1_ok and t2_ok and t15_ok:
+    if t1_ok and t2_ok and t15_ok and t16_ok:
         print(">>> ALL CONCURRENCY TESTS PASSED 100% <<<")
         sys.exit(0)
     else:

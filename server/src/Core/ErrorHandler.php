@@ -19,11 +19,19 @@ class ErrorHandler
     public static function formatException(Throwable $e): array
     {
         if ($e instanceof ApiException) {
+            $errors = $e->getErrors();
+            if ($errors === []) {
+                $errors = [[
+                    'field'   => '',
+                    'code'    => $e->getErrorCode(),
+                    'message' => $e->getMessage(),
+                ]];
+            }
             return [
                 'status_code' => $e->getStatusCode(),
                 'error_code'  => $e->getErrorCode(),
                 'message'     => $e->getMessage(),
-                'errors'      => $e->getErrors(),
+                'errors'      => $errors,
             ];
         }
 

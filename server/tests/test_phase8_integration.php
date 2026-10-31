@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/vendor/autoload.php';
+
 /**
  * Phase 8 Integration Test Suite
  * Covers Admin user management (list, status, role), security guards (self-lock, self-role, admin grant block),
  * immediate role enforcement on old token (T17), platform statistics, host statistics, and period rules (T20, T26).
  */
 
-$baseUrl = 'http://localhost:80'; // Inside docker container
+$baseUrl = getenv('API_BASE_URL') ?: 'http://localhost:80';
 $passed = 0;
 $failed = 0;
 
@@ -53,6 +55,37 @@ function assertTest(bool $condition, string $message): void
         echo "  [FAIL] {$message}\n";
         $failed++;
     }
+}
+
+function apiErrorCode(array $response): ?string
+{
+    return $response['data']['errors'][0]['code'] ?? null;
+}
+
+function insertStatisticsFixture(string $status, string $start, string $end, ?string $completedAt, int $amount): void
+{
+    $pdo = \App\Core\Db::getConnection();
+    $stmt = $pdo->prepare(
+        "INSERT INTO bookings (
+            booking_code, room_id, customer_id, rate_id, booking_type, start_time, end_time,
+            busy_start, busy_end, party_size, rate_unit, rental_units, room_unit_price,
+            room_amount, equipment_amount, total_amount, deposit_amount, customer_name,
+            customer_phone, customer_email, status, expires_at, completed_at
+        ) VALUES (?, 1, 4, 1, 'short_term', ?, ?, ?, ?, 1, 'hour', 1, ?, ?, 0, ?, 0,
+                  'Statistics Fixture', '0900000000', 'stats@example.test', ?, NULL, ?)"
+    );
+    $stmt->execute([
+        'STATS-' . bin2hex(random_bytes(8)),
+        $start,
+        $end,
+        $start,
+        date('Y-m-d H:i:s', strtotime($end . ' +30 minutes')),
+        $amount,
+        $amount,
+        $amount,
+        $status,
+        $completedAt,
+    ]);
 }
 
 echo "=== STARTING PHASE 8 INTEGRATION TESTS ===\n\n";
@@ -109,15 +142,15 @@ assertTest($resSearch['code'] === 200 && count($resSearch['data']['data']['items
 
 // Admin attempts to self-lock -> 400 cannot_lock_self
 $resSelfLock = makeRequest('PATCH', "/api/admin/users/{$adminId}/status", ['status' => 'locked'], $adminToken);
-assertTest($resSelfLock['code'] === 400 && $resSelfLock['data']['code'] === 'cannot_lock_self', "Admin cannot lock their own account (400 cannot_lock_self)");
+assertTest($resSelfLock['code'] === 400 && apiErrorCode($resSelfLock) === 'cannot_lock_self', "Admin cannot lock their own account (400 cannot_lock_self)");
 
 // Admin attempts to change own role -> 400 cannot_change_own_role
 $resSelfRole = makeRequest('PATCH', "/api/admin/users/{$adminId}/role", ['role' => 'customer'], $adminToken);
-assertTest($resSelfRole['code'] === 400 && $resSelfRole['data']['code'] === 'cannot_change_own_role', "Admin cannot change their own role (400 cannot_change_own_role)");
+assertTest($resSelfRole['code'] === 400 && apiErrorCode($resSelfRole) === 'cannot_change_own_role', "Admin cannot change their own role (400 cannot_change_own_role)");
 
 // Admin attempts to grant admin role to customer -> 400 invalid_role
 $resGrantAdmin = makeRequest('PATCH', "/api/admin/users/{$custId}/role", ['role' => 'admin'], $adminToken);
-assertTest($resGrantAdmin['code'] === 400 && $resGrantAdmin['data']['code'] === 'invalid_role', "Admin cannot grant admin role via API (400 invalid_role)");
+assertTest($resGrantAdmin['code'] === 400 && apiErrorCode($resGrantAdmin) === 'invalid_role', "Admin cannot grant admin role via API (400 invalid_role)");
 
 // -------------------------------------------------------------
 // 3. T17: Real-time DB Role & Status Enforcement via AuthMiddleware
@@ -132,7 +165,7 @@ $resReg = makeRequest('POST', '/api/auth/register', [
     'full_name' => 'Role Test User',
 ]);
 assertTest($resReg['code'] === 201, "Registered temporary test user");
-$targetUserId = (int) $resReg['data']['data']['user_id'];
+$targetUserId = (int) $resReg['data']['data']['user']['user_id'];
 
 // Log in as target user to obtain token
 $resTargetLogin = makeRequest('POST', '/api/auth/login', [
@@ -159,14 +192,14 @@ assertTest($resLock['code'] === 200 && $resLock['data']['data']['status'] === 'l
 
 // Target user calls protected route with token: rejected with 403 account_locked! (T17)
 $resLockedAccess = makeRequest('GET', '/api/test/me', null, $targetToken);
-assertTest($resLockedAccess['code'] === 403 && $resLockedAccess['data']['code'] === 'account_locked', "Locked user is immediately blocked on old token with 403 account_locked (T17)");
+assertTest($resLockedAccess['code'] === 403 && apiErrorCode($resLockedAccess) === 'account_locked', "Locked user is immediately blocked on old token with 403 account_locked (T17)");
 
 // Target user tries to log in again: rejected with 403
 $resLockedLogin = makeRequest('POST', '/api/auth/login', [
     'email'    => $testEmail,
     'password' => 'password123',
 ]);
-assertTest($resLockedLogin['code'] === 403 && $resLockedLogin['data']['code'] === 'account_locked', "Locked user login attempt is rejected with 403");
+assertTest($resLockedLogin['code'] === 403 && apiErrorCode($resLockedLogin) === 'account_locked', "Locked user login attempt is rejected with 403");
 
 // Admin unlocks user
 makeRequest('PATCH', "/api/admin/users/{$targetUserId}/status", ['status' => 'active'], $adminToken);
@@ -184,13 +217,23 @@ assertTest(isset($resAdminStats['data']['data']['period']['to']), "Statistics re
 assertTest(isset($resAdminStats['data']['data']['total_revenue']), "Statistics response includes total_revenue");
 assertTest(isset($resAdminStats['data']['data']['occupancy_rate']), "Statistics response includes occupancy_rate");
 
+// T26: Verify half-open period boundaries and partial occupancy for October 2026.
+insertStatisticsFixture('confirmed', '2026-10-31 20:00:00', '2026-11-01 02:00:00', null, 100);
+insertStatisticsFixture('completed', '2026-10-10 09:00:00', '2026-10-10 10:00:00', '2026-10-31 23:59:59', 150);
+insertStatisticsFixture('completed', '2026-11-01 00:00:00', '2026-11-01 01:00:00', '2026-11-01 00:00:00', 220);
+$resBoundaryStats = makeRequest('GET', '/api/admin/statistics?from=2026-10-01&to=2026-11-01', null, $adminToken);
+$boundaryData = $resBoundaryStats['data']['data'] ?? [];
+assertTest($resBoundaryStats['code'] === 200, 'T26: October boundary statistics returned 200');
+assertTest((int) ($boundaryData['total_revenue'] ?? -1) === 150, 'T26: completed_at at Oct 31 is included and Nov 1 is excluded');
+assertTest((float) ($boundaryData['occupancy_rate'] ?? -1) === 0.3, 'T26: only the 4 hours before Nov 1 count toward October occupancy');
+
 // T26: Period validation from >= to -> 400 invalid_date_range
 $resInvalidPeriod = makeRequest('GET', '/api/admin/statistics?from=2026-11-01&to=2026-10-01', null, $adminToken);
-assertTest($resInvalidPeriod['code'] === 400 && $resInvalidPeriod['data']['code'] === 'invalid_date_range', "T26: Statistics with from >= to rejected with 400 (invalid_date_range)");
+assertTest($resInvalidPeriod['code'] === 400 && apiErrorCode($resInvalidPeriod) === 'invalid_date_range', "T26: Statistics with from >= to rejected with 400 (invalid_date_range)");
 
 // Period span > 366 days -> 400 range_too_long
 $resTooLong = makeRequest('GET', '/api/admin/statistics?from=2024-01-01&to=2026-01-01', null, $adminToken);
-assertTest($resTooLong['code'] === 400 && $resTooLong['data']['code'] === 'range_too_long', "Statistics with span > 366 days rejected with 400 (range_too_long)");
+assertTest($resTooLong['code'] === 400 && apiErrorCode($resTooLong) === 'range_too_long', "Statistics with span > 366 days rejected with 400 (range_too_long)");
 
 // Customer calling GET /api/admin/statistics -> 403
 $resCustStats = makeRequest('GET', '/api/admin/statistics', null, $custToken);

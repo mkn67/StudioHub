@@ -109,12 +109,28 @@ assertTest($resXRoom['code'] === 403, "Host 1 POST /api/rooms on Host 2's Studio
 $resXUpdate = makeRequest('PATCH', '/api/rooms/4', ['name' => 'Hacked Room Name'], $host1Token);
 assertTest($resXUpdate['code'] === 403, "Host 1 PATCH /api/rooms/4 on Host 2's room returned 403");
 
+$tmpOwnerImage = tempnam(sys_get_temp_dir(), 'owner-test-');
+file_put_contents($tmpOwnerImage, 'not an image');
+$resXImage = makeRequest('POST', '/api/rooms/4/images', ['is_primary' => 'false'], $host1Token, [
+    'tmp_name' => $tmpOwnerImage,
+    'type' => 'text/plain',
+    'name' => 'unauthorized.txt',
+]);
+unlink($tmpOwnerImage);
+assertTest($resXImage['code'] === 403, "Host 1 POST /api/rooms/4/images on Host 2's room returned 403");
+
 // 3.3 Host 1 creates rate on Host 2's room (room_id = 4) -> 403
 $resXRate = makeRequest('POST', '/api/rooms/4/rates', [
     'rate_unit'  => 'hour',
     'unit_price' => 150000,
 ], $host1Token);
 assertTest($resXRate['code'] === 403, "Host 1 POST /api/rooms/4/rates on Host 2's room returned 403");
+
+$resXRatePatch = makeRequest('PATCH', '/api/rooms/4/rates/9', ['unit_price' => 999999], $host1Token);
+assertTest($resXRatePatch['code'] === 403, "Host 1 PATCH /api/rooms/4/rates/9 on Host 2's room returned 403");
+
+$resXStudio = makeRequest('PATCH', '/api/studios/2', ['name' => 'Unauthorized Studio'], $host1Token);
+assertTest($resXStudio['code'] === 403, "Host 1 PATCH /api/studios/2 owned by Host 2 returned 403");
 
 // 3.4 Host 1 creates equipment in Host 2's studio (studio_id = 2) -> 403
 $resXEquip = makeRequest('POST', '/api/equipments', [
@@ -134,6 +150,12 @@ assertTest($resXUpdateEq['code'] === 403, "Host 1 PATCH /api/equipments/5 on Hos
 // 3.6 Host 1 accesses Host 2's equipment categories -> 403
 $resXCat = makeRequest('GET', '/api/equipment-categories?studio_id=2', null, $host1Token);
 assertTest($resXCat['code'] === 403, "Host 1 GET /api/equipment-categories on Host 2's Studio 2 returned 403");
+
+$resXCatCreate = makeRequest('POST', '/api/equipment-categories', [
+    'studio_id' => 2,
+    'name' => 'Unauthorized category',
+], $host1Token);
+assertTest($resXCatCreate['code'] === 403, "Host 1 POST /api/equipment-categories on Host 2's Studio 2 returned 403");
 
 // 4. Room Creation & Multi-table Transaction
 echo "\n--- 4. Room Creation & Details ---\n";

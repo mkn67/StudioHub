@@ -13,8 +13,8 @@ if (file_exists($rootDir . '/.env')) {
 }
 
 use App\Core\Db;
-use App\Repositories\BookingRepository;
-use App\Services\BookingService;
+use App\Modules\Booking\BookingRepository;
+use App\Modules\Booking\BookingService;
 
 $pdo = Db::getConnection();
 $repo = new BookingRepository($pdo);

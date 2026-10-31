@@ -8,7 +8,7 @@ declare(strict_types=1);
  * cancellation, rejection, expire-on-access, cron expiration, and scenarios T7, T8, T9, T19, T20, T24.
  */
 
-$baseUrl = 'http://localhost:80'; // Inside docker container
+$baseUrl = getenv('API_BASE_URL') ?: 'http://localhost:80';
 $passed = 0;
 $failed = 0;
 
@@ -270,14 +270,27 @@ $stmtAuditB->execute([$bkBId]);
 $metaB = json_decode((string) $stmtAuditB->fetchColumn(), true);
 assertTest($metaB['reason'] === 'host_no_response' && $metaB['refund_due'] > 0, "Audit log for Booking B has reason=host_no_response and refund_due > 0 (T19, T24)");
 
+$stmtAuditA = $pdo->prepare("SELECT metadata FROM audit_logs WHERE entity_id = ? AND action = 'booking_expired'");
+$stmtAuditA->execute([$bkAId]);
+$metaA = json_decode((string) $stmtAuditA->fetchColumn(), true);
+assertTest($metaA['reason'] === 'unpaid_hold_timeout' && (int) $metaA['refund_due'] === 0, "T24: Unpaid expiry records unpaid_hold_timeout and refund_due=0");
+
 $stmtAuditC = $pdo->prepare("SELECT metadata FROM audit_logs WHERE entity_id = ? AND action = 'booking_expired'");
 $stmtAuditC->execute([$bkCId]);
 $metaC = json_decode((string) $stmtAuditC->fetchColumn(), true);
-assertTest($metaC['reason'] === 'host_no_response' && $metaC['refund_due'] > 0, "Audit log for Booking C has reason=host_no_response and refund_due > 0 (T24)");
+assertTest(
+    $metaC['reason'] === 'host_no_response'
+        && (int) $metaC['refund_due'] === (int) $metaC['payments'][0]['amount']
+        && $metaC['payments'][0]['payment_type'] === 'full',
+    "T24: Full-payment expiry records the exact refund due and the full payment"
+);
 
 // Re-running cron does not create duplicate logs or errors
 exec('php /var/www/html/bin/expire-bookings.php', $cronOutput2, $cronExitCode2);
 assertTest($cronExitCode2 === 0, "Re-running cron executed cleanly without duplicates");
+$stmtAuditCount = $pdo->prepare("SELECT COUNT(*) FROM audit_logs WHERE entity_id = ? AND action = 'booking_expired'");
+$stmtAuditCount->execute([$bkCId]);
+assertTest((int) $stmtAuditCount->fetchColumn() === 1, 'T24: second cron run does not duplicate expiry audit records');
 
 echo "\n=== PHASE 7 INTEGRATION TESTS SUMMARY ===\n";
 echo "Passed: {$passed}\n";

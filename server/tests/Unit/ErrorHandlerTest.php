@@ -29,6 +29,17 @@ class ErrorHandlerTest extends TestCase
         $this->assertEquals('email', $formatted['errors'][0]['field']);
     }
 
+    public function testApiExceptionWithoutDetailsKeepsMachineCodeInErrors(): void
+    {
+        $formatted = ErrorHandler::formatException(
+            new ApiException(409, 'payment_duplicate', 'Thanh toán đã tồn tại')
+        );
+
+        $this->assertSame(409, $formatted['status_code']);
+        $this->assertSame('payment_duplicate', $formatted['errors'][0]['code']);
+        $this->assertSame('Thanh toán đã tồn tại', $formatted['errors'][0]['message']);
+    }
+
     public function testFormatTriggerRoomOccupiedPDOException(): void
     {
         $pdoException = new PDOException("SQLSTATE[45000]: <<Unknown error>>: 1644 ROOM_OCCUPIED");

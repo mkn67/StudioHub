@@ -23,19 +23,19 @@ ErrorHandler::register();
 use App\Core\Router;
 use App\Core\Request;
 use App\Core\ApiResponse;
-use App\Middleware\CorsMiddleware;
-use App\Middleware\AuthMiddleware;
-use App\Middleware\RoleMiddleware;
-use App\Controllers\HealthController;
-use App\Controllers\AuthController;
-use App\Controllers\RoomController;
-use App\Controllers\EquipmentController;
-use App\Controllers\LookupController;
-use App\Controllers\StudioController;
-use App\Controllers\EquipmentCategoryController;
-use App\Controllers\BookingController;
-use App\Controllers\AdminController;
-use App\Controllers\HostController;
+use App\Core\CorsMiddleware;
+use App\Modules\Auth\AuthMiddleware;
+use App\Modules\Shared\RoleMiddleware;
+use App\Core\HealthController;
+use App\Modules\Auth\AuthController;
+use App\Modules\Rooms\RoomController;
+use App\Modules\Equipment\EquipmentController;
+use App\Modules\Catalog\LookupController;
+use App\Modules\Studios\StudioController;
+use App\Modules\Equipment\EquipmentCategoryController;
+use App\Modules\Booking\BookingController;
+use App\Modules\Admin\AdminController;
+use App\Modules\Admin\HostController;
 
 $router = new Router();
 $router->use(new CorsMiddleware());
@@ -108,18 +108,21 @@ $router->get('/api/admin/statistics', [AdminController::class, 'statistics'], $a
 
 $router->get('/api/host/statistics', [HostController::class, 'statistics'], $hostMiddlewares);
 
-// Verification routes for Phase 2 Auth/Role/Ownership
-$router->get('/api/test/me', function (Request $req) {
-    ApiResponse::success($req->user(), 'Xác thực thành công');
-}, [new AuthMiddleware()]);
+// Test-only identity probes used by the integration suites. Never register them in production.
+$appEnv = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'dev';
+if (in_array($appEnv, ['dev', 'test'], true)) {
+    $router->get('/api/test/me', function (Request $req) {
+        ApiResponse::success($req->user(), 'Xác thực thành công');
+    }, [new AuthMiddleware()]);
 
-$router->get('/api/test/host-only', function (Request $req) {
-    ApiResponse::success($req->user(), 'Truy cập host thành công');
-}, [new AuthMiddleware(), new RoleMiddleware('host')]);
+    $router->get('/api/test/host-only', function (Request $req) {
+        ApiResponse::success($req->user(), 'Truy cập host thành công');
+    }, [new AuthMiddleware(), new RoleMiddleware('host')]);
 
-$router->get('/api/test/admin-only', function (Request $req) {
-    ApiResponse::success($req->user(), 'Truy cập admin thành công');
-}, [new AuthMiddleware(), new RoleMiddleware('admin')]);
+    $router->get('/api/test/admin-only', function (Request $req) {
+        ApiResponse::success($req->user(), 'Truy cập admin thành công');
+    }, [new AuthMiddleware(), new RoleMiddleware('admin')]);
+}
 
 // 5. Dispatch Request
 $request = Request::fromGlobals();

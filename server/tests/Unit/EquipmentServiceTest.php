@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Exceptions\ApiException;
-use App\Repositories\EquipmentRepository;
-use App\Services\EquipmentService;
+use App\Modules\Equipment\EquipmentRepository;
+use App\Modules\Equipment\EquipmentService;
 use PHPUnit\Framework\TestCase;
 
 class EquipmentServiceTest extends TestCase

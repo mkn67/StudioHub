@@ -22,7 +22,11 @@ $dbHost = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'db';
 $dbPort = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: '3306';
 $dbName = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?: 'studio_dev';
 $dbUser = $_ENV['DB_USER'] ?? getenv('DB_USER') ?: 'studio_user';
-$dbPass = $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? getenv('DB_PASS') ?: getenv('DB_PASSWORD') ?: 'studio_password';
+$dbPass = $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? getenv('DB_PASS') ?: getenv('DB_PASSWORD') ?: '';
+if ($dbPass === '') {
+    fwrite(STDERR, "DB_PASS must be configured\n");
+    exit(1);
+}
 
 $isFresh = in_array('--fresh', $argv, true);
 

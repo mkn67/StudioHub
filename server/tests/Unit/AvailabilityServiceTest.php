@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Services\AvailabilityService;
+use App\Modules\Booking\AvailabilityService;
 use PHPUnit\Framework\TestCase;
 
 class AvailabilityServiceTest extends TestCase

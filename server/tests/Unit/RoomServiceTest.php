@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Exceptions\ApiException;
-use App\Repositories\RoomRepository;
-use App\Services\RoomService;
+use App\Modules\Rooms\RoomRepository;
+use App\Modules\Rooms\RoomService;
 use PHPUnit\Framework\TestCase;
 
 class RoomServiceTest extends TestCase

@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 vendor/
+__pycache__/
+*.py[cod]
 
 # Next.js build output
 .next/

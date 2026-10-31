@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Exceptions\ApiException;
-use App\Repositories\UserRepository;
-use App\Services\AuthService;
-use App\Services\JwtService;
+use App\Modules\Auth\UserRepository;
+use App\Modules\Auth\AuthService;
+use App\Modules\Auth\JwtService;
 use PHPUnit\Framework\TestCase;
 
 class AuthServiceTest extends TestCase

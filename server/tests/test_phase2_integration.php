@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\Db;
-use App\Services\JwtService;
+if (is_file(dirname(__DIR__) . '/.env')) {
+    Dotenv\Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
+}
 
-$baseUrl = 'http://localhost';
+use App\Core\Db;
+use App\Modules\Auth\JwtService;
+
+$baseUrl = getenv('API_BASE_URL') ?: 'http://localhost';
 $jwtService = new JwtService();
 
 echo "=====================================================\n";

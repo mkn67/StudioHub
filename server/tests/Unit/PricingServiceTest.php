@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Exceptions\ApiException;
-use App\Services\PricingService;
+use App\Modules\Booking\PricingService;
 use PHPUnit\Framework\TestCase;
 
 class PricingServiceTest extends TestCase
