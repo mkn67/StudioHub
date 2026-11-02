@@ -82,7 +82,9 @@ class Request
             return $this->jsonBody;
         }
 
-        $input = file_get_contents('php://input');
+        if ((int)$this->header('content-length','0') > 262144) throw new \App\Exceptions\ApiException(413,'payload_too_large','Nội dung quá lớn.');
+        $input = file_get_contents('php://input',false,null,0,262145);
+        if ($input!==false && strlen($input)>262144) throw new \App\Exceptions\ApiException(413,'payload_too_large','Nội dung quá lớn.');
         if ($input === false || trim($input) === '') {
             $this->jsonBody = [];
             return $this->jsonBody;
@@ -90,8 +92,7 @@ class Request
 
         $decoded = json_decode($input, true);
         if (!is_array($decoded)) {
-            $this->jsonBody = [];
-            return $this->jsonBody;
+            throw new \App\Exceptions\ApiException(400,'invalid_json','Nội dung JSON không hợp lệ.');
         }
 
         $this->jsonBody = $decoded;

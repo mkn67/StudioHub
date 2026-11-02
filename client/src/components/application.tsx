@@ -10,6 +10,7 @@ import { Auth, Profile, Support } from "./accounts";
 import { CustomerBookings, Payment, BookingDetail } from "./bookings";
 import { Operations } from "./operations";
 import { Empty, Modal } from "./ui";
+import { demoMode } from "@/data/api";
 export default function Application() {
   const path = usePathname(),
     segments = path.split("/").filter(Boolean),
@@ -126,8 +127,8 @@ export default function Application() {
               </Link>
               <button
                 className="text-button logout"
-                onClick={() => {
-                  dispatch({ type: "login", userId: null });
+                onClick={async () => {
+                  (await dispatch({ type: "login", userId: null }));
                   router.push("/");
                 }}
               >
@@ -212,8 +213,7 @@ export default function Application() {
           <div className="footer-bottom container">
             <span>© 2026 StudioHub</span>
             <span>
-              Bản frontend minh họa · Không thanh toán thật · Ảnh không gian
-              minh họa
+              {demoMode ? "Bản frontend minh họa · Không thanh toán thật · Ảnh không gian minh họa" : "StudioHub · Đặt thuê không gian sáng tạo"}
             </span>
           </div>
         </footer>

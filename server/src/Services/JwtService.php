@@ -17,7 +17,10 @@ class JwtService
 
     public function __construct(?string $secret = null, string $algorithm = 'HS256', int $ttl = 7200)
     {
-        $this->secret = $secret ?? $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET') ?: 'supersecretjwtkey_change_in_production_min32chars';
+        $this->secret = $secret ?? $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET') ?: '';
+        if (strlen($this->secret)<32 || $this->secret==='supersecretjwtkey_change_in_production_min32chars') {
+            throw new ApiException(503,'auth_not_configured','Cần cấu hình khóa xác thực riêng của máy chủ.');
+        }
         $this->algorithm = $algorithm;
         $this->ttl = $ttl; // 2 hours
     }
@@ -65,7 +68,7 @@ class JwtService
                     [
                         'field'   => 'token',
                         'code'    => 'invalid_token',
-                        'message' => $e->getMessage(),
+                        'message' => 'Token không hợp lệ hoặc đã hết hạn',
                     ]
                 ],
                 $e

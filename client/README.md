@@ -61,3 +61,5 @@ Dữ liệu tồn tại trên cùng trình duyệt và được chia sẻ giữa
 - Bảng quyền Admin là bản mô tả phạm vi quyền đã duyệt, không cho tự cấp quyền tùy ý.
 
 Đây là bản demo frontend, chưa phải ứng dụng production bảo mật.
+> **Cập nhật tích hợp 02/11/2026:** Mặc định dùng PHP API qua `/api/business`; demo offline cần `NEXT_PUBLIC_APP_MODE=demo`. Xem [hướng dẫn chạy hiện tại](../docs/development.md) và [kiểm chứng/giới hạn](../docs/integration-verification.md). MySQL chưa chạy trong lần kiểm chứng này; các hướng dẫn demo bên dưới chỉ áp dụng cho chế độ demo rõ ràng.
+

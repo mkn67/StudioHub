@@ -1,11 +1,12 @@
 "use client";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useStore, useSession } from "./store";
 import { Empty, PageHeading } from "./ui";
+import { demoMode } from "@/data/api";
 export function Auth({
   register = false,
   host = false,
@@ -13,7 +14,7 @@ export function Auth({
   register?: boolean;
   host?: boolean;
 }) {
-  const { state, dispatch, notice } = useStore(),
+  const { state, dispatch, notice, authenticate, busy } = useStore(),
     router = useRouter(),
     user = useSession();
   const [persona, setPersona] = useState("customer"),
@@ -23,7 +24,9 @@ export function Auth({
     [description, setDescription] = useState(""),
     [signupName, setSignupName] = useState(""),
     [signupEmail, setSignupEmail] = useState(""),
-    [signupPhone, setSignupPhone] = useState("");
+    [signupPhone, setSignupPhone] = useState(""),
+    [password, setPassword] = useState(""),
+    [authError, setAuthError] = useState("");
   return (
     <div className="auth-page">
       <Image width={1400} height={1000} src="/images/daylight.jpg" alt="" />
@@ -41,11 +44,27 @@ export function Auth({
         <p className="muted">
           {host
             ? `Bước ${step}/3 · Hồ sơ đối tác`
-            : "Chọn tài khoản để khám phá bản mô phỏng."}
+            : demoMode ? "Chọn tài khoản để khám phá bản mô phỏng." : "Đăng nhập an toàn bằng tài khoản StudioHub."}
         </p>
-        {host ? (
+        {!demoMode && !host ? (
+          <form onSubmit={async event => {
+            event.preventDefault(); setAuthError("");
+            const next = await authenticate(signupEmail, password, register ? { name: signupName, phone: signupPhone } : undefined);
+            if (!next) { setAuthError("Chưa xác thực được. Kiểm tra thông báo và thông tin đã nhập."); return; }
+            const actor = next.users.find(item => item.id === next.sessionId);
+            router.push(register ? "/profile" : actor?.role === "host" ? "/host" : actor?.role === "admin" ? "/admin" : "/my-bookings");
+          }}>
+            {register && <label>Họ tên<input required minLength={2} maxLength={100} autoComplete="name" value={signupName} onChange={event => setSignupName(event.target.value)} /></label>}
+            <label>Email<input required type="email" maxLength={150} autoComplete="email" value={signupEmail} onChange={event => setSignupEmail(event.target.value)} /></label>
+            {register && <label>Số điện thoại<input required type="tel" pattern="0[0-9]{9}" autoComplete="tel" value={signupPhone} onChange={event => setSignupPhone(event.target.value)} /></label>}
+            <label>Mật khẩu<input required type="password" minLength={register ? 8 : 1} maxLength={72} autoComplete={register ? "new-password" : "current-password"} value={password} onChange={event => setPassword(event.target.value)} /></label>
+            {authError && <p role="alert" className="error">{authError}</p>}
+            <button disabled={busy} className="btn full">{busy ? "Đang xử lý…" : register ? "Tạo tài khoản" : "Đăng nhập"}<ArrowRight size={17} /></button>
+            <p className="small-text"><Link className="text-link" href={register ? "/login" : "/register"}>{register ? "Đã có tài khoản? Đăng nhập" : "Tạo tài khoản khách hàng"}</Link></p>
+          </form>
+        ) : host ? (
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               if (step < 3) {
                 setStep(step + 1);
@@ -55,12 +74,12 @@ export function Auth({
                 notice("Đăng nhập tài khoản khách trước khi gửi hồ sơ.");
                 return;
               }
-              const s = dispatch({
+              const s = (await dispatch({
                 type: "application",
                 studioName: name,
                 address,
                 description,
-              });
+              }));
               if (s) {
                 notice("Đã gửi hồ sơ. Bạn có thể theo dõi tại trang hồ sơ.");
                 router.push("/profile");
@@ -71,13 +90,13 @@ export function Auth({
               <>
                 <label>
                   Tài khoản liên hệ
-                  <select
+                  {demoMode ? <select
                     value={state.sessionId ?? ""}
-                    onChange={(e) =>
-                      dispatch({
+                    onChange={async (e) =>
+                      (await dispatch({
                         type: "login",
                         userId: e.target.value || null,
-                      })
+                      }))
                     }
                     required
                   >
@@ -89,11 +108,10 @@ export function Auth({
                           {u.name} · {u.email}
                         </option>
                       ))}
-                  </select>
+                  </select> : <p>{user ? `${user.name} · ${user.email}` : <Link href="/login">Đăng nhập để gửi hồ sơ</Link>}</p>}
                 </label>
                 <p className="small-text muted">
-                  Thông tin liên hệ lấy từ hồ sơ khách. Đây là đăng ký đối tác
-                  trong môi trường mô phỏng.
+                  Thông tin liên hệ lấy từ hồ sơ khách hàng.
                 </p>
               </>
             )}
@@ -153,15 +171,15 @@ export function Auth({
           </form>
         ) : register ? (
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               if (
-                dispatch({
+                (await dispatch({
                   type: "register",
                   name: signupName,
                   email: signupEmail,
                   phone: signupPhone,
-                })
+                }))
               ) {
                 notice("Đã tạo tài khoản mô phỏng.");
                 router.push("/profile");
@@ -215,9 +233,9 @@ export function Auth({
           </form>
         ) : (
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (dispatch({ type: "login", userId: persona })) {
+              if ((await dispatch({ type: "login", userId: persona }))) {
                 const u = state.users.find((u) => u.id === persona)!;
                 router.push(
                   u.role === "host"
@@ -300,14 +318,14 @@ export function Profile() {
         </aside>
         <div>
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               if (
-                dispatch({
+                (await dispatch({
                   type: "profile",
                   name: name || user.name,
                   phone: phone || user.phone,
-                })
+                }))
               )
                 notice("Đã lưu thông tin.");
             }}
@@ -410,9 +428,9 @@ export function Support() {
       {user.restricted ? (
         <form
           className="policy-form"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (dispatch({ type: "request_restore", reason })) {
+            if ((await dispatch({ type: "request_restore", reason }))) {
               setReason("");
               notice("Đã gửi yêu cầu đến Admin.");
             }

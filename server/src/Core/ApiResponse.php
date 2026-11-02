@@ -46,6 +46,7 @@ class ApiResponse
 
         echo json_encode([
             'status'  => 'error',
+            'error_code' => $errorCode,
             'code'    => $statusCode,
             'message' => $message,
             'errors'  => $errors,

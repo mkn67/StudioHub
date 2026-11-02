@@ -84,7 +84,7 @@ export type Command =
   | { type: "reconcile"; id: string; paid: boolean; reason: string }
   | { type: "resolve_refund"; id: string; reason: string }
   | { type: "advance"; minutes: number }
-  | { type: "create"; selection: Selection }
+  | { type: "create"; selection: Selection; expectedTotal?: number; expectedDeposit?: number; expectedPolicy?: Policy }
   | { type: "payment"; id: string; outcome: "paid" | "failed" | "processing" }
   | {
       type:

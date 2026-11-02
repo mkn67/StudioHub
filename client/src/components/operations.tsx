@@ -1,6 +1,6 @@
 "use client";
 import { Presence, MotionSurface } from "./motion/system";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,11 +24,13 @@ import "@/features/dashboard/styles/dashboard.css";
 import { HostDeadline, UpcomingAgenda, RoomPopularity } from "@/features/dashboard/components/HostInsights";
 import { HostPricing } from "@/features/dashboard/components/HostPricing";
 import { HostCalendar } from "@/features/dashboard/components/HostCalendar";
+import { ConnectedReports } from "@/features/dashboard/components/ConnectedReports";
 import "@/features/dashboard/styles/host-operations.css";
 import "@/features/dashboard/styles/workspace-refinement.css";
 import "@/features/dashboard/styles/colored-refinement.css";
 import { bookingRentalTime, bookingStatusTokenCSS } from "@/features/dashboard/booking-status";
 import { useStore, useSession } from "./store";
+import { demoMode } from "@/data/api";
 import { PageHeading, Empty, Modal } from "./ui";
 import { BookingDetail } from "./bookings";
 import {
@@ -101,8 +103,8 @@ export function Operations({
     );
   const path = segments[0] ?? "";
   const links = role === "host" ? hostLinks : adminLinks;
-  function logout() {
-    dispatch({ type: "login", userId: null });
+  async function logout() {
+    (await dispatch({ type: "login", userId: null }));
     router.push("/");
   }
   return (
@@ -159,7 +161,7 @@ export function Operations({
         <div className="ops-workspace-bar">
           <button type="button" className="icon-button ops-menu-toggle" aria-label="Mở điều hướng" aria-expanded={menu} aria-controls="workspace-mobile-nav" onClick={() => setMenu(true)}><Menu size={21} aria-hidden="true" /></button>
           <div className="ops-breadcrumb"><Link href={`/${role}`}>{role === "host" ? "Không gian làm việc" : "Quản trị hệ thống"}</Link><ChevronRight size={13} aria-hidden="true" /><strong>{(role === "host" ? hostLinks : adminLinks).find(([key]) => key === path)?.[1] ?? "Chi tiết đơn"}</strong></div>
-          <div className="ops-workspace-context"><span className="dashboard-tag">Dữ liệu minh họa</span><time dateTime={localDate(state.now)}>{new Date(state.now).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" })}</time>
+          <div className="ops-workspace-context"><span className="dashboard-tag">{demoMode ? "Dữ liệu minh họa" : "Dữ liệu máy chủ"}</span><time dateTime={localDate(state.now)}>{new Date(state.now).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" })}</time>
             <details className="ops-account-menu" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
               <summary aria-label={`Tài khoản ${user.name}`}><span className="ops-avatar" aria-hidden="true">{user.name.split(" ").at(-1)?.slice(0, 1)}</span><span className="ops-account-name">{user.name.split(" ").at(-1)}</span><ChevronDown size={13} aria-hidden="true" /></summary>
               <div className="ops-account-popover"><strong>{user.name}</strong><Link href="/profile"><UserRound size={16} aria-hidden="true" /> Hồ sơ</Link><Link href="/rooms"><ArrowUpRight size={16} aria-hidden="true" /> Xem marketplace</Link><button type="button" onClick={logout}><LogOut size={16} aria-hidden="true" /> Đăng xuất</button></div>
@@ -406,7 +408,7 @@ function StudioManagement() {
       />
       <div className="settings-layout">
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             const studio: Studio = {
               ...st,
@@ -419,7 +421,7 @@ function StudioManagement() {
               active: st?.active ?? false,
               policy: st?.policy ?? structuredClone(state.studios[0].policy),
             };
-            if (dispatch({ type: "studio_save", studio }))
+            if ((await dispatch({ type: "studio_save", studio })))
               notice("Đã lưu Studio. Tiếp theo: loại phòng và phòng thực tế.");
           }}
         >
@@ -531,19 +533,19 @@ function RoomManagement({ admin = false }: { admin?: boolean }) {
           </label>
           <button
             className="btn secondary"
-            onClick={() => {
+            onClick={async () => {
               const studio = state.studios.find(
                 (st) => st.id === selectedStudio,
               );
               if (!studio) return;
               const reason = window.prompt("Lý do giám sát Studio (bắt buộc):");
               if (reason)
-                dispatch({
+                (await dispatch({
                   type: "studio_status",
                   id: studio.id,
                   active: !studio.active,
                   reason,
-                });
+                }));
             }}
           >
             {state.studios.find((st) => st.id === selectedStudio)?.active
@@ -609,18 +611,18 @@ function RoomManagement({ admin = false }: { admin?: boolean }) {
                     )}
                     <button
                       className="text-button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (
                           window.confirm(
                             `${r.active ? "Tạm ngưng" : "Mở"} nhận đặt phòng ${r.code}? Các đơn hiện có giữ nguyên.`,
                           )
                         ) {
                           if (
-                            dispatch({
+                            (await dispatch({
                               type: "room_status",
                               id: r.id,
                               active: !r.active,
-                            })
+                            }))
                           )
                             notice("Đã cập nhật trạng thái phòng.");
                         }
@@ -681,9 +683,9 @@ function RoomManagement({ admin = false }: { admin?: boolean }) {
         >
           <form
             className="modal-form"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (dispatch({ type: "room_save", room: edit })) setEdit(null);
+              if ((await dispatch({ type: "room_save", room: edit }))) setEdit(null);
             }}
           >
             <div className="form-grid">
@@ -751,9 +753,9 @@ function RoomManagement({ admin = false }: { admin?: boolean }) {
         <Modal title="Thông tin loại phòng" onClose={() => setEditType(null)}>
           <form
             className="modal-form"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (dispatch({ type: "type_save", roomType: editType }))
+              if ((await dispatch({ type: "type_save", roomType: editType })))
                 setEditType(null);
             }}
           >
@@ -915,9 +917,9 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
         <Modal title="Thông tin thiết bị" onClose={() => setEdit(null)}>
           <form
             className="modal-form"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (dispatch({ type: "equipment_save", equipment: edit }))
+              if ((await dispatch({ type: "equipment_save", equipment: edit })))
                 setEdit(null);
             }}
           >
@@ -938,14 +940,14 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
               />
             </label>
             <label>Mô tả công dụng<textarea maxLength={300} value={edit.description ?? ""} onChange={e => setEdit({ ...edit, description: e.target.value })} /></label>
-            <label>Ảnh thiết bị thật · lưu trong trình duyệt
+            {demoMode ? <label>Ảnh thiết bị thật · lưu trong trình duyệt
               <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 100 * 1024) { notice("Chọn PNG/JPEG/WebP tối đa 100 KB cho dữ liệu demo."); return; }
                 const reader = new FileReader(); reader.onload = () => setEdit(current => current ? { ...current, image: String(reader.result) } : current); reader.readAsDataURL(file);
               }} />
-            </label>
+            </label> : <label>URL ảnh thiết bị (HTTPS)<input type="url" value={edit.image.startsWith("https://") ? edit.image : ""} onChange={event => setEdit({ ...edit, image: event.target.value })} /></label>}
             <p className="small-text muted">Không có API tải ảnh lên server. Ảnh phòng cũ được thay bằng biểu tượng minh họa khi không có ảnh thiết bị thật.</p>
             <EquipmentVisual item={edit} />
             <button type="button" className="text-button" onClick={() => setEdit({ ...edit, image: "" })}>Bỏ ảnh thiết bị</button>
@@ -963,7 +965,7 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
                 />
               </label>
               <label>
-                Giá thuê / giờ
+                Giá thuê / {edit.pricingUnit === "session" ? "lần thuê" : "giờ"}
                 <input
                   required
                   min="0"
@@ -975,6 +977,7 @@ function EquipmentManagement({ admin = false }: { admin?: boolean }) {
                 />
               </label>
             </div>
+            <label>Đơn vị tính giá<select value={edit.pricingUnit ?? "hour"} onChange={event => setEdit({ ...edit, pricingUnit: event.target.value as "hour" | "session" })}><option value="hour">Theo giờ</option><option value="session">Mỗi lần thuê</option></select></label>
             <label className="checkbox-label">
               <input
                 type="checkbox"
@@ -1019,31 +1022,24 @@ function PolicyForm({ studio }: { studio: Studio }) {
       />
       <form
         className="policy-form"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           if (!window.confirm("Áp dụng chính sách cho các đơn mới?")) return;
-          if (dispatch({ type: "policy", studioId: studio.id, policy })) {
-            dispatch({
-              type: "studio_save",
-              studio: { ...studio, policy, active },
-            });
-            notice("Đã lưu chính sách.");
+          if ((await dispatch({ type: "policy", studioId: studio.id, policy }))) {
+            if ((await dispatch({ type: "studio_status", id: studio.id, active, reason: "Cập nhật trạng thái nhận đặt thuê" }))) notice("Đã lưu chính sách.");
           }
         }}
       >
         <div className="form-grid">
           <label>
             Hạn thanh toán cọc (phút)
-            <input
+            <select
               required
-              type="number"
-              min="15"
-              max="180"
               value={policy.paymentMinutes}
               onChange={(e) =>
                 setPolicy({ ...policy, paymentMinutes: +e.target.value })
               }
-            />
+            >{[15, 30, 60, 120, 180].map(minutes => <option key={minutes} value={minutes}>{minutes} phút</option>)}</select>
           </label>
           <label>
             Tỷ lệ cọc (%)
@@ -1109,6 +1105,7 @@ function PolicyForm({ studio }: { studio: Studio }) {
           <p>Giờ hoạt động và phụ thu khung giờ được quản lý tại <Link href="/host/studios">Studio của tôi</Link>. Không thay đổi các điều khoản đã lưu trong đơn cũ.</p>
         </div>
         <h2>Các mốc hoàn cọc</h2>
+        <button type="button" className="btn secondary" onClick={() => setPolicy({ ...policy, refundTiers: [...policy.refundTiers, { hours: policy.cancelHours, percent: 0 }] })}>Thêm mốc hoàn cọc</button>
         {policy.refundTiers.map((t, i) => (
           <div className="form-grid" key={i}>
             <label>
@@ -1168,6 +1165,7 @@ function PolicyForm({ studio }: { studio: Studio }) {
 function Reports() {
   const { bookings, rooms } = useHostData();
   const { state } = useStore();
+  if (!demoMode) return <ConnectedReports />;
   return (
     <>
       <PageHeading
@@ -1264,7 +1262,7 @@ function AdminSurface({ path }: { path: string }) {
       <>
         <PageHeading
           title="Phạm vi quyền truy cập"
-          description="Quyền của các vai trò trong giai đoạn frontend mô phỏng. Việc kiểm soát an toàn phía máy chủ thuộc giai đoạn tiếp theo."
+          description={demoMode ? "Quyền của các vai trò trong giai đoạn frontend mô phỏng." : "Quyền của các vai trò được kiểm tra tại máy chủ cho từng thao tác."}
         />
         <div className="table-scroll">
           <table>
@@ -1319,7 +1317,7 @@ function AdminOverview() {
     <>
       <PageHeading
         title="Tổng quan hệ thống"
-        description="Giám sát vận hành, đối tác và các trường hợp cần xử lý · Dữ liệu minh họa."
+        description={demoMode ? "Giám sát vận hành, đối tác và các trường hợp cần xử lý · Dữ liệu minh họa." : "Giám sát vận hành, đối tác và các trường hợp cần xử lý."}
       />
       <DashboardKpis>
         <DashboardKpi label="Hồ sơ chờ duyệt" value={state.applications.filter(a => a.status === "pending").length} hint="Kiểm tra hồ sơ trước khi cấp quyền" icon={UserCheck} accent="yellow" href="/admin/host-requests" />
@@ -1437,18 +1435,18 @@ function HostApprovals() {
                 <div className="actions">
                   <button
                     className="btn"
-                    onClick={() => {
+                    onClick={async () => {
                       if (
                         window.confirm(
                           `Duyệt hồ sơ ${app.studioName} và cấp quyền Host?`,
                         )
                       )
-                        dispatch({
+                        (await dispatch({
                           type: "review_application",
                           id: app.id,
                           approved: true,
                           reason,
-                        });
+                        }));
                     }}
                   >
                     Duyệt đối tác
@@ -1456,13 +1454,13 @@ function HostApprovals() {
                   <button
                     className="btn secondary"
                     disabled={!reason.trim()}
-                    onClick={() => {
-                      if (window.confirm(`Từ chối hồ sơ ${app.studioName}?`)) dispatch({
+                    onClick={async () => {
+                      if (window.confirm(`Từ chối hồ sơ ${app.studioName}?`)) (await dispatch({
                         type: "review_application",
                         id: app.id,
                         approved: false,
                         reason,
-                      });
+                      }));
                     }}
                   >
                     Từ chối hồ sơ
@@ -1629,8 +1627,8 @@ function UsersTable() {
                   className="btn secondary"
                   disabled={!reason.trim()}
                   key={type}
-                  onClick={() => {
-                    if (dispatch({ type, userId: selected, reason })) {
+                  onClick={async () => {
+                    if ((await dispatch({ type, userId: selected, reason }))) {
                       setSelected("");
                       setReason("");
                     }

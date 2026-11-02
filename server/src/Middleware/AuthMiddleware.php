@@ -12,11 +12,11 @@ use PDO;
 
 class AuthMiddleware
 {
-    private JwtService $jwtService;
+    private ?JwtService $jwtService;
 
     public function __construct(?JwtService $jwtService = null)
     {
-        $this->jwtService = $jwtService ?? new JwtService();
+        $this->jwtService = $jwtService;
     }
 
     /**
@@ -47,7 +47,7 @@ class AuthMiddleware
         }
 
         // Verify token signature and expiration
-        $claims = $this->jwtService->verify($token);
+        $claims = ($this->jwtService ?? new JwtService())->verify($token);
         $userId = (int) ($claims['sub'] ?? 0);
 
         if ($userId <= 0) {
@@ -68,6 +68,9 @@ class AuthMiddleware
         // CRITICAL REQUIREMENT (Section 1 & 5.8):
         // Always reload user from DB on every protected request to enforce current status & role
         $pdo = Db::getConnection();
+        $revoked = $pdo->prepare('SELECT 1 FROM auth_revocations WHERE token_hash=? AND expires_at>NOW()');
+        $revoked->execute([hash('sha256',$token)]);
+        if ($revoked->fetchColumn()) throw new ApiException(401,'unauthorized','Phiên đăng nhập đã kết thúc.');
         $stmt = $pdo->prepare('
             SELECT u.user_id, u.role_id, r.role_name AS role, u.full_name, u.email, u.phone, u.status
             FROM users u

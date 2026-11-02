@@ -1,8 +1,9 @@
 "use client";
 import { Presence, StepPanel, useContentMotion } from "./motion/system";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { Modal } from "./ui";
 import { useStore, useSession } from "./store";
@@ -13,6 +14,7 @@ import { BookingCalendar } from "@/features/pricing/components/BookingCalendar";
 import { RentalPriceSummary } from "@/features/pricing/components/RentalPriceSummary";
 import { EquipmentVisual } from "@/features/pricing/components/EquipmentVisual";
 import styles from "@/features/pricing/styles/rental.module.css";
+import { demoMode } from "@/data/api";
 
 export function BookingWizard({ room, onClose, changeId }: { room: Room; onClose: () => void; changeId?: string }) {
   const { state, dispatch } = useStore(), user = useSession(), router = useRouter();
@@ -38,11 +40,11 @@ export function BookingWizard({ room, onClose, changeId }: { room: Room; onClose
     const reason = !validSelectedSlot ? availabilityError ?? "Chọn một giờ bắt đầu khả dụng trên lịch." : "";
     setError(reason); return !reason && !!snapshot;
   };
-  const submit = () => {
+  const submit = async () => {
     if (!validate()) return;
     if (!accepted) { setError("Vui lòng xác nhận đã đọc các chính sách."); return; }
     if (!user) { setAuth(true); return; }
-    const result = dispatch(changeId ? { type: "change", id: changeId, selection } : { type: "create", selection });
+    const result = (await dispatch(changeId ? { type: "change", id: changeId, selection } : { type: "create", selection, expectedTotal: total, expectedDeposit: deposit, expectedPolicy: studio.policy }));
     if (result) { onClose(); router.push(changeId ? `/my-bookings/${changeId}` : `/payment/${result.bookings.at(-1)!.id}`); }
   };
   return <Modal wide title={changeId ? "Yêu cầu đổi lịch" : "Đặt thuê không gian"} onClose={onClose}>
@@ -83,7 +85,7 @@ export function BookingWizard({ room, onClose, changeId }: { room: Room; onClose
             {Object.entries(equipment).filter(([, q]) => q > 0).map(([id, q]) => <div className="line-item" key={id}><span>{state.equipment.find(e => e.id === id)?.name}</span><span>× {q} · Thuê thêm</span></div>)}
             <div className="note"><strong>Chính sách áp dụng cho đơn này</strong><p>Thanh toán cọc trong {studio.policy.paymentMinutes} phút. Chủ Studio duyệt trong 2 giờ sau khi nhận cọc.</p><p>Tự hủy trước {studio.policy.cancelHours} giờ. {studio.policy.refundTiers.map(t => `Trước ${t.hours} giờ hoàn ${t.percent}% cọc`).join("; ")}.</p><p>Đổi lịch trước {studio.policy.changeHours} giờ, tối đa 1 lần được duyệt. Quá giờ {money(studio.policy.overtimePerBlock)} / 30 phút làm tròn lên.</p><p>Hủy đơn chưa trả cọc hoặc bỏ thanh toán: 1 vi phạm. Đủ 3 vi phạm sẽ tạm ngưng đặt thuê.</p>{changeId && <p>Lịch cũ giữ nguyên trong lúc chờ duyệt. Cọc đã trả được giữ nguyên khi đổi thành công.</p>}</div>
             <label className="checkbox-label"><input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} />Tôi đã kiểm tra thông tin và đồng ý với các chính sách trên.</label>
-            {auth && !user && <div className="note"><strong>Đăng nhập để xác nhận</strong><p>Tài khoản minh họa, không cần mật khẩu. Lựa chọn của bạn được giữ trong biểu mẫu này.</p><button className="btn secondary" onClick={() => { dispatch({ type: "login", userId: "customer" }); setAuth(false); }}>Tiếp tục với Minh Anh</button></div>}
+            {auth && !user && <div className="note"><strong>Đăng nhập để xác nhận</strong>{demoMode ? <><p>Tài khoản minh họa, không cần mật khẩu.</p><button className="btn secondary" onClick={async () => { (await dispatch({ type: "login", userId: "customer" })); setAuth(false); }}>Tiếp tục với Minh Anh</button></> : <Link className="btn secondary" href="/login">Đăng nhập bằng tài khoản của bạn</Link>}</div>}
           </>}
           {error && <p role="alert" className="error">{error}</p>}
         </StepPanel></Presence>
@@ -92,7 +94,7 @@ export function BookingWizard({ room, onClose, changeId }: { room: Room; onClose
           {snapshot ? <RentalPriceSummary snapshot={snapshot} /> : <p>Chưa thể tính giá cho lựa chọn này.</p>}
           <div className="line-item"><span>{changeId ? "Giữ cọc đã trả" : `Cọc cần thanh toán · ${studio.policy.depositPercent}%`}</span><strong>{money(changeId ? state.bookings.find(b => b.id === changeId)!.deposit : deposit)}</strong></div>
           <div className="line-item"><span>Còn lại theo dự kiến</span><span>{money(Math.max(0, total - (changeId ? state.bookings.find(b => b.id === changeId)!.deposit : deposit)))}</span></div>
-          <small>Giá và khả dụng minh họa · Không thu tiền thật. Các điều khoản được lưu cùng đơn khi xác nhận.</small>
+          <small>{demoMode ? "Giá và khả dụng minh họa · Không thu tiền thật." : "Máy chủ kiểm tra lại giá và khả dụng khi xác nhận."} Các điều khoản được lưu cùng đơn khi xác nhận.</small>
         </aside>
       </div>
       <div className="wizard-footer">{step > 1 ? <button className="btn secondary" onClick={() => { setDirection(-1); setStep(step - 1); setError(""); }}><ArrowLeft size={16} />Quay lại</button> : <button className="text-button" onClick={onClose}>Đóng</button>}

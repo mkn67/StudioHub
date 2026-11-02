@@ -640,3 +640,16 @@ Plan này thay đổi vài quy tắc so với văn bản hiện tại của 3.2 
 - **3.3.2 mục 5c:** kỳ nửa mở `[from, to)` (ví dụ tháng 10/2026: `from = 2026-10-01`, `to = 2026-11-01`); `total_revenue` phân kỳ theo `completed_at` và là tổng đơn `completed` (đã thu đủ); `occupancy_rate` chỉ tính phần giờ nằm trong kỳ.
 - **3.3.2 mục 6:** thêm các endpoint bổ sung và mô tả thanh toán `deposit` / `full` / `remaining`.
 - **3.3.3:** cập nhật hạn chế token: đăng xuất không thu hồi token; khóa/đổi vai trò thì áp dụng ngay.
+# Full-stack integration execution — 2026-11-02
+
+Initial discovery and dependency map are documented in `integration-audit.md` and `integration-matrix.md` before application changes.
+
+1. Add versioned, non-destructive schema upgrade for types/config, booking snapshots, attempts, refunds, incidents, collections and idempotency. Preserve legacy records; reject ambiguous historical migration rather than invent payment evidence.
+2. Complete PHP pricing/availability and lifecycle services with room/studio lock ordering, server time, integer VND, ownership, scheduler and explicit development payment adapter.
+3. Secure established JWT authentication; centralize browser HTTP access with a same-origin credential bridge, secure cookie and origin checks. No business rules in Next.
+4. Connect existing store/UI asynchronously; isolate explicit demo mode; never fall back to fixtures after API failure. Scope data to actor and public catalog.
+5. Connect management/admin/report mutations; preserve draft editors and current design.
+6. Run PHP syntax/service tests, frontend regressions/typecheck/lint/build and HTTP/browser checks. MySQL-dependent checks must report an external blocker if no service is available. Update endpoint/setup docs and final matrix truthfully.
+
+---
+

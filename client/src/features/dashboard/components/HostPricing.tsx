@@ -85,11 +85,11 @@ function PricingEditor({ typeId, initialRoomId, onClose }: { typeId: string; ini
   function close() {
     if (!dirty.current || window.confirm("Bỏ các thay đổi bảng giá chưa lưu?")) onClose();
   }
-  function save() {
+  async function save() {
     if (!captureForms()) return;
     // Validate the whole transaction before asking the shared provider to persist.
     try { applyHostPricing(shared.state, commands.current); } catch (error) { setMessage(error instanceof Error ? error.message : "Bảng giá chưa hợp lệ."); return; }
-    if (shared.saveHostPricing(commands.current)) { dirty.current = false; shared.notice("Đã lưu bảng giá. Các đơn đã tạo giữ nguyên snapshot."); onClose(); }
+    if ((await shared.saveHostPricing(commands.current))) { dirty.current = false; shared.notice("Đã lưu bảng giá. Các đơn đã tạo giữ nguyên snapshot."); onClose(); }
     else setMessage("Chưa lưu được bảng giá. Bản nháp vẫn còn, bạn có thể thử lại.");
   }
   return <Modal title={`Chỉnh sửa bảng giá · ${type.name}`} onClose={close} wide className="host-pricing-modal">

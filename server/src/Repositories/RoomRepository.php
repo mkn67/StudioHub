@@ -386,8 +386,7 @@ class RoomRepository
             FROM bookings
             WHERE room_id = :room_id
               AND (
-                status IN ('confirmed', 'checked_in')
-                OR (status = 'pending' AND expires_at > NOW())
+                status IN ('awaiting_payment', 'pending', 'confirmed', 'checked_in')
               )
               AND busy_end > :from_dt
               AND busy_start < :to_dt
