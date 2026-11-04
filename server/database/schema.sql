@@ -254,7 +254,8 @@ CREATE TABLE IF NOT EXISTS payments (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_payments_type CHECK (payment_type IN ('deposit', 'remaining', 'full')),
     CONSTRAINT chk_payments_status CHECK (status IN ('pending', 'success', 'failed')),
-    CONSTRAINT chk_payments_amount CHECK (amount > 0),
+    -- A zero-value "remaining" settlement is valid when the deposit covered the full total.
+    CONSTRAINT chk_payments_amount CHECK (amount >= 0),
     CONSTRAINT fk_payments_booking FOREIGN KEY (booking_id) REFERENCES bookings (booking_id) ON DELETE CASCADE,
     INDEX idx_payments_lookup (booking_id, payment_type, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

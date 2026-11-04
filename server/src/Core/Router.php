@@ -106,6 +106,8 @@ class Router
                     return $handler($req, $vars);
                 });
         }
+
+        throw new ApiException(500, 'router_dispatch_failed', 'Không thể xử lý tuyến đường');
     }
 }
 

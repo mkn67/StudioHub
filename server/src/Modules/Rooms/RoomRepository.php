@@ -765,7 +765,7 @@ class RoomRepository
             throw new \App\Exceptions\ApiException(400, 'invalid_minimum_units', 'minimum_units phải lớn hơn 0');
         }
 
-        $maxUnits = isset($rateData['maximum_units']) && $rateData['maximum_units'] !== null
+        $maxUnits = isset($rateData['maximum_units'])
             ? (int) $rateData['maximum_units']
             : null;
         if ($maxUnits !== null && $maxUnits < $minUnits) {

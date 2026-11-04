@@ -52,6 +52,9 @@ class PaymentService
         if ($paymentMethod === '') {
             $paymentMethod = 'sandbox_qr';
         }
+        if ($paymentMethod !== 'sandbox_qr') {
+            throw new ApiException(400, 'invalid_payment_method', 'Hiện chỉ hỗ trợ phương thức thanh toán mô phỏng sandbox_qr');
+        }
 
         $this->pdo->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
         $this->pdo->beginTransaction();
@@ -71,6 +74,7 @@ class PaymentService
             if ($booking['status'] === 'pending') {
                 $didExpire = $this->bookingService->expireIfDue($bookingId, $this->pdo);
                 if ($didExpire) {
+                    $this->pdo->commit();
                     throw new ApiException(400, 'booking_expired', 'Đơn đặt phòng đã hết hạn giữ chỗ');
                 }
                 $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $this->pdo);

@@ -12,11 +12,13 @@ class AuthService
 {
     private UserRepository $userRepository;
     private JwtService $jwtService;
+    private TokenRevocationRepository $tokenRevocations;
 
-    public function __construct(?UserRepository $userRepository = null, ?JwtService $jwtService = null)
+    public function __construct(?UserRepository $userRepository = null, ?JwtService $jwtService = null, ?TokenRevocationRepository $tokenRevocations = null)
     {
         $this->userRepository = $userRepository ?? new UserRepository();
         $this->jwtService = $jwtService ?? new JwtService();
+        $this->tokenRevocations = $tokenRevocations ?? new TokenRevocationRepository();
     }
 
     /**
@@ -146,6 +148,17 @@ class AuthService
                 'role'       => $user['role'],
             ],
         ];
+    }
+
+    /** Revoke the authenticated JWT until its original expiry. */
+    public function logout(array $claims): void
+    {
+        $jti = $claims['jti'] ?? null;
+        $expiresAt = filter_var($claims['exp'] ?? null, FILTER_VALIDATE_INT);
+        if (!is_string($jti) || !preg_match('/^[a-f0-9]{64}$/', $jti) || $expiresAt === false || $expiresAt <= time()) {
+            throw new ApiException(401, 'unauthorized', 'Token không hợp lệ hoặc đã hết hạn');
+        }
+        $this->tokenRevocations->revoke($jti, $expiresAt);
     }
 
     /**

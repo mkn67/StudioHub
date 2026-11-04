@@ -41,7 +41,7 @@ class AdminController
     public function updateUserStatus(Request $request, array $vars = []): void
     {
         $id = (int) ($vars['id'] ?? $request->param('id') ?? 0);
-        $body = $request->json() ?? [];
+        $body = $request->json();
         $admin = $request->getAttribute('user');
 
         $status = trim((string) ($body['status'] ?? ''));
@@ -57,7 +57,7 @@ class AdminController
     public function updateUserRole(Request $request, array $vars = []): void
     {
         $id = (int) ($vars['id'] ?? $request->param('id') ?? 0);
-        $body = $request->json() ?? [];
+        $body = $request->json();
         $admin = $request->getAttribute('user');
 
         $role = trim((string) ($body['role'] ?? ''));

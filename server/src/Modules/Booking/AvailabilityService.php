@@ -117,8 +117,14 @@ class AvailabilityService
 
         // Validate party_size if provided
         $partySize = 1;
-        if (isset($request['party_size']) && $request['party_size'] !== '' && $request['party_size'] !== null) {
-            $partySize = (int) $request['party_size'];
+        if (array_key_exists('party_size', $request) && $request['party_size'] !== null && $request['party_size'] !== '') {
+            $validatedPartySize = filter_var($request['party_size'], FILTER_VALIDATE_INT);
+            if ($validatedPartySize === false || $validatedPartySize <= 0) {
+                throw new ApiException(400, 'validation_error', 'Số lượng người phải là số nguyên dương', [
+                    ['field' => 'party_size', 'code' => 'invalid_integer', 'message' => 'party_size must be a positive integer'],
+                ]);
+            }
+            $partySize = $validatedPartySize;
             if ($partySize <= 0 || $partySize > (int) $room['capacity']) {
                 throw new ApiException(
                     400,
@@ -180,8 +186,7 @@ class AvailabilityService
                 $consolidated[$eqId] = ($consolidated[$eqId] ?? 0) + $qty;
             }
 
-            if (!empty($consolidated)) {
-                // Sort ascending by equipment_id to prevent deadlocks
+            // Sort ascending by equipment_id to prevent deadlocks
                 ksort($consolidated);
                 $eqIds = array_keys($consolidated);
                 $inClause = implode(',', array_fill(0, count($eqIds), '?'));
@@ -230,7 +235,6 @@ class AvailabilityService
                         'unit_price'   => $eqRow['unit_price'],
                     ];
                 }
-            }
         }
 
         // 6. Check Room Schedule Conflict (Section 5.1)

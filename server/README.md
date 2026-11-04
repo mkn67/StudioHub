@@ -9,9 +9,9 @@ src/
 └── Modules/
     ├── Auth/             # Account endpoints, JWT, account repository, auth middleware
     ├── Catalog/          # Space types and amenities
-    ├── Studios/
+    ├── Studios/           # Studios, service packages, private production projects
     ├── Rooms/
-    ├── Equipment/
+    ├── Equipment/         # Reusable equipment and consumable stock ledger
     ├── Booking/          # Availability, pricing, lifecycle and payments
     ├── Admin/            # Admin and host statistics
     └── Shared/           # Ownership checks, audit logging, role middleware
@@ -32,6 +32,12 @@ MySQL is available to host tools at `localhost:3307`; the API and expiry worker 
 
 ```sh
 docker compose exec api php bin/expire-bookings.php
+```
+
+For an existing database, apply additive migrations without rebuilding data:
+
+```sh
+docker compose exec api php database/migrate-up.php
 ```
 
 To rebuild a local database, `--fresh` is accepted only when `APP_ENV` is `dev` or `test` and `DB_NAME` ends in `_dev` or `_test`:
@@ -55,11 +61,14 @@ The development seed uses `password123` for these accounts:
 
 These credentials are for local development only.
 
+Login and availability-check limits default to 10 requests per 15 minutes and 60 requests per minute per client IP. Configure them with `LOGIN_RATE_LIMIT`, `LOGIN_RATE_WINDOW_SECONDS`, `AVAILABILITY_RATE_LIMIT`, and `AVAILABILITY_RATE_WINDOW_SECONDS`. Only `REMOTE_ADDR` is used as the client identity; configure trusted proxy handling before placing the API behind a proxy that does not preserve the originating address.
+
 ## API and tests
 
 - OpenAPI 3.0 contract: [`openapi.yaml`](openapi.yaml)
 - Postman collection: [`postman/Studio-Rental-API.postman_collection.json`](postman/Studio-Rental-API.postman_collection.json)
 - Unit suite: `docker compose exec api ./vendor/bin/phpunit tests/Unit`
+- Domain integration suite (isolated DB): set `DB_NAME=studio_backend_test` and `APP_ENV=test`, apply `database/migrate-up.php`, then run `vendor/bin/phpunit tests/Integration`.
 - Integration suites: `docker compose exec api php tests/test_phaseN_integration.php` (replace `N` with a phase number)
 - Concurrency scenarios T1, T2 and T15: `python3 server/tests/concurrency_test.py http://localhost:8000`
 
@@ -71,7 +80,7 @@ docker run --rm -p 8081:8080 \
   docker.io/swaggerapi/swagger-ui
 ```
 
-Open `http://localhost:8081`. The local Swagger UI container is currently running on port 8081. The API simulates payment records; it does not connect to a payment provider or transfer/refund real funds. Expiry and cancellation audit records include `refund_due` for later handling.
+Open `http://localhost:8081`. The API simulates payment records; it does not connect to a payment provider or transfer/refund real funds. Logout revokes the current JWT immediately; expired revocation and rate-limit rows are purged by the existing cron worker. Service packages create separate service orders and do not reserve rooms; project metadata is private by default, and hosts receive a redacted view unless separately granted confidential access.
 
 ## Deployment notes
 

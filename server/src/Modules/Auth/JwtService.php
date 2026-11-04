@@ -43,6 +43,7 @@ class JwtService
             'sub' => $userId,
             'iat' => $now,
             'exp' => $now + $ttl,
+            'jti' => bin2hex(random_bytes(32)),
         ]);
 
         return JWT::encode($payload, $this->secret, $this->algorithm);
