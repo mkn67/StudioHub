@@ -221,6 +221,29 @@ class AuthService
             $updateData['phone'] = trim((string) $input['phone']) !== '' ? trim((string) $input['phone']) : null;
         }
 
+        if (array_key_exists('address', $input)) {
+            $address = trim((string) $input['address']);
+            $addressLength = preg_match_all('/./us', $address, $matches);
+            if ($addressLength === false || $addressLength > 255) {
+                throw new ApiException(400, 'invalid_address', 'Địa chỉ không được vượt quá 255 ký tự');
+            }
+            $updateData['address'] = $address !== '' ? $address : null;
+        }
+
+        if (array_key_exists('date_of_birth', $input)) {
+            $dateOfBirth = trim((string) $input['date_of_birth']);
+            if ($dateOfBirth === '') {
+                $updateData['date_of_birth'] = null;
+            } else {
+                $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d', $dateOfBirth);
+                $dateErrors = \DateTimeImmutable::getLastErrors();
+                if ($parsed === false || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) || $parsed->format('Y-m-d') !== $dateOfBirth || $parsed > new \DateTimeImmutable('today')) {
+                    throw new ApiException(400, 'invalid_date_of_birth', 'Ngày sinh phải có định dạng YYYY-MM-DD và không ở tương lai');
+                }
+                $updateData['date_of_birth'] = $dateOfBirth;
+            }
+        }
+
         if (array_key_exists('avatar_url', $input)) {
             $updateData['avatar_url'] = trim((string) $input['avatar_url']) !== '' ? trim((string) $input['avatar_url']) : null;
         }

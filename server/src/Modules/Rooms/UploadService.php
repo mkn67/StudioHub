@@ -26,6 +26,15 @@ class UploadService
      */
     public static function uploadRoomImage(array $file, ?string $targetDir = null): string
     {
+        return self::uploadImage($file, 'rooms', $targetDir);
+    }
+
+    /** Store a validated image in an entity-specific public upload directory. */
+    public static function uploadImage(array $file, string $entity, ?string $targetDir = null): string
+    {
+        if (!in_array($entity, ['rooms', 'avatars', 'studios', 'equipments'], true)) {
+            throw new ApiException(400, 'invalid_upload_target', 'Loại ảnh tải lên không hợp lệ');
+        }
         if (!isset($file['error']) || is_array($file['error'])) {
             throw new ApiException(400, 'invalid_upload', 'Tập tin tải lên không hợp lệ');
         }
@@ -63,10 +72,10 @@ class UploadService
         }
 
         $extension = self::ALLOWED_MIME_TYPES[$mime];
-        $randomName = 'room_' . bin2hex(random_bytes(16)) . '.' . $extension;
+        $randomName = rtrim($entity, 's') . '_' . bin2hex(random_bytes(16)) . '.' . $extension;
 
         if ($targetDir === null) {
-            $targetDir = dirname(__DIR__, 3) . '/public/uploads/rooms';
+            $targetDir = dirname(__DIR__, 3) . '/public/uploads/' . $entity;
         }
 
         if (!is_dir($targetDir)) {
@@ -86,7 +95,7 @@ class UploadService
             }
         }
 
-        return '/uploads/rooms/' . $randomName;
+        return '/uploads/' . $entity . '/' . $randomName;
     }
 }
 

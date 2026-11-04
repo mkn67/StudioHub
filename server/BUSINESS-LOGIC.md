@@ -53,7 +53,7 @@ Trong từng module, Controller nhận request/validate và định dạng respo
 2. Tháng thuê quy ước cố định 30 ngày, ngày thuê là 24 giờ liên tục từ giờ bắt đầu.
 3. Đơn chỉ khóa lịch đến `end_time + 30 phút`; xác nhận đơn không cần thanh toán đủ ngay.
 4. Thanh toán hiện chỉ là mô phỏng, nên frontend không nên hiển thị như giao dịch tiền thật.
-5. Logout không vô hiệu JWT ngay lập tức.
+5. Tỷ lệ cọc, giờ hoạt động và refund tiers theo Studio đã được thêm; `change_hours` và `overtime_per_30m` đang lưu cấu hình nhưng chưa có API đổi lịch/check-out để áp dụng.
 
 ## Bản rà soát để quyết định sửa nghiệp vụ
 
@@ -65,7 +65,7 @@ Các mục dưới đây mô tả chính xác hơn hệ quả hiện tại. “C
 - Khi tạo đơn, service khóa dòng phòng và các thiết bị được yêu cầu theo ID tăng dần, rồi chạy cùng phép kiểm tra trong transaction. Đây là điều phối chống tranh chấp; trigger ở DB là lớp bảo vệ thêm.
 - Xung đột dùng `[busy_start, busy_end)`; code cộng buffer vào cuối đơn mới và so với `busy_start/busy_end` của đơn cũ. Vì thế đơn bắt đầu đúng lúc buffer kết thúc được nhận.
 - `party_size` được ép sang số nguyên trước khi kiểm tra. Nếu client gửi giá trị không phải số, ví dụ `"abc"`, ép kiểu có thể thành `0` và bị báo vượt sức chứa thay vì lỗi định dạng. **Gợi ý:** validate kiểu đầu vào và trả lỗi field rõ ràng trước khi ép kiểu.
-- Thời gian phải khớp đúng `YYYY-MM-DD HH:mm:ss`, bắt đầu lớn hơn thời điểm hiện tại. Chưa thấy rule giờ hoạt động theo ngày/giờ của studio trong bước khả dụng. **Cần chốt:** studio có giờ mở cửa/đóng cửa, ngày nghỉ, hoặc thời gian setup riêng không?
+- Thời gian phải khớp đúng `YYYY-MM-DD HH:mm:ss`, bắt đầu lớn hơn thời điểm hiện tại và nằm trọn trong giờ hoạt động theo ngày của Studio. Chưa có lịch ngày nghỉ hoặc thời gian setup riêng.
 - Tìm rate dựa vào `DATE(start_time)` và snapshot đơn. Khi thuê vắt qua ngày hết hạn của bảng giá, rate vẫn được chấp nhận nếu hiệu lực vào ngày bắt đầu; đây là quyết định D15.
 - Thiết bị phải thuộc cùng studio và đang active. Dữ liệu ID trùng trong payload được gộp số lượng trước khi kiểm kho/tính tiền. **Cần chốt:** có giới hạn số lượng mỗi dòng/giới hạn tổng để tránh số lượng cực lớn không?
 
@@ -87,7 +87,7 @@ Các mục dưới đây mô tả chính xác hơn hệ quả hiện tại. “C
 
 Khách có thể hủy `pending` hoặc `confirmed` qua endpoint riêng; không thể tự hủy `checked_in`. Hủy/host từ chối/hết hạn sau thanh toán tạo ledger `booking_refunds` trạng thái `success` trong sandbox, cùng transaction với đổi trạng thái booking; audit ghi tổng tiền đã hoàn sandbox. **Không có tiền thật di chuyển**. Nguồn: `BookingStateMachine.php`, `BookingService.php`, migration `007_refunds_and_inventory_reservations.sql`.
 
-**Cần chốt quan trọng:** hiện khách có thể hủy booking đã confirmed mà audit ghi hoàn toàn bộ số đã thu, bất kể còn bao lâu đến giờ thuê. Host cũng có thể hủy confirmed. Chưa có chính sách phân biệt hoàn đủ/một phần/không hoàn theo thời điểm, hay xử lý trường hợp khách đã check-in. Hãy xác định bảng chính sách trước khi tích hợp cổng thanh toán thật.
+**Cần chốt quan trọng:** booking mới chụp `refund_tiers` trong policy snapshot và sandbox tính số refund của khách hủy theo thời gian còn lại. Booking cũ không có snapshot vẫn hoàn đủ. Host từ chối/hết hạn tiếp tục hoàn đủ sandbox. Hãy xác nhận chính sách này trước khi tích hợp cổng thanh toán thật.
 
 ### Thanh toán và hết hạn
 
@@ -153,3 +153,21 @@ Các endpoint mới được thêm theo hướng additive, không đổi payload
 - JWT mới chứa `jti` ngẫu nhiên riêng cho từng lần đăng nhập. Logout đưa `jti` vào `revoked_jwt_tokens`; middleware từ chối token đó ngay, kể cả khi chữ ký và `exp` vẫn hợp lệ. Token phát hành trước migration không có `jti` sẽ cần đăng nhập lại.
 - `POST /api/auth/login` mặc định giới hạn 10 request/15 phút/IP; `POST /api/bookings/check-availability` mặc định 60 request/phút/IP. Phản hồi vượt mức là HTTP 429 kèm `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`. Ngưỡng cấu hình trong `.env`.
 - Rate limit dùng fixed window lưu trong MySQL nên có hiệu lực xuyên qua nhiều worker/container. Danh tính IP lấy từ `REMOTE_ADDR`; nếu chạy sau reverse proxy phải cấu hình để API nhận đúng IP gốc và không tin header forward do client tự gửi.
+
+### Bổ sung API quản trị và vận hành (2026-11-04)
+
+- Host có thể đọc danh sách phòng/thiết bị của Studio mình, kể cả tài nguyên inactive; chi tiết phòng và bảng giá cũng được giới hạn theo quyền sở hữu. `GET /api/host/calendar` chỉ trả booking đang giữ lịch (confirmed/checked_in hoặc pending chưa hết hạn), không trả thông tin liên hệ khách.
+- Admin có thể tìm/lọc danh sách Studio, phòng và thiết bị trên toàn hệ thống; cập nhật tài nguyên qua PATCH được giới hạn theo danh sách field và ghi audit log trong cùng transaction. Danh sách role có thể gán chỉ gồm Host/Customer; API không hiển thị role Admin như một quyền có thể cấp.
+- `/api/admin/audit-logs` đọc lịch sử thao tác; `/api/admin/refund-exceptions` gộp refund booking và service order. Admin có thể ghi nhận kết quả đối soát: `confirm_succeeded` bắt buộc mã bằng chứng, `mark_failed` bắt buộc lý do. Action cập nhật ledger và ghi lịch sử/audit; endpoint không gửi tiền và không tự xác minh mã bằng chứng với ngân hàng.
+- `/api/admin/reports/series` và `/api/host/reports/series` tách số booking theo ngày bắt đầu khỏi doanh thu theo ngày `completed_at`, cùng dùng khoảng nửa mở `[from, to)`. `/api/host/overview` ghép thống kê hiện có với tối đa 10 booking sắp tới.
+- Host application nhận `studio_name`, `address`, `description`; chỉ Customer đang active được gửi và mỗi tài khoản chỉ có một hồ sơ pending/approved. Admin chỉ quyết định hồ sơ pending; từ chối phải có lý do. Duyệt đổi role Customer thành Host trong cùng transaction với hồ sơ và audit log. Hồ sơ bị từ chối có thể nộp lại.
+- Profile thêm `date_of_birth` (`YYYY-MM-DD`, không nhận ngày tương lai) và `address` tối đa 255 ký tự. Gửi chuỗi rỗng sẽ xóa giá trị; hai field này được thêm bằng migration `010_user_profile_details.sql`.
+- Customer có thể xem hồ sơ Host mới nhất tại `GET /api/host-applications/current`; trả `null` nếu chưa từng gửi.
+- Đổi email yêu cầu mật khẩu hiện tại và mã 6 số một lần, hết hạn sau 15 phút. Dev/test trả `development_code`; production gọi `mail()`, nên cần cấu hình mail server để dùng thật. Hai route được rate limit.
+- Avatar và ảnh Studio/thiết bị dùng upload ảnh chung JPG/PNG/WebP, giới hạn 5 MiB. Ảnh lưu ở public uploads.
+- Tùy chọn notification được lưu trong DB nhưng hiện chưa có worker/email/SMS sender dùng các cờ này.
+- Xác minh danh tính giữ 4 ký tự cuối và giấy tờ trong thư mục private (`PRIVATE_IDENTITY_STORAGE`); admin list/decision/download được audit. Mặc định tệp ở `server/storage/private-identities`, ngoài webroot. Chưa có mã hóa file, quét malware, retention/cleanup hay hồ sơ xóa dữ liệu; cần bổ sung trước khi nhận giấy tờ thật.
+- Hồ sơ pháp lý Host được lưu dưới dạng cá nhân/doanh nghiệp và chuyển sang `submitted`; Admin có thể duyệt/từ chối bằng route quản trị, từ chối phải có lý do và quyết định có audit. Admin đăng ký PDF hợp đồng tối đa 2 MiB cho Studio; Host có quyền xem metadata và xin URL một lần/5 phút cho hợp đồng active. Hệ thống chưa có ký điện tử hoặc chứng thực chữ ký.
+- Chính sách thuê cấu hình cọc, thời gian giữ đơn, giờ hoạt động, hạn hủy, refund tiers, hạn đổi lịch và phí quá giờ. Booking mới lưu snapshot; giờ mở/đóng, tiền cọc, thời gian giữ và cancel/refund được áp dụng trong khả dụng/vòng đời booking. `change_hours` và `overtime_per_30m` chưa có endpoint nghiệp vụ đi kèm vì backend hiện chưa có flow đổi booking/check-out tính phí.
+- Room types là cấu hình riêng theo Studio và có thể gắn vào phòng. Xóa thiết bị chặn khi đã có booking history; xóa bảng giá chỉ cho rate inactive chưa được booking tham chiếu. Cả hai ghi audit.
+- Các migration bổ sung hiện tại là `009_host_applications.sql`, `010_user_profile_details.sql`, `011_account_and_studio_management.sql`, `012_legal_contracts_room_types_and_refund_actions.sql`. Chạy `php database/migrate.php` để áp dụng các migration chưa có trong `schema_migrations`; chưa chạy trên DB trong phiên này.

@@ -74,5 +74,33 @@ class EquipmentController
         $res = $this->equipmentService->updateEquipment($equipmentId, $body);
         ApiResponse::success($res, 'Cập nhật thiết bị thành công');
     }
+
+    public function uploadImage(Request $request, array $vars): void
+    {
+        $userId = (int) $request->user()['user_id'];
+        $equipmentId = (int) $vars['id'];
+        \App\Modules\Shared\OwnershipGuard::assertOwnsEquipment($userId, $equipmentId);
+        $file = $_FILES['image'] ?? [];
+        if (!$file) throw new \App\Exceptions\ApiException(400, 'missing_file', 'Vui lòng gửi ảnh trong trường image');
+        $isPrimary = filter_var($request->body('is_primary', false), FILTER_VALIDATE_BOOLEAN);
+        $url = \App\Modules\Rooms\UploadService::uploadImage($file, 'equipments');
+        try {
+            $result = $this->equipmentService->uploadImage($equipmentId, $url, (bool) $isPrimary);
+        } catch (\Throwable $error) {
+            $path = dirname(__DIR__, 3) . '/public' . $url;
+            if (is_file($path)) @unlink($path);
+            throw $error;
+        }
+        ApiResponse::created($result, 'Tải ảnh thiết bị thành công');
+    }
+
+    public function delete(Request $request, array $vars): void
+    {
+        $userId = (int) $request->user()['user_id'];
+        $equipmentId = (int) $vars['id'];
+        \App\Modules\Shared\OwnershipGuard::assertOwnsEquipment($userId, $equipmentId);
+        $this->equipmentService->deleteEquipment($equipmentId, $userId);
+        ApiResponse::ok(['equipment_id' => $equipmentId, 'deleted' => true], 'Xóa thiết bị vĩnh viễn thành công');
+    }
 }
 

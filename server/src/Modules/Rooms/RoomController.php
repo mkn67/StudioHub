@@ -145,6 +145,16 @@ class RoomController
         ApiResponse::success($res, 'Cập nhật bảng giá thành công');
     }
 
+    public function deleteRate(Request $request, array $vars): void
+    {
+        $userId = (int) $request->user()['user_id'];
+        $roomId = (int) $vars['id'];
+        $rateId = (int) $vars['rate_id'];
+        \App\Modules\Shared\OwnershipGuard::assertOwnsRate($userId, $roomId, $rateId);
+        $this->roomService->deleteRate($roomId, $rateId, $userId);
+        ApiResponse::ok(['room_id' => $roomId, 'rate_id' => $rateId, 'deleted' => true], 'Xóa bảng giá vĩnh viễn thành công');
+    }
+
     /**
      * POST /api/rooms/{id}/images
      * Upload room image (Host only, multipart/form-data)

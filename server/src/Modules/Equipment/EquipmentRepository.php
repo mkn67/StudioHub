@@ -38,6 +38,7 @@ class EquipmentRepository
                    e.pricing_unit,
                    e.total_quantity,
                    e.image_url,
+                   COALESCE((SELECT JSON_ARRAYAGG(ei.image_url) FROM equipment_images ei WHERE ei.equipment_id = e.equipment_id), JSON_ARRAY()) AS images,
                    e.status
             FROM equipments e
             JOIN equipment_categories ec ON e.category_id = ec.category_id
@@ -69,6 +70,7 @@ class EquipmentRepository
             'pricing_unit'   => $item['pricing_unit'],
             'total_quantity' => (int) $item['total_quantity'],
             'image_url'      => $item['image_url'],
+            'images'         => is_string($item['images']) ? (json_decode($item['images'], true) ?: []) : [],
             'status'         => $item['status'],
         ], $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
@@ -193,6 +195,54 @@ class EquipmentRepository
         $sql = 'UPDATE equipments SET ' . implode(', ', $fields) . ', updated_at = NOW() WHERE equipment_id = ?';
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute($params);
+    }
+
+    public function addImage(int $equipmentId, string $imageUrl, bool $isPrimary): int
+    {
+        $this->pdo->beginTransaction();
+        try {
+            if ($isPrimary) {
+                $clear = $this->pdo->prepare('UPDATE equipment_images SET is_primary = 0 WHERE equipment_id = ?');
+                $clear->execute([$equipmentId]);
+                $update = $this->pdo->prepare('UPDATE equipments SET image_url = ?, updated_at = NOW() WHERE equipment_id = ?');
+                $update->execute([$imageUrl, $equipmentId]);
+            }
+            $stmt = $this->pdo->prepare('INSERT INTO equipment_images (equipment_id, image_url, is_primary) VALUES (?, ?, ?)');
+            $stmt->execute([$equipmentId, $imageUrl, $isPrimary ? 1 : 0]);
+            $id = (int) $this->pdo->lastInsertId();
+            $this->pdo->commit();
+            return $id;
+        } catch (\Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
+    }
+
+    public function deleteIfUnused(int $equipmentId, int $actorId): array
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $lock = $this->pdo->prepare('SELECT image_url FROM equipments WHERE equipment_id = ? FOR UPDATE');
+            $lock->execute([$equipmentId]);
+            $imageUrl = $lock->fetchColumn();
+            if ($imageUrl === false) throw new \App\Exceptions\ApiException(404, 'equipment_not_found', 'Không tìm thấy thiết bị');
+            $usage = $this->pdo->prepare('SELECT 1 FROM booking_details WHERE equipment_id = ? LIMIT 1');
+            $usage->execute([$equipmentId]);
+            if ($usage->fetchColumn()) throw new \App\Exceptions\ApiException(409, 'equipment_in_use', 'Không thể xóa thiết bị đã xuất hiện trong lịch sử đặt phòng');
+            $images = $this->pdo->prepare('SELECT image_url FROM equipment_images WHERE equipment_id = ?');
+            $images->execute([$equipmentId]);
+            $urls = $images->fetchAll(PDO::FETCH_COLUMN);
+            if (is_string($imageUrl) && $imageUrl !== '') $urls[] = $imageUrl;
+            $delete = $this->pdo->prepare('DELETE FROM equipments WHERE equipment_id = ?');
+            $delete->execute([$equipmentId]);
+            $audit = $this->pdo->prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id, metadata) VALUES (?, 'equipment_permanently_deleted', 'equipments', ?, JSON_OBJECT('image_count', ?))");
+            $audit->execute([$actorId, $equipmentId, count($urls)]);
+            $this->pdo->commit();
+            return array_values(array_unique($urls));
+        } catch (\Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
     }
 
     /**

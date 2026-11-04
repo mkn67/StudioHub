@@ -375,6 +375,11 @@ class RoomService
         ];
     }
 
+    public function deleteRate(int $roomId, int $rateId, int $actorId): void
+    {
+        $this->roomRepo->deleteRateIfUnused($roomId, $rateId, $actorId);
+    }
+
     /**
      * Upload room image
      *

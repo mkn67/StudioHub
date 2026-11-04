@@ -10,6 +10,7 @@ use App\Core\Validator;
 use App\Modules\Studios\StudioRepository;
 use App\Modules\Shared\OwnershipGuard;
 use App\Exceptions\ApiException;
+use App\Modules\Rooms\UploadService;
 
 class StudioController
 {
@@ -84,6 +85,33 @@ class StudioController
         $updated = $this->studioRepo->findById($studioId);
 
         ApiResponse::success($updated, 'Cập nhật cơ sở studio thành công');
+    }
+
+    public function uploadCover(Request $req, array $vars = []): void
+    {
+        $userId = (int) $req->user()['user_id'];
+        $studioId = (int) ($vars['id'] ?? 0);
+        OwnershipGuard::assertOwnsStudio($userId, $studioId);
+        $file = $_FILES['image'] ?? [];
+        if (!$file) throw new ApiException(400, 'missing_file', 'Vui lòng gửi ảnh trong trường image');
+        $url = UploadService::uploadImage($file, 'studios');
+        try {
+            $existing = $this->studioRepo->findById($studioId);
+            $this->studioRepo->updateCover($studioId, $url);
+        } catch (\Throwable $error) {
+            $this->deleteCoverFile($url);
+            throw $error;
+        }
+        $this->deleteCoverFile(is_array($existing) ? ($existing['cover_url'] ?? null) : null);
+        ApiResponse::created(['studio_id' => $studioId, 'cover_url' => $url], 'Tải ảnh đại diện Studio thành công');
+    }
+
+    private function deleteCoverFile(?string $url): void
+    {
+        if (is_string($url) && preg_match('#^/uploads/studios/[A-Za-z0-9_.-]+$#', $url)) {
+            $path = dirname(__DIR__, 3) . '/public' . $url;
+            if (is_file($path)) @unlink($path);
+        }
     }
 }
 

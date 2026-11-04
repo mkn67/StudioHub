@@ -51,7 +51,8 @@ class BookingRepository
                 customer_email,
                 note,
                 status,
-                expires_at
+                expires_at,
+                policy_snapshot
             ) VALUES (
                 :booking_code,
                 :room_id,
@@ -75,7 +76,8 @@ class BookingRepository
                 :customer_email,
                 :note,
                 :status,
-                :expires_at
+                :expires_at,
+                :policy_snapshot
             )
         ");
 
@@ -103,6 +105,7 @@ class BookingRepository
             'note'             => $data['note'] ?? null,
             'status'           => $data['status'] ?? 'pending',
             'expires_at'       => $data['expires_at'],
+            'policy_snapshot' => $data['policy_snapshot'] ?? null,
         ]);
 
         return (int) $db->lastInsertId();

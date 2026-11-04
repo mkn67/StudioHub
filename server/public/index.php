@@ -41,6 +41,11 @@ use App\Modules\Equipment\ConsumableController;
 use App\Modules\Booking\BookingController;
 use App\Modules\Admin\AdminController;
 use App\Modules\Admin\HostController;
+use App\Modules\HostApplications\HostApplicationController;
+use App\Modules\Account\AccountController;
+use App\Modules\Studios\StudioPolicyController;
+use App\Modules\Studios\HostRoomTypeController;
+use App\Modules\LegalContracts\LegalContractController;
 
 $router = new Router();
 $router->use(new CorsMiddleware());
@@ -60,6 +65,15 @@ $router->post('/api/auth/login', [AuthController::class, 'login'], [new RateLimi
 $router->post('/api/auth/logout', [AuthController::class, 'logout'], [new AuthMiddleware()]);
 $router->get('/api/auth/profile', [AuthController::class, 'profile'], [new AuthMiddleware()]);
 $router->patch('/api/auth/profile', [AuthController::class, 'updateProfile'], [new AuthMiddleware()]);
+$router->post('/api/host-applications', [HostApplicationController::class, 'submit'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->get('/api/host-applications/current', [HostApplicationController::class, 'current'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->post('/api/auth/email-change-requests', [AccountController::class, 'requestEmailChange'], [new AuthMiddleware(), new RateLimitMiddleware('email-change', 5, 900)]);
+$router->post('/api/auth/email-change-confirmations', [AccountController::class, 'confirmEmailChange'], [new AuthMiddleware(), new RateLimitMiddleware('email-change-confirm', 10, 900)]);
+$router->post('/api/account/avatar', [AccountController::class, 'uploadAvatar'], [new AuthMiddleware()]);
+$router->get('/api/account/notification-preferences', [AccountController::class, 'notificationPreferences'], [new AuthMiddleware()]);
+$router->patch('/api/account/notification-preferences', [AccountController::class, 'updateNotificationPreferences'], [new AuthMiddleware()]);
+$router->get('/api/account/identity-verification', [AccountController::class, 'identityVerification'], [new AuthMiddleware()]);
+$router->post('/api/account/identity-verification', [AccountController::class, 'submitIdentityVerification'], [new AuthMiddleware(), new RateLimitMiddleware('identity-verification', 5, 86400)]);
 
 // --- Phase 4: Public Catalog Routes ---
 $router->get('/api/rooms', [RoomController::class, 'index']);
@@ -98,6 +112,18 @@ $router->get('/api/host/projects', [ProductionProjectController::class, 'listAut
 $router->get('/api/studios/mine', [StudioController::class, 'mine'], $hostMiddlewares);
 $router->post('/api/studios', [StudioController::class, 'create'], $hostMiddlewares);
 $router->patch('/api/studios/{id:\d+}', [StudioController::class, 'update'], $hostMiddlewares);
+$router->post('/api/studios/{id:\d+}/cover', [StudioController::class, 'uploadCover'], $hostMiddlewares);
+$router->get('/api/host/policies', [StudioPolicyController::class, 'index'], $hostMiddlewares);
+$router->patch('/api/host/policies', [StudioPolicyController::class, 'update'], $hostMiddlewares);
+$router->get('/api/host/room-types', [HostRoomTypeController::class, 'index'], $hostMiddlewares);
+$router->post('/api/host/room-types', [HostRoomTypeController::class, 'create'], $hostMiddlewares);
+$router->patch('/api/host/room-types/{id:\d+}', [HostRoomTypeController::class, 'update'], $hostMiddlewares);
+$router->get('/api/host/legal-profile', [LegalContractController::class, 'legalProfile'], $hostMiddlewares);
+$router->patch('/api/host/legal-profile', [LegalContractController::class, 'updateLegalProfile'], $hostMiddlewares);
+$router->get('/api/host/contracts', [LegalContractController::class, 'contracts'], $hostMiddlewares);
+$router->get('/api/host/contracts/{id:\d+}', [LegalContractController::class, 'contract'], $hostMiddlewares);
+$router->post('/api/host/contracts/{id:\d+}/document-access', [LegalContractController::class, 'grantDocumentAccess'], $hostMiddlewares);
+$router->get('/api/host/contracts/{id:\d+}/documents/{token}', [LegalContractController::class, 'downloadDocument'], $hostMiddlewares);
 $router->post('/api/host/studios/{studio_id:\d+}/service-packages', [ServicePackageController::class, 'create'], $hostMiddlewares);
 $router->patch('/api/host/service-packages/{package_id:\d+}', [ServicePackageController::class, 'update'], $hostMiddlewares);
 $router->post('/api/host/studios/{studio_id:\d+}/consumables', [ConsumableController::class, 'create'], $hostMiddlewares);
@@ -119,6 +145,7 @@ $router->patch('/api/rooms/{id:\d+}', [RoomController::class, 'update'], $hostMi
 // Rates
 $router->post('/api/rooms/{id:\d+}/rates', [RoomController::class, 'createRate'], $hostMiddlewares);
 $router->patch('/api/rooms/{id:\d+}/rates/{rate_id:\d+}', [RoomController::class, 'updateRate'], $hostMiddlewares);
+$router->delete('/api/rooms/{id:\d+}/rates/{rate_id:\d+}', [RoomController::class, 'deleteRate'], $hostMiddlewares);
 
 // Images
 $router->post('/api/rooms/{id:\d+}/images', [RoomController::class, 'uploadImage'], $hostMiddlewares);
@@ -126,6 +153,8 @@ $router->post('/api/rooms/{id:\d+}/images', [RoomController::class, 'uploadImage
 // Equipments
 $router->post('/api/equipments', [EquipmentController::class, 'create'], $hostMiddlewares);
 $router->patch('/api/equipments/{id:\d+}', [EquipmentController::class, 'update'], $hostMiddlewares);
+$router->post('/api/equipments/{id:\d+}/images', [EquipmentController::class, 'uploadImage'], $hostMiddlewares);
+$router->delete('/api/equipments/{id:\d+}', [EquipmentController::class, 'delete'], $hostMiddlewares);
 
 // --- Phase 6: Booking Engine Routes ---
 $router->post('/api/bookings/check-availability', [BookingController::class, 'checkAvailability'], [new RateLimitMiddleware('availability')]);
@@ -141,12 +170,42 @@ $router->post('/api/bookings/{id:\d+}/payments', [BookingController::class, 'pay
 // --- Phase 8: Administration & Statistics Routes ---
 $adminMiddlewares = [new AuthMiddleware(), new RoleMiddleware('admin')];
 
+$router->get('/api/admin/host-applications', [HostApplicationController::class, 'index'], $adminMiddlewares);
+$router->get('/api/admin/host-applications/{id:\\d+}', [HostApplicationController::class, 'show'], $adminMiddlewares);
+$router->patch('/api/admin/host-applications/{id:\\d+}/decision', [HostApplicationController::class, 'decide'], $adminMiddlewares);
+$router->get('/api/admin/identity-verifications', [AccountController::class, 'adminIdentityVerifications'], $adminMiddlewares);
+$router->get('/api/admin/identity-verifications/{id:\d+}/document', [AccountController::class, 'adminIdentityDocument'], $adminMiddlewares);
+$router->patch('/api/admin/identity-verifications/{id:\d+}/decision', [AccountController::class, 'decideIdentityVerification'], $adminMiddlewares);
+$router->post('/api/admin/studios/{studio_id:\d+}/contracts', [LegalContractController::class, 'createContract'], $adminMiddlewares);
+$router->get('/api/admin/legal-profiles', [LegalContractController::class, 'adminLegalProfiles'], $adminMiddlewares);
+$router->patch('/api/admin/legal-profiles/{id:\d+}/decision', [LegalContractController::class, 'decideLegalProfile'], $adminMiddlewares);
+
 $router->get('/api/admin/users', [AdminController::class, 'users'], $adminMiddlewares);
 $router->patch('/api/admin/users/{id:\d+}/status', [AdminController::class, 'updateUserStatus'], $adminMiddlewares);
 $router->patch('/api/admin/users/{id:\d+}/role', [AdminController::class, 'updateUserRole'], $adminMiddlewares);
 $router->get('/api/admin/statistics', [AdminController::class, 'statistics'], $adminMiddlewares);
 
 $router->get('/api/host/statistics', [HostController::class, 'statistics'], $hostMiddlewares);
+$router->get('/api/host/rooms', [HostController::class, 'rooms'], $hostMiddlewares);
+$router->get('/api/host/rooms/{id:\\d+}', [HostController::class, 'room'], $hostMiddlewares);
+$router->get('/api/host/rooms/{id:\\d+}/rates', [HostController::class, 'roomRates'], $hostMiddlewares);
+$router->get('/api/host/equipments', [HostController::class, 'equipments'], $hostMiddlewares);
+$router->get('/api/host/calendar', [HostController::class, 'calendar'], $hostMiddlewares);
+$router->get('/api/host/reports/series', [HostController::class, 'reportSeries'], $hostMiddlewares);
+$router->get('/api/host/overview', [HostController::class, 'overview'], $hostMiddlewares);
+
+$router->get('/api/admin/roles', [AdminController::class, 'roles'], $adminMiddlewares);
+$router->get('/api/admin/studios', [AdminController::class, 'studios'], $adminMiddlewares);
+$router->get('/api/admin/rooms', [AdminController::class, 'rooms'], $adminMiddlewares);
+$router->get('/api/admin/equipments', [AdminController::class, 'equipments'], $adminMiddlewares);
+$router->patch('/api/admin/studios/{id:\\d+}', [AdminController::class, 'updateStudio'], $adminMiddlewares);
+$router->patch('/api/admin/rooms/{id:\\d+}', [AdminController::class, 'updateRoom'], $adminMiddlewares);
+$router->patch('/api/admin/equipments/{id:\\d+}', [AdminController::class, 'updateEquipment'], $adminMiddlewares);
+$router->get('/api/admin/audit-logs', [AdminController::class, 'auditLogs'], $adminMiddlewares);
+$router->get('/api/admin/refund-exceptions', [AdminController::class, 'refundExceptions'], $adminMiddlewares);
+$router->get('/api/admin/refund-exceptions/{id:\\d+}', [AdminController::class, 'refundException'], $adminMiddlewares);
+$router->post('/api/admin/refund-exceptions/{id:\\d+}/actions', [AdminController::class, 'refundExceptionAction'], $adminMiddlewares);
+$router->get('/api/admin/reports/series', [AdminController::class, 'reportSeries'], $adminMiddlewares);
 
 // Test-only identity probes used by the integration suites. Never register them in production.
 $appEnv = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'dev';

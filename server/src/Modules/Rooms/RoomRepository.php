@@ -577,6 +577,11 @@ class RoomRepository
      */
     public function createRoom(array $data, array $spaceTypeIds, array $amenityIds = []): int
     {
+        if (isset($data['room_type_id']) && $data['room_type_id'] !== '') {
+            $type = $this->pdo->prepare("SELECT 1 FROM host_room_types WHERE room_type_id = ? AND studio_id = ? AND status = 'active'");
+            $type->execute([(int) $data['room_type_id'], (int) $data['studio_id']]);
+            if (!$type->fetchColumn()) throw new \App\Exceptions\ApiException(400, 'invalid_room_type', 'Loại phòng riêng không thuộc Studio này hoặc đã ngừng sử dụng');
+        }
         // 1. Validate space types existence
         if (empty($spaceTypeIds)) {
             throw new \App\Exceptions\ApiException(400, 'invalid_space_types', 'Phòng phải có ít nhất một loại hình không gian');
@@ -604,12 +609,13 @@ class RoomRepository
         try {
             $stmt = $this->pdo->prepare('
                 INSERT INTO rooms (
-                    studio_id, name, description, area, ceiling_height,
+                    studio_id, room_type_id, name, description, area, ceiling_height,
                     capacity, soundproof_level, power_specs, rules, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             $stmt->execute([
                 $data['studio_id'],
+                ($data['room_type_id'] ?? '') !== '' ? (int) $data['room_type_id'] : null,
                 $data['name'],
                 $data['description'] ?? null,
                 $data['area'],
@@ -665,7 +671,7 @@ class RoomRepository
      */
     public function updateRoom(int $roomId, array $data, ?array $spaceTypeIds = null, ?array $amenityIds = null): bool
     {
-        $allowed = ['name', 'description', 'area', 'ceiling_height', 'capacity', 'soundproof_level', 'power_specs', 'rules', 'status'];
+        $allowed = ['name', 'description', 'area', 'ceiling_height', 'capacity', 'soundproof_level', 'power_specs', 'rules', 'status', 'room_type_id'];
         $fields = [];
         $params = [];
 
@@ -678,6 +684,14 @@ class RoomRepository
 
         $this->pdo->beginTransaction();
         try {
+            if (array_key_exists('room_type_id', $data) && $data['room_type_id'] !== null && $data['room_type_id'] !== '') {
+                $room = $this->pdo->prepare('SELECT studio_id FROM rooms WHERE room_id = ? FOR UPDATE');
+                $room->execute([$roomId]);
+                $studioId = $room->fetchColumn();
+                $type = $this->pdo->prepare("SELECT 1 FROM host_room_types WHERE room_type_id = ? AND studio_id = ? AND status = 'active'");
+                $type->execute([(int) $data['room_type_id'], (int) $studioId]);
+                if (!$type->fetchColumn()) throw new \App\Exceptions\ApiException(400, 'invalid_room_type', 'Loại phòng riêng không thuộc Studio này hoặc đã ngừng sử dụng');
+            }
             if (!empty($fields)) {
                 $params[] = $roomId;
                 $sql = 'UPDATE rooms SET ' . implode(', ', $fields) . ', updated_at = NOW() WHERE room_id = ?';
@@ -826,6 +840,29 @@ class RoomRepository
         $sql = 'UPDATE room_rates SET ' . implode(', ', $fields) . ' WHERE rate_id = ?';
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute($params);
+    }
+
+    public function deleteRateIfUnused(int $roomId, int $rateId, int $actorId): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $rate = $this->pdo->prepare('SELECT status FROM room_rates WHERE rate_id = ? AND room_id = ? FOR UPDATE');
+            $rate->execute([$rateId, $roomId]);
+            $status = $rate->fetchColumn();
+            if ($status === false) throw new \App\Exceptions\ApiException(404, 'rate_not_found', 'Không tìm thấy bảng giá thuộc phòng này');
+            if ($status === 'active') throw new \App\Exceptions\ApiException(409, 'active_rate_delete_forbidden', 'Hãy ngừng áp dụng bảng giá trước khi xóa vĩnh viễn');
+            $usage = $this->pdo->prepare('SELECT 1 FROM bookings WHERE rate_id = ? LIMIT 1');
+            $usage->execute([$rateId]);
+            if ($usage->fetchColumn()) throw new \App\Exceptions\ApiException(409, 'rate_in_use', 'Không thể xóa bảng giá đã được dùng trong lịch sử đặt phòng');
+            $delete = $this->pdo->prepare('DELETE FROM room_rates WHERE rate_id = ? AND room_id = ?');
+            $delete->execute([$rateId, $roomId]);
+            $audit = $this->pdo->prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id, metadata) VALUES (?, 'room_rate_permanently_deleted', 'room_rates', ?, JSON_OBJECT('room_id', ?))");
+            $audit->execute([$actorId, $rateId, $roomId]);
+            $this->pdo->commit();
+        } catch (\Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
     }
 
     /**

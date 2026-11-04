@@ -100,7 +100,7 @@ class BookingService
                 $nowDt = new DateTimeImmutable('now');
 
                 // Step 8: Determine expires_at = LEAST(created_at + HOLD_MINUTES, start_time)
-                $holdMinutes = (int) ($_ENV['HOLD_MINUTES'] ?? 15);
+                $holdMinutes = (int) ($eval['policy']['payment_minutes'] ?? ($_ENV['HOLD_MINUTES'] ?? 15));
                 $holdExpiry = $nowDt->modify("+{$holdMinutes} minutes");
                 $finalExpiry = $holdExpiry < $startDt ? $holdExpiry : $startDt;
                 $expiresAt = $finalExpiry->format('Y-m-d H:i:s');
@@ -132,6 +132,7 @@ class BookingService
                     'note'             => $note,
                     'status'           => 'pending',
                     'expires_at'       => $expiresAt,
+                    'policy_snapshot' => json_encode($eval['policy'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
                 ];
 
                 // Insert bookings
@@ -566,6 +567,16 @@ class BookingService
                 ];
             }
 
+            $policy = is_string($booking['policy_snapshot'] ?? null)
+                ? (json_decode((string) $booking['policy_snapshot'], true) ?: [])
+                : (is_array($booking['policy_snapshot'] ?? null) ? $booking['policy_snapshot'] : []);
+            if ($paidTotal > 0 && isset($policy['cancel_hours'])) {
+                $hoursUntilStart = (strtotime((string) $booking['start_time']) - time()) / 3600;
+                if ($hoursUntilStart < (int) $policy['cancel_hours']) {
+                    throw new ApiException(409, 'cancellation_deadline_passed', 'Đã quá hạn hủy theo chính sách của Studio');
+                }
+            }
+
             $this->bookingRepo->updateBookingStatus($bookingId, 'cancelled', null, null, $this->pdo);
             $releaseReservations = $this->pdo->prepare("UPDATE inventory_reservations SET status = 'released' WHERE booking_id = ? AND status = 'reserved'");
             $releaseReservations->execute([$bookingId]);
@@ -624,7 +635,10 @@ class BookingService
             $filters['status'] = trim((string) $query['status']);
         }
 
-        return $this->bookingRepo->listBookings($filters, $page, $limit, $this->pdo);
+        $result = $this->bookingRepo->listBookings($filters, $page, $limit, $this->pdo);
+        foreach ($result['items'] as &$booking) unset($booking['policy_snapshot']);
+        unset($booking);
+        return $result;
     }
 
     /**
@@ -661,6 +675,7 @@ class BookingService
 
         $equipments = $this->bookingRepo->getBookingDetails($bookingId, $this->pdo);
         $payments = $this->bookingRepo->getAllPayments($bookingId, $this->pdo);
+        unset($booking['policy_snapshot']);
 
         return array_merge($booking, [
             'equipments' => $equipments,
@@ -672,22 +687,54 @@ class BookingService
     {
         $payments = $this->bookingRepo->getSuccessfulPayments($bookingId, $pdo);
         $refundTotal = 0;
+        $paidTotal = array_sum(array_map(static fn(array $payment): int => (int) $payment['amount'], $payments));
+        $refundPercent = 100;
+        if ($reason === 'customer_cancelled' && $paidTotal > 0) {
+            $bookingStmt = $pdo->prepare('SELECT start_time, policy_snapshot FROM bookings WHERE booking_id = ?');
+            $bookingStmt->execute([$bookingId]);
+            $booking = $bookingStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $snapshot = is_string($booking['policy_snapshot'] ?? null) ? (json_decode((string) $booking['policy_snapshot'], true) ?: []) : [];
+            $tiers = $snapshot['refund_tiers'] ?? [];
+            if (is_array($tiers) && $tiers !== []) {
+                $hoursUntilStart = (strtotime((string) ($booking['start_time'] ?? 'now')) - time()) / 3600;
+                $refundPercent = 0;
+                foreach ($tiers as $tier) {
+                    if ($hoursUntilStart >= (float) ($tier['hours'] ?? PHP_INT_MAX)) {
+                        $refundPercent = max(0, min(100, (int) ($tier['percent'] ?? 0)));
+                        break;
+                    }
+                }
+            }
+        }
+        $targetRefund = (int) round($paidTotal * $refundPercent / 100);
+        $existingTotal = 0;
+        $existingByPayment = [];
+        foreach ($payments as $payment) {
+            $check = $pdo->prepare('SELECT amount FROM booking_refunds WHERE payment_id = ?');
+            $check->execute([(int) $payment['payment_id']]);
+            $existing = $check->fetchColumn();
+            if ($existing !== false) {
+                $existingByPayment[(int) $payment['payment_id']] = (int) $existing;
+                $existingTotal += (int) $existing;
+            }
+        }
+        $remainingBudget = max(0, $targetRefund - $existingTotal);
         foreach ($payments as $payment) {
             $amount = (int) $payment['amount'];
             if ($amount <= 0) continue;
             $paymentId = (int) $payment['payment_id'];
-            $check = $pdo->prepare('SELECT amount FROM booking_refunds WHERE payment_id = ?');
-            $check->execute([$paymentId]);
-            $existing = $check->fetchColumn();
-            if ($existing !== false) {
-                $refundTotal += (int) $existing;
+            if (isset($existingByPayment[$paymentId])) {
+                $refundTotal += $existingByPayment[$paymentId];
                 continue;
             }
+            $refundAmount = min($amount, $remainingBudget);
+            if ($refundAmount <= 0) continue;
             $key = "booking-refund-{$bookingId}-{$paymentId}";
             $transactionCode = 'BRF-' . bin2hex(random_bytes(12));
             $insert = $pdo->prepare("INSERT INTO booking_refunds (payment_id, booking_id, amount, status, reason, transaction_code, idempotency_key) VALUES (?, ?, ?, 'success', ?, ?, ?)");
-            $insert->execute([$paymentId, $bookingId, $amount, $reason, $transactionCode, $key]);
-            $refundTotal += $amount;
+            $insert->execute([$paymentId, $bookingId, $refundAmount, $reason, $transactionCode, $key]);
+            $refundTotal += $refundAmount;
+            $remainingBudget -= $refundAmount;
         }
         return $refundTotal;
     }

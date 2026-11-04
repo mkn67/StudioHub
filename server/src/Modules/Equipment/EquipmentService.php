@@ -100,5 +100,21 @@ class EquipmentService
             'message'      => 'Cập nhật thiết bị thành công',
         ];
     }
+
+    public function uploadImage(int $equipmentId, string $imageUrl, bool $isPrimary): array
+    {
+        $imageId = $this->equipmentRepo->addImage($equipmentId, $imageUrl, $isPrimary);
+        return ['image_id' => $imageId, 'equipment_id' => $equipmentId, 'image_url' => $imageUrl, 'is_primary' => $isPrimary];
+    }
+
+    public function deleteEquipment(int $equipmentId, int $actorId): void
+    {
+        $urls = $this->equipmentRepo->deleteIfUnused($equipmentId, $actorId);
+        foreach ($urls as $url) {
+            if (!is_string($url) || !preg_match('#^/uploads/equipments/[A-Za-z0-9_.-]+$#', $url)) continue;
+            $path = dirname(__DIR__, 3) . '/public' . $url;
+            if (is_file($path)) @unlink($path);
+        }
+    }
 }
 

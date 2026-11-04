@@ -149,6 +149,44 @@ class AvailabilityService
             throw new ApiException(400, 'studio_inactive', 'Studio không hoạt động');
         }
 
+        $policyStmt = $db->prepare('SELECT payment_minutes, deposit_percent, cancel_hours, change_hours, refund_tiers, overtime_per_30m, open_hour, close_hour FROM studio_policies WHERE studio_id = ?');
+        $policyStmt->execute([(int) $studio['studio_id']]);
+        $policy = $policyStmt->fetch(PDO::FETCH_ASSOC) ?: [
+            'payment_minutes' => (int) ($_ENV['HOLD_MINUTES'] ?? 15),
+            'deposit_percent' => 100 * (float) ($_ENV['DEPOSIT_RATE'] ?? 0.30),
+            'cancel_hours' => 24,
+            'change_hours' => 24,
+            'refund_tiers' => '[]',
+            'overtime_per_30m' => 0,
+            'open_hour' => 8,
+            'close_hour' => 22,
+        ];
+        $policy['refund_tiers'] = is_string($policy['refund_tiers']) ? (json_decode($policy['refund_tiers'], true) ?: []) : ($policy['refund_tiers'] ?? []);
+        foreach (['payment_minutes', 'cancel_hours', 'change_hours', 'overtime_per_30m', 'open_hour', 'close_hour'] as $field) $policy[$field] = (int) $policy[$field];
+        $policy['deposit_percent'] = (float) $policy['deposit_percent'];
+
+        // A reservation must fit entirely inside the Studio's daily operating window.
+        // Check every calendar day touched so a multi-day booking cannot cross a closed period.
+        $openAt = $policy['open_hour'] * 60;
+        $closeAt = $policy['close_hour'] * 60;
+        $day = $startDt->setTime(0, 0);
+        $lastDay = $endDt->format('H:i:s') === '00:00:00'
+            ? $endDt->modify('-1 second')->setTime(0, 0)
+            : $endDt->setTime(0, 0);
+        while ($day <= $lastDay) {
+            $dayStart = $day->getTimestamp();
+            $bookingStart = max($startDt->getTimestamp(), $dayStart);
+            $bookingEnd = min($endDt->getTimestamp(), $day->modify('+1 day')->getTimestamp());
+            $opensAt = $day->setTime(intdiv($openAt, 60), $openAt % 60)->getTimestamp();
+            $closesAt = $day->setTime(intdiv($closeAt, 60), $closeAt % 60)->getTimestamp();
+            if ($bookingStart < $opensAt || $bookingEnd > $closesAt) {
+                throw new ApiException(400, 'outside_operating_hours', 'Thời gian thuê phải nằm trong giờ hoạt động của Studio', [
+                    ['field' => 'start_time', 'code' => 'outside_operating_hours', 'message' => sprintf('Studio hoạt động từ %02d:00 đến %02d:00', $policy['open_hour'], $policy['close_hour'])],
+                ]);
+            }
+            $day = $day->modify('+1 day');
+        }
+
         // 4. Load & Validate Rate
         $rateStmt = $db->prepare("SELECT * FROM room_rates WHERE rate_id = ?");
         $rateStmt->execute([$rateId]);
@@ -303,12 +341,13 @@ class AvailabilityService
         }
 
         // 8. Calculate Pricing (Section 5.2)
-        $depositRate = (float) ($_ENV['DEPOSIT_RATE'] ?? 0.30);
+        $depositRate = $policy['deposit_percent'] / 100;
         $pricing = PricingService::calculate($rate, $durationMinutes, $pricingEquipments, $depositRate);
 
         return [
             'room'            => $room,
             'studio'          => $studio,
+            'policy'          => $policy,
             'rate'            => $rate,
             'start_time'      => $startDt->format('Y-m-d H:i:s'),
             'end_time'        => $endDt->format('Y-m-d H:i:s'),

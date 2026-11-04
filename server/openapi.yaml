@@ -533,6 +533,9 @@ paths:
               properties:
                 full_name: {type: string}
                 phone: {type: string}
+                date_of_birth: {type: string, format: date, nullable: true}
+                address: {type: string, maxLength: 255, nullable: true}
+                avatar_url: {type: string, maxLength: 255, nullable: true}
                 current_password: {type: string}
                 new_password: {type: string, minLength: 8}
       responses:
@@ -830,6 +833,495 @@ paths:
         - {in: query, name: from, schema: {type: string, format: date}}
         - {in: query, name: to, schema: {type: string, format: date}}
       responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/host/rooms:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: List all rooms of an owned studio, including inactive rooms
+      parameters:
+        - {in: query, name: studio_id, schema: {type: integer, minimum: 1}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/host/rooms/{id}:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Room management detail including inactive rooms
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/host/rooms/{id}/rates:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: All rates for an owned room, including inactive and expired rates
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/host/equipments:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: List all equipment for an owned studio
+      parameters:
+        - {in: query, name: studio_id, schema: {type: integer, minimum: 1}}
+        - {in: query, name: status, schema: {type: string, enum: [active, maintenance, inactive]}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/host/calendar:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Consolidated room booking calendar for an owned studio
+      parameters:
+        - {in: query, name: studio_id, schema: {type: integer, minimum: 1}}
+        - {in: query, name: from, schema: {type: string, format: date}}
+        - {in: query, name: to, schema: {type: string, format: date}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/host/reports/series:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Daily bookings and completed revenue for current host
+      parameters:
+        - {in: query, name: from, schema: {type: string, format: date}}
+        - {in: query, name: to, schema: {type: string, format: date}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/host/overview:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Host statistics and upcoming bookings
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/roles:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List roles that an admin API is allowed to assign (host and customer)
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/studios:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List studios including inactive studios
+      parameters:
+        - {in: query, name: status, schema: {type: string, enum: [active, inactive]}}
+        - {in: query, name: search, schema: {type: string}}
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/rooms:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List rooms across the platform
+      parameters:
+        - {in: query, name: status, schema: {type: string, enum: [active, maintenance, inactive]}}
+        - {in: query, name: search, schema: {type: string}}
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/equipments:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List equipment across the platform
+      parameters:
+        - {in: query, name: status, schema: {type: string, enum: [active, maintenance, inactive]}}
+        - {in: query, name: search, schema: {type: string}}
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/studios/{id}:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Update Studio metadata or visibility; records an audit log
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/admin/rooms/{id}:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Update room metadata or status; records an audit log
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/admin/equipments/{id}:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Update equipment metadata or status; records an audit log
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/admin/audit-logs:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List recent audit log entries
+      parameters:
+        - {in: query, name: page, schema: {type: integer, minimum: 1, default: 1}}
+        - {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/refund-exceptions:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List booking refunds with pending or failed sandbox status
+      parameters:
+        - {in: query, name: status, schema: {type: string, enum: [pending, failed]}}
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/refund-exceptions/{id}:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: View a booking refund record
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/admin/reports/series:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Daily booking and completed revenue series for the requested period
+      parameters:
+        - {in: query, name: from, schema: {type: string, format: date}}
+        - {in: query, name: to, schema: {type: string, format: date}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/host-applications:
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Submit a host application as an active customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studio_name, address, description]
+              properties:
+                studio_name: {type: string, maxLength: 150}
+                address: {type: string, maxLength: 255}
+                description: {type: string}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/admin/host-applications:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List host applications for admin review
+      parameters:
+        - {in: query, name: status, schema: {type: string, enum: [pending, approved, rejected]}}
+        - {in: query, name: page, schema: {type: integer, minimum: 1, default: 1}}
+        - {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/host-applications/{id}:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: View an application and applicant details
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/admin/host-applications/{id}/decision:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Approve or reject a pending host application
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approved]
+              properties:
+                approved: {type: boolean}
+                reason: {type: string}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/host-applications/current:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Get the current customer's latest host application status
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/auth/email-change-requests:
+    post:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Start email change after verifying the current password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [new_email, current_password], properties: {new_email: {type: string, format: email}, current_password: {type: string}}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}, '429': {$ref: '#/components/responses/Error'}, '503': {$ref: '#/components/responses/Error'}}
+  /api/auth/email-change-confirmations:
+    post:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Confirm an email change using the six digit code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [new_email, code], properties: {new_email: {type: string, format: email}, code: {type: string, pattern: '^\\d{6}$'}}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}, '429': {$ref: '#/components/responses/Error'}}
+  /api/account/avatar:
+    post:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Upload a JPG, PNG or WebP account avatar (maximum 5 MiB)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {type: object, required: [image], properties: {image: {type: string, format: binary}}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/account/notification-preferences:
+    get:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Get account notification preferences
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+    patch:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Update account notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email_booking_updates: {type: boolean}
+                email_product_updates: {type: boolean}
+                sms_booking_updates: {type: boolean}
+                in_app_updates: {type: boolean}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/account/identity-verification:
+    get:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Get the current account identity verification status
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+    post:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Submit identity details and private document evidence
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [legal_name, document_type, document_last4, document]
+              properties:
+                legal_name: {type: string, maxLength: 150}
+                document_type: {type: string, enum: [national_id, passport, business_registration]}
+                document_last4: {type: string, minLength: 4, maxLength: 4}
+                document: {type: string, format: binary}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}, '429': {$ref: '#/components/responses/Error'}}
+  /api/admin/identity-verifications:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List identity verification requests for admin review
+      parameters:
+        - {in: query, name: status, schema: {type: string, enum: [pending, approved, rejected]}}
+        - {in: query, name: page, schema: {type: integer, minimum: 1}}
+        - {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/admin/identity-verifications/{id}/decision:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Approve or reject an identity verification request
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/admin/identity-verifications/{id}/document:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Download private identity evidence; access is audited
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {description: Private document stream}, '404': {$ref: '#/components/responses/Error'}}
+  /api/host/policies:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: List rental policy per owned studio, optionally filtered by studio_id
+      parameters: [{in: query, name: studio_id, schema: {type: integer, minimum: 1}}]
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+    patch:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Update rental/deposit/refund policy for an owned studio
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/studios/{id}/cover:
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Upload a Studio cover image
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {type: object, required: [image], properties: {image: {type: string, format: binary}}}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/equipments/{id}/images:
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Upload an equipment image
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: {type: object, required: [image], properties: {image: {type: string, format: binary}, is_primary: {type: boolean}}}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/host/room-types:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: List private room types for the current host
+      parameters: [{in: query, name: studio_id, schema: {type: integer, minimum: 1}}]
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Create a room type owned by a studio
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/host/room-types/{id}:
+    patch:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Update a private room type
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/equipments/{id}:
+    delete:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Permanently delete an equipment item only when no booking references it
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/rooms/{id}/rates/{rate_id}:
+    delete:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Permanently delete an inactive, unreferenced room rate
+      parameters:
+        - {$ref: '#/components/parameters/Id'}
+        - {in: path, name: rate_id, required: true, schema: {type: integer, minimum: 1}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/host/legal-profile:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Get the current host legal profile
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+    patch:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Create or update individual/company legal profile
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/admin/legal-profiles:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List host legal profiles for admin review
+      parameters:
+        - {in: query, name: status, schema: {type: string, enum: [submitted, verified, rejected]}}
+        - {in: query, name: page, schema: {type: integer, minimum: 1}}
+        - {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 100}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/admin/legal-profiles/{id}/decision:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Verify or reject a submitted host legal profile
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verified]
+              properties:
+                verified: {type: boolean}
+                reason: {type: string}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/host/contracts:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: List contracts for the current host
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/host/contracts/{id}:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: View contract status and term dates
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/host/contracts/{id}/document-access:
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Issue a single-use five-minute link for an active contract PDF
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'201': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/host/contracts/{id}/documents/{token}:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Download a contract PDF using its single-use access token
+      parameters:
+        - {$ref: '#/components/parameters/Id'}
+        - {in: path, name: token, required: true, schema: {type: string, pattern: '^[a-f0-9]{64}$'}}
+      responses:
+        '200': {description: Private PDF stream}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/admin/studios/{studio_id}/contracts:
+    post:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Register a contract PDF up to 2 MiB and its status/term for a studio
+      parameters: [{in: path, name: studio_id, required: true, schema: {type: integer, minimum: 1}}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [contract_code, title, document]
+              properties:
+                contract_code: {type: string, maxLength: 80}
+                title: {type: string, maxLength: 180}
+                status: {type: string, enum: [draft, pending, active]}
+                effective_from: {type: string, format: date}
+                effective_to: {type: string, format: date}
+                document: {type: string, format: binary}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/admin/refund-exceptions/{id}/actions:
+    post:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Record an admin-attested external refund result; this endpoint does not move money
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: {type: string, enum: [confirm_succeeded, mark_failed]}
+                evidence_reference: {type: string, maxLength: 255, description: Required for confirm_succeeded}
+                reason: {type: string, description: Required for mark_failed}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}

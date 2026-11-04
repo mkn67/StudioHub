@@ -23,7 +23,7 @@ class UserRepository
     {
         $stmt = $this->pdo->prepare('
             SELECT u.user_id, u.role_id, r.role_name AS role, u.full_name, u.email,
-                   u.password_hash, u.phone, u.avatar_url, u.status, u.created_at, u.updated_at
+                   u.password_hash, u.phone, u.date_of_birth, u.address, u.avatar_url, u.status, u.created_at, u.updated_at
             FROM users u
             JOIN roles r ON u.role_id = r.role_id
             WHERE u.email = ?
@@ -42,7 +42,7 @@ class UserRepository
     {
         $stmt = $this->pdo->prepare('
             SELECT u.user_id, u.role_id, r.role_name AS role, u.full_name, u.email,
-                   u.password_hash, u.phone, u.avatar_url, u.status, u.created_at, u.updated_at
+                   u.password_hash, u.phone, u.date_of_birth, u.address, u.avatar_url, u.status, u.created_at, u.updated_at
             FROM users u
             JOIN roles r ON u.role_id = r.role_id
             WHERE u.user_id = ?
@@ -100,7 +100,7 @@ class UserRepository
      */
     public function update(int $id, array $data): bool
     {
-        $allowedFields = ['full_name', 'phone', 'avatar_url', 'password_hash', 'status', 'role_id'];
+        $allowedFields = ['full_name', 'phone', 'date_of_birth', 'address', 'avatar_url', 'password_hash', 'status', 'role_id'];
         $fieldsToUpdate = [];
         $params = [];
 

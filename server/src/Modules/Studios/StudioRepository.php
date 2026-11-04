@@ -107,5 +107,11 @@ class StudioRepository
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute($params);
     }
+
+    public function updateCover(int $studioId, string $coverUrl): bool
+    {
+        $stmt = $this->pdo->prepare('UPDATE studios SET cover_url = ?, updated_at = NOW() WHERE studio_id = ?');
+        return $stmt->execute([$coverUrl, $studioId]);
+    }
 }
 
