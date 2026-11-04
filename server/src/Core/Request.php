@@ -99,6 +99,20 @@ class Request
         return $this->jsonBody;
     }
 
+    public function body(?string $key = null, mixed $default = null): mixed
+    {
+        $data = $this->json();
+        if (empty($data) && !empty($_POST)) {
+            $data = $_POST;
+        }
+
+        if ($key === null) {
+            return $data;
+        }
+
+        return $data[$key] ?? $default;
+    }
+
     public function headers(): array
     {
         return $this->headers;
@@ -133,6 +147,12 @@ class Request
     public function getAttribute(string $key, mixed $default = null): mixed
     {
         return $this->attributes[$key] ?? $default;
+    }
+
+    public function param(string $name, ?string $default = null): ?string
+    {
+        $params = $this->getAttribute('params', []);
+        return isset($params[$name]) ? (string) $params[$name] : $default;
     }
 
     public function user(): ?array

@@ -84,6 +84,7 @@ class Router
                 $routeIndex = $routeInfo[1];
                 $vars = $routeInfo[2];
                 $matchedRoute = $this->routes[$routeIndex];
+                $request->setAttribute('params', $vars);
 
                 // Build pipeline: global middlewares -> route middlewares -> handler
                 $pipeline = new Pipeline();
@@ -105,6 +106,8 @@ class Router
                     return $handler($req, $vars);
                 });
         }
+
+        throw new ApiException(500, 'router_dispatch_failed', 'Không thể xử lý tuyến đường');
     }
 }
 

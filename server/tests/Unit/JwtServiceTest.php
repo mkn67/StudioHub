@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Exceptions\ApiException;
-use App\Services\JwtService;
+use App\Modules\Auth\JwtService;
 use PHPUnit\Framework\TestCase;
 
 class JwtServiceTest extends TestCase
@@ -32,6 +32,7 @@ class JwtServiceTest extends TestCase
         $this->assertEquals('customer', $payload['role']);
         $this->assertArrayHasKey('iat', $payload);
         $this->assertArrayHasKey('exp', $payload);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $payload['jti']);
         $this->assertGreaterThan(time(), $payload['exp']);
     }
 

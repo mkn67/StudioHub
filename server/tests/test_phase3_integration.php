@@ -6,7 +6,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Db;
 
-$baseUrl = 'http://localhost';
+$baseUrl = getenv('API_BASE_URL') ?: 'http://localhost';
 
 echo "=====================================================\n";
 echo "Phase 3 Integration Verification (Auth & Account)\n";

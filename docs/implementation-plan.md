@@ -52,7 +52,7 @@
 | Ngôn ngữ / kiến trúc | **PHP 8.2 thuần, chia module** (không framework). Router dùng `nikic/fast-route`, middleware là pipeline tự viết rất nhỏ | Khớp "PHP RESTful API" ở 3.3.1. Nếu nhóm muốn Slim 4 thì chỉ đổi Phase 0 và Phase 2; từ Phase 3 trở đi không đổi. |
 | Thư viện | `nikic/fast-route`, `firebase/php-jwt`, `vlucas/phpdotenv`, `phpunit/phpunit` (dev) | Không ORM, chỉ PDO. |
 | Repo | Monorepo `client/` + `server/` | Chốt một lần, mọi đường dẫn trong plan dùng `server/`. |
-| Phân lớp | Controller mỏng → Service (nghiệp vụ, transaction) → Repository (SQL) | Transaction và khóa chỉ nằm ở Service. |
+| Cách tổ chức code | **Module nghiệp vụ trước**: Auth, Catalog, Studios, Rooms, Equipment, Booking, Admin, Shared; mỗi module gom controller, service, repository và middleware liên quan | Không chia toàn bộ source thành các thư mục layer ở cấp `src/`. Thành phần hạ tầng dùng chung đặt trong `Core/`; transaction và SQL vẫn nằm cạnh nghiệp vụ trong module tương ứng. |
 | CSDL | MySQL 8.0, image `mysql:8.0`, InnoDB, tên bảng **chữ thường snake_case** | `CHECK` chỉ được thực thi từ **8.0.16** trở lên; VPS cũng phải đạt mức này (D13). |
 | Xác thực | JWT HS256, TTL 2 giờ, claims `sub`, `iat`, `exp`. **AuthMiddleware nạp lại user từ DB ở mọi request được bảo vệ** (trạng thái và vai trò hiện tại) | Khóa tài khoản hoặc đổi vai trò có hiệu lực ngay. Role trong token chỉ để Front-end hiển thị. Đăng xuất vẫn không thu hồi token (giới hạn ở 3.3.3). |
 | Mật khẩu | `password_hash(..., PASSWORD_BCRYPT)` | Theo data dictionary. |
@@ -118,14 +118,17 @@ repo/
    │  ├─ .htaccess
    │  └─ uploads/rooms/
    ├─ src/
-   │  ├─ Core/                # App, Router, Request, Pipeline, ApiResponse, Db, ErrorHandler, Validator, Clock
+   │  ├─ Core/                # Router, Request, Pipeline, ApiResponse, Db, ErrorHandler, Validator, CORS, health
    │  ├─ Exceptions/          # ApiException(status, code, message, errors[])
-   │  ├─ Middleware/          # CorsMiddleware, AuthMiddleware, RoleMiddleware
-   │  ├─ Controllers/         # Auth, Lookup, Studio, Room, Rate, Equipment, Booking, Payment, Admin, Host
-   │  ├─ Services/            # JwtService, OwnershipGuard, PricingService, StockCalculator,
-   │  │                       # AvailabilityService, BookingService, BookingStateMachine,
-   │  │                       # PaymentService, StatsService, UploadService, AuditLogger
-   │  └─ Repositories/        # User, Studio, Room, Rate, Equipment, Booking, Payment
+   │  └─ Modules/
+   │     ├─ Auth/             # AuthController, AuthService, UserRepository, JwtService, AuthMiddleware
+   │     ├─ Catalog/          # LookupController, LookupRepository
+   │     ├─ Studios/          # StudioController, StudioRepository
+   │     ├─ Rooms/            # RoomController, RoomService, RoomRepository, UploadService
+   │     ├─ Equipment/        # Equipment controllers, service and repositories
+   │     ├─ Booking/          # BookingController, booking/payment services, pricing and stock logic
+   │     ├─ Admin/            # AdminController, HostController, AdminService, StatsService
+   │     └─ Shared/           # OwnershipGuard, RoleMiddleware, AuditLogger
    ├─ database/
    │  ├─ schema.sql
    │  ├─ triggers/            # mỗi trigger 1 file .sql, KHÔNG có DELIMITER
@@ -652,4 +655,3 @@ Initial discovery and dependency map are documented in `integration-audit.md` an
 6. Run PHP syntax/service tests, frontend regressions/typecheck/lint/build and HTTP/browser checks. MySQL-dependent checks must report an external blocker if no service is available. Update endpoint/setup docs and final matrix truthfully.
 
 ---
-

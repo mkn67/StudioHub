@@ -2,8 +2,10 @@
 
 - Đọc docs/3.2-database.md, docs/3.3-api.md và docs/implementation-plan.md trước khi làm. Chỉ làm đúng phase được giao, không thêm endpoint ngoài tài liệu. Nếu plan và 3.3.2 mâu thuẫn thì theo plan.
 - Stack: PHP 8.2 thuần chia module, nikic/fast-route, PDO MySQL, firebase/php-jwt. Không ORM, không framework. Code nằm trong server/.
-- Luồng bắt buộc cho mỗi endpoint: validate đầu vào → xác thực/role (middleware) → kiểm tra sở hữu (OwnershipGuard) → Service → trả response.
-- Controller không chứa SQL và không mở transaction. Transaction và khóa chỉ nằm trong Service.
+- Tổ chức theo module nghiệp vụ trong `server/src/Modules/`: Auth, Catalog, Studios, Rooms, Equipment, Booking, Admin và Shared. Mỗi module đặt controller, service và repository liên quan cạnh nhau; không tạo các thư mục layer dùng chung ở cấp `src/`.
+- Thành phần hạ tầng dùng chung nằm trong `server/src/Core/` và `server/src/Exceptions/`.
+- Luồng bắt buộc cho mỗi endpoint: validate đầu vào → xác thực/role → kiểm tra sở hữu → xử lý nghiệp vụ trong module → trả response.
+- Controller không chứa SQL và không mở transaction. Transaction và khóa nằm trong service cùng module.
 - SQL chỉ dùng prepared statement với tham số. Không nối chuỗi người dùng vào SQL.
 - Response luôn theo envelope: thành công {status,code,message,data}; lỗi {status:"error",code,message,errors:[{field,code,message}]}. `errors` luôn là mảng.
 - Tiền là số nguyên VND. Thời gian là chuỗi "YYYY-MM-DD HH:mm:ss" giờ Asia/Ho_Chi_Minh, không offset. PHP đặt date_default_timezone_set('Asia/Ho_Chi_Minh'); mỗi kết nối MySQL chạy SET time_zone = '+07:00'.

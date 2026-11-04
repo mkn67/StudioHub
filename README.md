@@ -208,4 +208,3 @@ Dự án đã cấu hình Volume Bind Mount:
 3. **Tắt compose có mất dữ liệu hay mất image không?**
    * **Không.** Lệnh `podman-compose down` chỉ tắt container. Toàn bộ image và dữ liệu database MySQL (`mysqldata` volume) vẫn được bảo toàn nguyên vẹn.
 > **Integration update (2026-11-02):** Connected frontend/PHP implementation and non-destructive MySQL upgrades are now present. MySQL execution is still unverified because the local service was unavailable. Start with [current setup](docs/development.md), [API reference](docs/api-reference.md), and [actual verification / blockers](docs/integration-verification.md). Historical architecture/demo notes below are retained for context.
-

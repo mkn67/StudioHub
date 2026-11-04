@@ -1,0 +1,893 @@
+openapi: 3.0.3
+info:
+  title: Studio Rental API
+  version: 1.0.0
+  description: >-
+    REST API for studio and equipment rental. Timestamps use Asia/Ho_Chi_Minh
+    and the format YYYY-MM-DD HH:mm:ss. Money values are integer VND.
+servers:
+  - url: http://localhost:8000
+    description: Local development
+tags:
+  - name: Health
+  - name: Authentication
+  - name: Catalog
+  - name: Host
+  - name: Booking
+  - name: Services
+  - name: Production Projects
+  - name: Administration
+paths:
+  /api/studios/{studio_id}/service-packages:
+    get:
+      tags: [Services]
+      summary: List active service packages for a studio
+      parameters:
+        - {name: studio_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+  /api/host/studios/{studio_id}/service-packages:
+    post:
+      tags: [Services]
+      summary: Create a service package for an owned studio
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: studio_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, pricing_unit, base_price]
+              properties:
+                name: {type: string, maxLength: 150}
+                description: {type: string}
+                category: {type: string}
+                pricing_unit: {type: string, enum: [hour, session, day, song, project]}
+                base_price: {type: integer, minimum: 0, description: Integer VND}
+                included_duration_minutes: {type: integer, minimum: 0}
+                included_sessions: {type: integer, minimum: 0}
+                included_revisions: {type: integer, minimum: 0}
+                status: {type: string, enum: [draft, active, inactive]}
+                items: {type: array, maxItems: 50, items: {type: object, required: [item_type, name], properties: {item_type: {type: string, enum: [service, session, staff, equipment, revision, deliverable]}, name: {type: string}, quantity: {type: integer}, duration_minutes: {type: integer}, details: {type: string}}}}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/host/service-packages/{package_id}:
+    patch:
+      tags: [Services]
+      summary: Update a service package; existing orders retain their snapshots
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: package_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name: {type: string, maxLength: 150}
+                description: {type: string}
+                base_price: {type: integer, minimum: 0}
+                status: {type: string, enum: [draft, active, inactive]}
+                included_duration_minutes: {type: integer, minimum: 0}
+                included_sessions: {type: integer, minimum: 0}
+                included_revisions: {type: integer, minimum: 0}
+                items: {type: array, maxItems: 50, items: {type: object, required: [item_type, name], properties: {item_type: {type: string, enum: [service, session, staff, equipment, revision, deliverable]}, name: {type: string}, quantity: {type: integer, minimum: 0}, duration_minutes: {type: integer, minimum: 0}, details: {type: string}}}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/service-orders:
+    get:
+      tags: [Services]
+      summary: List service orders owned by the authenticated customer
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+    post:
+      tags: [Services]
+      summary: Create a pending service package order
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [package_id]
+              properties:
+                package_id: {type: integer, minimum: 1}
+                quantity: {type: integer, minimum: 1, maximum: 100, default: 1}
+                project_id: {type: integer, minimum: 1, description: Optional owned production project in the same studio}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/service-orders/{order_id}/payments:
+    post:
+      tags: [Services]
+      summary: Settle a service order using the local sandbox
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: order_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, maxLength: 100}}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/service-orders/{order_id}/cancel:
+    post:
+      tags: [Services]
+      summary: Cancel an unused service order and record a sandbox refund when paid
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: order_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/projects:
+    get:
+      tags: [Production Projects]
+      summary: List projects owned by the authenticated customer
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+    post:
+      tags: [Production Projects]
+      summary: Create a private production project
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studio_id]
+              properties:
+                studio_id: {type: integer, minimum: 1}
+                project_type: {type: string, enum: [single, ep, album, cover, other]}
+                private_name: {type: string, maxLength: 255, description: Private; not returned to studio host by default}
+                description: {type: string, description: Private; not returned to studio host by default}
+                confidentiality_level: {type: string, enum: [private, restricted]}
+                target_date: {type: string, format: date}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+  /api/host/projects:
+    get:
+      tags: [Production Projects]
+      summary: List projects where the authenticated host is an active member
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+  /api/projects/{project_id}:
+    get:
+      tags: [Production Projects]
+      summary: View an owned or explicitly shared project
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/members:
+    get:
+      tags: [Production Projects]
+      summary: List project access grants (owner only)
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [Production Projects]
+      summary: Grant scoped project access to a collaborator (owner only)
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: {type: integer, minimum: 1}
+                can_view_confidential: {type: boolean, default: false}
+                can_manage_tracks: {type: boolean, default: false}
+                can_manage_sessions: {type: boolean, default: false}
+                can_manage_files: {type: boolean, default: false}
+                can_download_files: {type: boolean, default: false}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/members/{user_id}:
+    delete:
+      tags: [Production Projects]
+      summary: Revoke collaborator access (owner only)
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: user_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/tracks/{track_id}:
+    patch:
+      tags: [Production Projects]
+      summary: Move a track to the next production status
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: track_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [production_status], properties: {production_status: {type: string, enum: [planned, recording, editing, mixing, mastering, delivered]}}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/tracks/{track_id}/revisions:
+    post:
+      tags: [Production Projects]
+      summary: Request a revision using a paid project package entitlement
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: track_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [service_order_id], properties: {service_order_id: {type: integer, minimum: 1}, request_note: {type: string, maxLength: 5000}}}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/files:
+    get:
+      tags: [Production Projects]
+      summary: List private files (owner or granted download permission)
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [Production Projects]
+      summary: Upload a private project file via multipart form field file
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+    put:
+      tags: [Production Projects]
+      summary: Upload a private project file as a raw body for large files
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: X-File-Name, in: header, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/octet-stream: {schema: {type: string, format: binary}}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/files/{file_id}:
+    get:
+      tags: [Production Projects]
+      summary: Download a private file after project permission check
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: file_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {description: Private file bytes}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    delete:
+      tags: [Production Projects]
+      summary: Soft-delete a private project file and remove its stored bytes
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: file_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/tracks:
+    post:
+      tags: [Production Projects]
+      summary: Add private track metadata to an owned project
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [internal_code]
+              properties:
+                internal_code: {type: string, maxLength: 80}
+                private_title: {type: string, maxLength: 255}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/projects/{project_id}/bookings/{booking_id}:
+    post:
+      tags: [Production Projects]
+      summary: Link an owned booking in the same studio as a project session
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: project_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: booking_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                purpose: {type: string, maxLength: 100}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/host/studios/{studio_id}/consumables:
+    get:
+      tags: [Host]
+      summary: List consumable stock for an owned studio
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: studio_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [Host]
+      summary: Create a consumable inventory item with zero opening stock
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: studio_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, unit]
+              properties:
+                name: {type: string, maxLength: 150}
+                unit: {type: string, maxLength: 30}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/host/consumables/{item_id}/movements:
+    get:
+      tags: [Host]
+      summary: List recent movements for an owned consumable
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: item_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [Host]
+      summary: Add an idempotent stock movement
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: item_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [movement_type, idempotency_key]
+              properties:
+                movement_type: {type: string, enum: [receipt, consume, adjust, reversal]}
+                quantity_delta: {type: string, pattern: '^-?(0|[1-9][0-9]{0,8})(\\.[0-9]{1,3})?$', description: Required except for reversal}
+                idempotency_key: {type: string, maxLength: 100}
+                reversal_of_movement_id: {type: integer, description: Required for reversal; quantity is derived from original movement}
+                booking_id: {type: integer}
+                reason: {type: string, maxLength: 255}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/host/consumables/{item_id}/reservations:
+    post:
+      tags: [Host]
+      summary: Reserve available stock for a booking
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: item_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [booking_id, quantity, idempotency_key], properties: {booking_id: {type: integer, minimum: 1}, quantity: {type: string, pattern: '^(0|[1-9][0-9]{0,8})(\\.[0-9]{1,3})?$'}, idempotency_key: {type: string, maxLength: 100}}}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/host/consumables/{item_id}/reservations/{reservation_id}/consume:
+    post:
+      tags: [Host]
+      summary: Consume reserved inventory and write its stock movement
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: item_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: reservation_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/host/consumables/{item_id}/reservations/{reservation_id}/release:
+    post:
+      tags: [Host]
+      summary: Release reserved inventory without changing on-hand stock
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: item_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+        - {name: reservation_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register customer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, full_name]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string, minLength: 8}
+                full_name: {type: string}
+                phone: {type: string}
+                role: {type: string, deprecated: true, description: Ignored; new accounts are customers}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in and receive a two-hour bearer token; limited to 10 requests per 15 minutes per IP by default
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string, format: password}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Revoke the current bearer token immediately until its original expiry
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/auth/profile:
+    get:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Get current profile
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+    patch:
+      tags: [Authentication]
+      security: [{bearerAuth: []}]
+      summary: Update profile or password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name: {type: string}
+                phone: {type: string}
+                current_password: {type: string}
+                new_password: {type: string, minLength: 8}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/rooms:
+    get:
+      tags: [Catalog]
+      summary: Search active rooms
+      parameters:
+        - {in: query, name: keyword, schema: {type: string}}
+        - {in: query, name: space_type_id, schema: {type: integer}}
+        - {in: query, name: rate_unit, schema: {type: string, enum: [hour, half_day, day, week, month, session]}}
+        - {in: query, name: min_price, schema: {type: integer, minimum: 0}}
+        - {in: query, name: max_price, schema: {type: integer, minimum: 0}}
+        - {in: query, name: min_area, schema: {type: number, minimum: 0}}
+        - {in: query, name: page, schema: {type: integer, minimum: 1, default: 1}}
+        - {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 50, default: 12}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Create a room in an owned studio
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/rooms/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      tags: [Catalog]
+      summary: Get room details
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '404': {$ref: '#/components/responses/Error'}
+    patch:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Update owned room
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/rooms/{id}/calendar:
+    get:
+      tags: [Catalog]
+      summary: Get busy intervals without customer details
+      parameters:
+        - {$ref: '#/components/parameters/Id'}
+        - {in: query, name: from, schema: {type: string, format: date}}
+        - {in: query, name: to, schema: {type: string, format: date}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+  /api/rooms/{id}/rates:
+    get:
+      tags: [Catalog]
+      summary: List effective room rates
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Create a room rate
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/rooms/{id}/rates/{rate_id}:
+    patch:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Update a rate belonging to the room
+      parameters:
+        - {$ref: '#/components/parameters/Id'}
+        - {in: path, name: rate_id, required: true, schema: {type: integer}}
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/rooms/{id}/images:
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Upload JPG, PNG, or WebP room image (5 MB maximum)
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: {type: string, format: binary}
+                is_primary: {type: boolean}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/equipments:
+    get:
+      tags: [Catalog]
+      summary: List active equipment for a studio
+      parameters:
+        - {in: query, name: studio_id, required: true, schema: {type: integer}}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Create equipment in an owned studio
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/equipments/{id}:
+    patch:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Update owned equipment
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/space-types:
+    get:
+      tags: [Catalog]
+      summary: List space types
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/amenities:
+    get:
+      tags: [Catalog]
+      summary: List amenities
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/studios/mine:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: List studios owned by current host
+      responses: {'200': {$ref: '#/components/responses/Success'}}
+  /api/studios:
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Create studio
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/studios/{id}:
+    patch:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Update owned studio
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/equipment-categories:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: List equipment categories for an owned studio
+      parameters: [{in: query, name: studio_id, required: true, schema: {type: integer}}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}}
+    post:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Create equipment category
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/bookings/check-availability:
+    post:
+      tags: [Booking]
+      summary: Check availability and quote price without writing or locking rows; limited to 60 requests per minute per IP by default
+      requestBody: {$ref: '#/components/requestBodies/BookingRequest'}
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Error'}
+  /api/bookings:
+    get:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: List bookings visible to current customer or host
+      parameters:
+        - {in: query, name: status, schema: {type: string}}
+        - {in: query, name: page, schema: {type: integer, default: 1}}
+        - {in: query, name: limit, schema: {type: integer, default: 12, maximum: 50}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Error'}}
+    post:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: Create booking as customer
+      requestBody: {$ref: '#/components/requestBodies/BookingRequest'}
+      responses:
+        '201': {$ref: '#/components/responses/Success'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/bookings/{id}:
+    get:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: Get booking detail visible to current customer or host
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/bookings/{id}/status:
+    patch:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: Host changes booking lifecycle state
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [status], properties: {status: {type: string, enum: [confirmed, checked_in, completed, rejected]}}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/bookings/{id}/cancel:
+    post:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: Cancel own pending or confirmed booking
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/bookings/{id}/payments:
+    post:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: Create sandbox deposit, full, or remaining payment
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [payment_type], properties: {payment_type: {type: string, enum: [deposit, full, remaining]}, payment_method: {type: string, enum: [sandbox_qr], default: sandbox_qr, description: Sandbox only; real payment providers are not configured}}}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/admin/users:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: List and filter users (admin)
+      parameters:
+        - {in: query, name: role, schema: {type: string}}
+        - {in: query, name: status, schema: {type: string}}
+        - {in: query, name: search, schema: {type: string}}
+        - {in: query, name: page, schema: {type: integer, default: 1}}
+        - {in: query, name: limit, schema: {type: integer, maximum: 50, default: 12}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/admin/users/{id}/status:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Lock or unlock user (admin)
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: { $ref: '#/components/requestBodies/JsonObject' }
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/admin/users/{id}/role:
+    patch:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Set user role to host or customer (admin)
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody: {$ref: '#/components/requestBodies/JsonObject'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/admin/statistics:
+    get:
+      tags: [Administration]
+      security: [{bearerAuth: []}]
+      summary: Platform statistics for half-open period [from, to)
+      parameters:
+        - {in: query, name: from, schema: {type: string, format: date}}
+        - {in: query, name: to, schema: {type: string, format: date}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/host/statistics:
+    get:
+      tags: [Host]
+      security: [{bearerAuth: []}]
+      summary: Statistics for current host studios and half-open period [from, to)
+      parameters:
+        - {in: query, name: from, schema: {type: string, format: date}}
+        - {in: query, name: to, schema: {type: string, format: date}}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    Id: {in: path, name: id, required: true, schema: {type: integer, minimum: 1}}
+  requestBodies:
+    JsonObject:
+      required: true
+      content:
+        application/json:
+          schema: {type: object, additionalProperties: true}
+    BookingRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [room_id, rate_id, start_time, end_time]
+            properties:
+              room_id: {type: integer}
+              rate_id: {type: integer}
+              start_time: {type: string, example: '2026-11-20 09:00:00'}
+              end_time: {type: string, example: '2026-11-20 12:00:00'}
+              party_size: {type: integer, minimum: 1}
+              equipments: {type: array, items: {type: object, required: [equipment_id, quantity], properties: {equipment_id: {type: integer}, quantity: {type: integer, minimum: 1}}}}
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [status, code, message, data]
+      properties:
+        status: {type: string, enum: [success]}
+        code: {type: integer}
+        message: {type: string}
+        data: {}
+    ErrorEnvelope:
+      type: object
+      required: [status, code, message, errors]
+      properties:
+        status: {type: string, enum: [error]}
+        code: {type: integer}
+        message: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code, message]
+            properties:
+              field: {type: string}
+              code: {type: string}
+              message: {type: string}
+  responses:
+    Success:
+      description: Successful request
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/SuccessEnvelope'}
+    Error:
+      description: API error; errors is always an array
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}

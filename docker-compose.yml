@@ -97,6 +97,7 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_APP_MODE=connected
       - BUSINESS_API_URL=http://api
+      - API_INTERNAL_URL=http://api
       - APP_ORIGIN=http://localhost:3000
     command: sh -c "npm ci --include=dev --include=optional && npm run dev -- --hostname 0.0.0.0"
     depends_on:
