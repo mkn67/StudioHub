@@ -13,7 +13,7 @@ export function StudioRentalSettings({ studio }: { studio: Studio }) {
   return <section className={styles.settings} data-operating-settings={studio.id}>
     <h2>Giờ hoạt động & phụ thu khung giờ</h2>
     <p>Áp dụng cho các đơn mới tại {studio.name}. Phụ thu không mở rộng giờ hoạt động. Giá và lịch hiện được mô phỏng trên trình duyệt này.</p>
-    <form onSubmit={event => { event.preventDefault(); if (dispatch({ type: "rental_settings", studioId: studio.id, operatingHours: hours, timeSurcharge: rule })) notice("Đã lưu giờ hoạt động và phụ thu cho đơn mới."); }}>
+    <form onSubmit={async event => { event.preventDefault(); if ((await dispatch({ type: "rental_settings", studioId: studio.id, operatingHours: hours, timeSurcharge: rule }))) notice("Đã lưu giờ hoạt động và phụ thu cho đơn mới."); }}>
       <div className={styles.grid}>
         <label>Chế độ hoạt động<select value={hours.mode} onChange={e => setHours(e.target.value === "all_day" ? { mode: "all_day" } : { mode: "fixed", opens: "", closes: "" })}>
           <option value="fixed">Giờ hoạt động cố định</option><option value="all_day">Hoạt động 24/24</option>

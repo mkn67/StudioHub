@@ -24,6 +24,7 @@ use App\Core\Router;
 use App\Core\Request;
 use App\Core\ApiResponse;
 use App\Core\CorsMiddleware;
+use App\Core\RateLimitMiddleware;
 use App\Modules\Auth\AuthMiddleware;
 use App\Modules\Shared\RoleMiddleware;
 use App\Core\HealthController;
@@ -32,7 +33,11 @@ use App\Modules\Rooms\RoomController;
 use App\Modules\Equipment\EquipmentController;
 use App\Modules\Catalog\LookupController;
 use App\Modules\Studios\StudioController;
+use App\Modules\Studios\ServicePackageController;
+use App\Modules\Studios\ProductionProjectController;
+use App\Modules\Studios\ProjectFileController;
 use App\Modules\Equipment\EquipmentCategoryController;
+use App\Modules\Equipment\ConsumableController;
 use App\Modules\Booking\BookingController;
 use App\Modules\Admin\AdminController;
 use App\Modules\Admin\HostController;
@@ -43,10 +48,15 @@ $router->use(new CorsMiddleware());
 // Public health check route
 $router->get('/api/health', [HealthController::class, 'check']);
 $router->get('/health', [HealthController::class, 'check']);
+$router->get('/api/catalog', [App\Controllers\WorkspaceController::class, 'catalog']);
+$router->get('/api/workspace', [App\Controllers\WorkspaceController::class, 'state'], [new AuthMiddleware()]);
+$router->post('/api/commands', [App\Controllers\WorkspaceController::class, 'command'], [new AuthMiddleware()]);
+$router->post('/api/booking-quotes', [App\Controllers\WorkspaceController::class, 'quote'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->get('/api/reports', [App\Controllers\WorkspaceController::class, 'report'], [new AuthMiddleware()]);
 
 // --- Phase 3: Auth & Account Routes ---
 $router->post('/api/auth/register', [AuthController::class, 'register']);
-$router->post('/api/auth/login', [AuthController::class, 'login']);
+$router->post('/api/auth/login', [AuthController::class, 'login'], [new RateLimitMiddleware('login')]);
 $router->post('/api/auth/logout', [AuthController::class, 'logout'], [new AuthMiddleware()]);
 $router->get('/api/auth/profile', [AuthController::class, 'profile'], [new AuthMiddleware()]);
 $router->patch('/api/auth/profile', [AuthController::class, 'updateProfile'], [new AuthMiddleware()]);
@@ -59,14 +69,44 @@ $router->get('/api/rooms/{id:\d+}/rates', [RoomController::class, 'rates']);
 $router->get('/api/equipments', [EquipmentController::class, 'index']);
 $router->get('/api/space-types', [LookupController::class, 'spaceTypes']);
 $router->get('/api/amenities', [LookupController::class, 'amenities']);
+$router->get('/api/studios/{studio_id:\d+}/service-packages', [ServicePackageController::class, 'publicList']);
+$router->post('/api/service-orders', [ServicePackageController::class, 'createOrder'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->get('/api/service-orders', [ServicePackageController::class, 'listOrders'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->post('/api/service-orders/{order_id:\d+}/payments', [ServicePackageController::class, 'payOrder'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->post('/api/service-orders/{order_id:\d+}/cancel', [ServicePackageController::class, 'cancelOrder'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->post('/api/projects', [ProductionProjectController::class, 'create'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->get('/api/projects', [ProductionProjectController::class, 'listMine'], [new AuthMiddleware()]);
+$router->get('/api/projects/{project_id:\d+}', [ProductionProjectController::class, 'show'], [new AuthMiddleware()]);
+$router->get('/api/projects/{project_id:\d+}/members', [ProductionProjectController::class, 'members'], [new AuthMiddleware()]);
+$router->post('/api/projects/{project_id:\d+}/members', [ProductionProjectController::class, 'grantMember'], [new AuthMiddleware()]);
+$router->delete('/api/projects/{project_id:\d+}/members/{user_id:\d+}', [ProductionProjectController::class, 'revokeMember'], [new AuthMiddleware()]);
+$router->post('/api/projects/{project_id:\d+}/tracks', [ProductionProjectController::class, 'createTrack'], [new AuthMiddleware()]);
+$router->patch('/api/projects/{project_id:\d+}/tracks/{track_id:\d+}', [ProductionProjectController::class, 'updateTrackStatus'], [new AuthMiddleware()]);
+$router->post('/api/projects/{project_id:\d+}/tracks/{track_id:\d+}/revisions', [ProductionProjectController::class, 'requestRevision'], [new AuthMiddleware()]);
+$router->get('/api/projects/{project_id:\d+}/files', [ProjectFileController::class, 'list'], [new AuthMiddleware()]);
+$router->post('/api/projects/{project_id:\d+}/files', [ProjectFileController::class, 'uploadMultipart'], [new AuthMiddleware()]);
+$router->put('/api/projects/{project_id:\d+}/files', [ProjectFileController::class, 'uploadRaw'], [new AuthMiddleware()]);
+$router->get('/api/projects/{project_id:\d+}/files/{file_id:\d+}', [ProjectFileController::class, 'download'], [new AuthMiddleware()]);
+$router->delete('/api/projects/{project_id:\d+}/files/{file_id:\d+}', [ProjectFileController::class, 'delete'], [new AuthMiddleware()]);
+$router->post('/api/projects/{project_id:\d+}/bookings/{booking_id:\d+}', [ProductionProjectController::class, 'linkBooking'], [new AuthMiddleware()]);
 
 // --- Phase 5: Host Management Routes ---
 $hostMiddlewares = [new AuthMiddleware(), new RoleMiddleware('host')];
+$router->get('/api/host/projects', [ProductionProjectController::class, 'listAuthorizedForHost'], $hostMiddlewares);
 
 // Studios
 $router->get('/api/studios/mine', [StudioController::class, 'mine'], $hostMiddlewares);
 $router->post('/api/studios', [StudioController::class, 'create'], $hostMiddlewares);
 $router->patch('/api/studios/{id:\d+}', [StudioController::class, 'update'], $hostMiddlewares);
+$router->post('/api/host/studios/{studio_id:\d+}/service-packages', [ServicePackageController::class, 'create'], $hostMiddlewares);
+$router->patch('/api/host/service-packages/{package_id:\d+}', [ServicePackageController::class, 'update'], $hostMiddlewares);
+$router->post('/api/host/studios/{studio_id:\d+}/consumables', [ConsumableController::class, 'create'], $hostMiddlewares);
+$router->get('/api/host/studios/{studio_id:\d+}/consumables', [ConsumableController::class, 'listForStudio'], $hostMiddlewares);
+$router->post('/api/host/consumables/{item_id:\d+}/movements', [ConsumableController::class, 'move'], $hostMiddlewares);
+$router->get('/api/host/consumables/{item_id:\d+}/movements', [ConsumableController::class, 'listMovements'], $hostMiddlewares);
+$router->post('/api/host/consumables/{item_id:\d+}/reservations', [ConsumableController::class, 'reserve'], $hostMiddlewares);
+$router->post('/api/host/consumables/{item_id:\d+}/reservations/{reservation_id:\d+}/consume', [ConsumableController::class, 'consumeReservation'], $hostMiddlewares);
+$router->post('/api/host/consumables/{item_id:\d+}/reservations/{reservation_id:\d+}/release', [ConsumableController::class, 'releaseReservation'], $hostMiddlewares);
 
 // Equipment Categories
 $router->get('/api/equipment-categories', [EquipmentCategoryController::class, 'index'], $hostMiddlewares);
@@ -88,7 +128,7 @@ $router->post('/api/equipments', [EquipmentController::class, 'create'], $hostMi
 $router->patch('/api/equipments/{id:\d+}', [EquipmentController::class, 'update'], $hostMiddlewares);
 
 // --- Phase 6: Booking Engine Routes ---
-$router->post('/api/bookings/check-availability', [BookingController::class, 'checkAvailability']);
+$router->post('/api/bookings/check-availability', [BookingController::class, 'checkAvailability'], [new RateLimitMiddleware('availability')]);
 $router->post('/api/bookings', [BookingController::class, 'create'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
 
 // --- Phase 7: Booking Lifecycle & Payments Routes ---
@@ -126,4 +166,5 @@ if (in_array($appEnv, ['dev', 'test'], true)) {
 
 // 5. Dispatch Request
 $request = Request::fromGlobals();
+if ($request->method()==='OPTIONS') (new CorsMiddleware())->handle($request, static fn()=>null);
 $router->dispatch($request);

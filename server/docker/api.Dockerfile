@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
-    && docker-php-ext-install pdo pdo_mysql zip \
+    libonig-dev \
+    && docker-php-ext-install pdo pdo_mysql zip mbstring \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer

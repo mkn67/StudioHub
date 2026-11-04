@@ -145,13 +145,41 @@ try {
         echo "-> Seed applied ({$seedCount} statements executed).\n";
     }
 
-    // 4. Verify results
+    // 4. Apply versioned, additive migrations for existing and fresh databases.
+    $pdo->exec(<<<'SQL'
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            migration VARCHAR(190) PRIMARY KEY,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        SQL);
+    $migrationFiles = glob(__DIR__ . '/migrations/*.sql') ?: [];
+    sort($migrationFiles, SORT_STRING);
+    foreach ($migrationFiles as $migrationFile) {
+        $migrationName = basename($migrationFile);
+        $migrationCheck = $pdo->prepare('SELECT 1 FROM schema_migrations WHERE migration = ?');
+        $migrationCheck->execute([$migrationName]);
+        if ($migrationCheck->fetchColumn()) {
+            continue;
+        }
+        $migrationSql = file_get_contents($migrationFile);
+        foreach (preg_split('/;\s*$/m', (string) $migrationSql) ?: [] as $migrationStatement) {
+            $migrationStatement = trim($migrationStatement);
+            if ($migrationStatement !== '') {
+                $pdo->exec($migrationStatement);
+            }
+        }
+        $migrationRecord = $pdo->prepare('INSERT INTO schema_migrations (migration) VALUES (?)');
+        $migrationRecord->execute([$migrationName]);
+        echo " - Applied migration: {$migrationName}\n";
+    }
+
+    // 5. Verify results
     $verifiedTables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
     $verifiedTriggers = $pdo->query("SHOW TRIGGERS")->fetchAll();
 
     echo "==================================================\n";
     echo "Migration Completed Successfully!\n";
-    echo "Total tables: " . count($verifiedTables) . " (Expected: 16)\n";
+    echo "Total tables: " . count($verifiedTables) . " (Base schema: 16; additive domain tables included)\n";
     echo "Total triggers: " . count($verifiedTriggers) . " (Expected: 2)\n";
     echo "==================================================\n";
 

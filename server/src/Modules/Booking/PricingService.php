@@ -37,7 +37,7 @@ class PricingService
         }
 
         $divisor = $rateUnitMinutes;
-        if ($divisor === null || $divisor <= 0) {
+        if ($divisor === null) {
             $divisor = self::UNIT_MINUTES_MAP[$rateUnit] ?? null;
         }
 

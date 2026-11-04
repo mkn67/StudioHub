@@ -32,6 +32,7 @@ class JwtServiceTest extends TestCase
         $this->assertEquals('customer', $payload['role']);
         $this->assertArrayHasKey('iat', $payload);
         $this->assertArrayHasKey('exp', $payload);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $payload['jti']);
         $this->assertGreaterThan(time(), $payload['exp']);
     }
 

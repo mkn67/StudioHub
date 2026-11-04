@@ -488,8 +488,7 @@ class RoomRepository
             FROM bookings
             WHERE room_id = :room_id
               AND (
-                status IN ('confirmed', 'checked_in')
-                OR (status = 'pending' AND expires_at > NOW())
+                status IN ('awaiting_payment', 'pending', 'confirmed', 'checked_in')
               )
               AND busy_end > :from_dt
               AND busy_start < :to_dt
@@ -765,7 +764,7 @@ class RoomRepository
             throw new \App\Exceptions\ApiException(400, 'invalid_minimum_units', 'minimum_units phải lớn hơn 0');
         }
 
-        $maxUnits = isset($rateData['maximum_units']) && $rateData['maximum_units'] !== null
+        $maxUnits = isset($rateData['maximum_units'])
             ? (int) $rateData['maximum_units']
             : null;
         if ($maxUnits !== null && $maxUnits < $minUnits) {

@@ -1,0 +1,113 @@
+/* Operations-only visual hierarchy; existing booking and payment tokens stay semantic. */
+.ops-shell {
+  --sh-muted:#526675; --sh-blue-soft:#DFEAFD;
+  --sh-mint-soft:#DDF2E5; --sh-yellow-soft:#FFF0D4;
+  --sh-lilac-soft:#EEE7FF; --sh-coral-soft:#FDE6E3;
+  font-size:15px;
+}
+.ops-shell :is(label,legend) { font-size:15px; font-weight:500; }
+.ops-shell :is(input,select,textarea) { font-size:16px; }
+.ops-shell :is(.page-heading p,.host-metric-note) { font-size:14px; }
+.ops-shell .btn { border:2px solid var(--sh-ink); border-radius:9px; box-shadow:4px 4px 0 var(--sh-ink); font-size:15px; font-weight:700; }
+.ops-shell .btn.secondary { border:2px solid var(--sh-ink); background:var(--sh-blue-soft); color:var(--sh-ink); box-shadow:var(--sh-hard-sm); }
+.ops-shell .btn:hover:not(:disabled) { transform:translate(-1px,-1px); box-shadow:5px 5px 0 var(--sh-ink); }
+.ops-shell .btn.secondary:hover:not(:disabled) { background:var(--sh-primary-soft); transform:translate(-1px,-1px); box-shadow:5px 5px 0 var(--sh-ink); }
+.ops-shell .btn:active:not(:disabled),.ops-shell .btn.secondary:active:not(:disabled) { transform:translate(3px,3px); box-shadow:1px 1px 0 var(--sh-ink); }
+.ops-shell .btn.destructive { background:var(--sh-coral-soft); color:#923E38; border-color:#923E38; box-shadow:3px 3px 0 #923E38; }
+.ops-shell .btn.destructive:hover:not(:disabled) { background:#F8D5D0; }
+.ops-shell .btn:disabled { opacity:1; background:#E9EEF3; color:#617180; border-color:#A5B3BD; box-shadow:none; cursor:not-allowed; }
+.ops-shell :is(.text-button,.text-link) { font-size:14px; min-height:40px; }
+.ops-shell .text-button:disabled { color:#617180; background:#E9EEF3; border-radius:6px; padding-inline:8px; cursor:not-allowed; opacity:1; }
+.ops-shell .dashboard-kpi { background:var(--kpi-accent); border:2px solid var(--sh-ink); box-shadow:var(--sh-hard-md); }
+.ops-shell .dashboard-kpi.accent-mint { --kpi-accent:var(--sh-mint-soft); }
+.ops-shell .dashboard-kpi.accent-yellow { --kpi-accent:var(--sh-yellow-soft); }
+.ops-shell .dashboard-kpi.accent-lilac { --kpi-accent:var(--sh-lilac-soft); }
+.ops-shell .dashboard-kpi.accent-coral { --kpi-accent:var(--sh-coral-soft); }
+.ops-shell .dashboard-kpi-icon { background:#FFFFFFB3; }
+.ops-shell .dashboard-kpi-top { font-size:15px; }
+.ops-shell .dashboard-kpi-value { font-size:32px; overflow-wrap:anywhere; }
+.ops-shell .dashboard-kpi-hint { font-size:14px; }
+.ops-shell :is(.dashboard-analytics,.host-popularity) .dashboard-panel-heading { background:var(--sh-blue-soft); margin:-22px -22px 20px; padding:20px 22px; border-bottom:2px solid var(--sh-ink); border-radius:14px 14px 0 0; flex-wrap:wrap; }
+.ops-shell .dashboard-analytics .dashboard-panel:first-child .dashboard-panel-heading { background:var(--sh-primary-soft); }
+.ops-shell :is(.dashboard-analytics .dashboard-panel,.host-popularity) { border:2px solid var(--sh-ink); border-radius:16px; box-shadow:var(--sh-hard-sm); }
+.ops-shell .dashboard-panel-heading h2 { font-size:23px; font-weight:600; }
+.ops-shell .dashboard-eyebrow { font-size:14px; }
+.ops-shell .dashboard-tag { font-size:13px; padding:5px 9px; border-color:#97ACBA; }
+.ops-shell .dashboard-chart { background:repeating-linear-gradient(to top,transparent 0 39px,#CBD5E1 39px 40px); }
+.ops-shell .dashboard-chart-track > span { background:#3188A2; }
+.ops-shell .is-today .dashboard-chart-track > span { background:var(--sh-primary); }
+.ops-shell :is(.dashboard-chart-label,.dashboard-chart-number) { font:500 14px/1.4 var(--font-display); font-variant-numeric:tabular-nums; }
+.ops-shell .dashboard-chart-caption { font-size:14px; }
+.ops-shell .dashboard-status-total span { font-size:14px; }
+.ops-shell .dashboard-distribution > div > div:first-child { font-size:14px; }
+.ops-shell .dashboard-distribution-track { height:10px; background:#E9EEF3; }
+.ops-shell .host-popularity-bar { height:12px; background:#E9EEF3; }
+.ops-shell .host-popularity tbody tr:first-child { background:#F0FAF6; }
+.ops-shell .host-popularity .mono { font:500 15px/1.6 var(--font-display); font-variant-numeric:tabular-nums; }
+.ops-shell .host-period-control button { font-size:14px; min-height:40px; }
+.ops-shell[data-page="reports"] :is(td,th) { font-size:14px; }
+.ops-shell[data-page="reports"] th { background:var(--sh-blue-soft); color:var(--sh-ink); font-weight:600; }
+.ops-shell[data-page="reports"] td:nth-last-child(-n+3) { text-align:right; font-variant-numeric:tabular-nums; }
+.ops-shell[data-page="reports"] th:nth-last-child(-n+3) { text-align:right; }
+.ops-shell[data-page="reports"] td:first-child a { font-family:var(--font-utility); font-size:13px; color:var(--sh-primary); }
+.ops-shell .host-pricing-overview { gap:24px; padding-right:4px; }
+.ops-shell .host-pricing-summary { --pricing-tint:var(--sh-primary-soft); padding:0 20px; border:2px solid var(--sh-ink); border-radius:16px; box-shadow:var(--sh-hard-sm); }
+.ops-shell .host-pricing-summary[data-tone="blue"] { --pricing-tint:var(--sh-blue-soft); }
+.ops-shell .host-pricing-summary[data-tone="lilac"] { --pricing-tint:var(--sh-lilac-soft); }
+.ops-shell .host-pricing-summary-head { margin:0 -20px; padding:20px; border-radius:14px 14px 0 0; background:var(--pricing-tint); border-bottom:2px solid var(--sh-ink); }
+.ops-shell .host-pricing-summary-head h2 { font-size:25px; font-weight:700; }
+.ops-shell .host-pricing-summary-head p { font-size:14px; }
+.ops-shell .host-pricing-base { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.ops-shell .host-pricing-base strong { font-size:23px; font-weight:700; font-variant-numeric:tabular-nums; }
+.ops-shell .host-pricing-base strong span { font-size:15px; font-weight:500; }
+.ops-shell .host-pricing-plans { gap:8px; font-size:14px; }
+.ops-shell .host-pricing-plans .dashboard-tag { background:#F1F6FA; font-size:14px; }
+.ops-shell .host-pricing-units li { padding:14px 0; border-color:#CBD5E1; }
+.ops-shell .host-pricing-units strong { font-size:15px; }
+.ops-shell .host-pricing-units span { font-size:14px; }
+.ops-shell .host-pricing-units .text-button { font-size:14px; text-align:left; white-space:normal; flex-shrink:0; max-width:45%; }
+.ops-shell .host-pricing-modal.dialog[open] { display:flex; flex-direction:column; height:min(800px,calc(100dvh - 48px)); overflow:hidden; border:2px solid var(--sh-ink); border-radius:16px; }
+.ops-shell .host-pricing-modal > :not(.host-editor-content) { flex-shrink:0; }
+.ops-shell .host-pricing-modal .dialog-head { background:var(--sh-primary-soft); border-bottom:2px solid var(--sh-ink); position:static; }
+.ops-shell .host-pricing-modal .dialog-head h2 { font-size:23px; }
+.ops-shell .host-pricing-modal .icon-button { border:1px solid var(--sh-ink); border-radius:8px; min-width:40px; min-height:40px; background:white; }
+.ops-shell .host-pricing-scope { background:#EFF4FC; padding:14px 24px; border-color:#A6BAC6; }
+.ops-shell .host-pricing-scope > p:first-child { font-size:14px; }
+.ops-shell .host-pricing-modal :is(label,legend) { font-size:15px; }
+.ops-shell .host-pricing-modal :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]) { border:2px solid #A1B2BE; border-radius:9px; min-height:44px; min-width:0; }
+.ops-shell .host-editor-tabs { padding:12px 24px; gap:8px; flex-wrap:wrap; overflow:visible; border-color:#A6BAC6; }
+.ops-shell .host-editor-tabs button { border:1px solid #8C9FAC; color:var(--sh-ink); font-size:15px; font-weight:600; min-height:44px; transition:background .14s ease,box-shadow .14s ease; }
+.ops-shell .host-editor-tabs button:hover { background:var(--sh-blue-soft); }
+.ops-shell .host-editor-tabs button[aria-selected="true"] { border:2px solid var(--sh-ink); background:var(--sh-primary-soft); box-shadow:2px 2px 0 var(--sh-ink); }
+.ops-shell .host-editor-content { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:22px 24px 28px; background:var(--sh-canvas); }
+.ops-shell .host-editor-content .rate-form { padding:18px; border:1px solid #A6BAC6; border-radius:12px; background:white; }
+.ops-shell .host-editor-content .rate-form fieldset { padding:14px; border:0; border-radius:10px; background:#EFF4FC; }
+.ops-shell .host-editor-content [data-featured-manager] > div:first-child span { font:500 14px/1.5 var(--font-display); }
+.ops-shell .host-editor-content :is(h2,h3) { font-size:22px; }
+.ops-shell .host-editor-content p { font-size:15px; color:var(--sh-muted); line-height:1.65; }
+.ops-shell .host-editor-content [data-package-manager] > form { padding:0; border:0; background:transparent; margin-top:18px; }
+.ops-shell .host-editor-content [data-package-manager] > form + form { background:#F1F6FA; padding:18px; border:1px solid #A6BAC6; border-radius:12px; }
+.ops-shell .host-editor-content details { border-block:1px solid #CBD5E1; padding:14px 0; margin-top:14px; }
+.ops-shell .host-editor-content summary { min-height:40px; font-size:16px; font-weight:600; }
+.ops-shell .host-editor-content small { font-size:14px; }
+.ops-shell .host-editor-content [data-featured-manager] { font-size:15px; }
+.ops-shell .host-editor-content [data-featured-manager] > div:first-child { flex-wrap:wrap; }
+.ops-shell .host-editor-content [data-featured-manager] span { letter-spacing:0; }
+.ops-shell .host-editor-footer { position:static; border-top:2px solid var(--sh-ink); background:#F0F7FA; padding:14px 24px 18px; }
+.ops-shell .host-editor-footer > span { font-size:14px; }
+.ops-shell .host-editor-footer .btn.secondary { background:white; box-shadow:none; }
+.ops-shell .host-editor-message { margin:0; padding:8px 24px; font-size:14px; background:var(--sh-yellow-soft); }
+@media(min-width:768px) and (max-width:1350px) { .ops-shell .dashboard-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:767px) {
+  .ops-shell .dashboard-kpi { padding:16px; }.ops-shell .dashboard-kpi-value { font-size:30px; }
+  .ops-shell .dashboard-kpi-top { font-size:15px; }.ops-shell .dashboard-kpi-hint { font-size:14px; }
+  .ops-shell .dashboard-panel-heading h2 { font-size:22px; }
+  .ops-shell .host-pricing-summary-head { align-items:stretch; }.ops-shell .host-pricing-summary-head h2 { font-size:24px; }
+  .ops-shell .host-pricing-modal.dialog[open] { width:calc(100vw - 16px); max-height:calc(100dvh - 16px); height:calc(100dvh - 16px); }
+  .ops-shell .host-pricing-modal .dialog-head { padding:12px 14px; }.ops-shell .host-pricing-modal .dialog-head h2 { font-size:20px; }
+  .ops-shell .host-pricing-scope { padding:10px 14px; }.ops-shell .host-pricing-scope .host-metric-note { font-size:14px; }
+  .ops-shell .host-editor-tabs { padding:10px 14px; gap:6px; }.ops-shell .host-editor-tabs button { flex:1 1 calc(50% - 6px); padding:8px; }
+  .ops-shell .host-editor-content { padding:18px 14px 24px; }
+  .ops-shell .host-editor-footer { padding:12px 14px 16px; flex-wrap:wrap; }.ops-shell .host-editor-footer > span { flex-basis:100%; }.ops-shell .host-editor-footer .actions { margin-left:auto; }
+}
+@media(prefers-reduced-motion:reduce) { .ops-shell .btn,.ops-shell .host-editor-tabs button { transition:none; }.ops-shell .btn:is(:hover,:active):not(:disabled),.ops-shell .btn.secondary:is(:hover,:active):not(:disabled) { transform:none; } }

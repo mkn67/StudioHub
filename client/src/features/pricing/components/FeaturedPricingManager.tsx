@@ -8,18 +8,18 @@ import { effectiveFeaturedPricing, effectivePricingPlans, featuredPricingLabels 
 import { PricingList } from "./PricingList";
 import styles from "../styles/editorial.module.css";
 
-export function FeaturedPricingManager({ typeId }: { typeId: string }) {
+export function FeaturedPricingManager({ typeId, initialRoomId, lockRoom = false }: { typeId: string; initialRoomId?: string; lockRoom?: boolean }) {
   const { state, dispatch, notice } = useStore();
-  const rooms = state.rooms.filter(room => room.typeId === typeId);
-  const [roomId, setRoomId] = useState(rooms[0]?.id ?? "");
+  const rooms = state.rooms.filter(room => room.typeId === typeId && (!lockRoom || room.id === initialRoomId));
+  const [roomId, setRoomId] = useState(initialRoomId ?? rooms[0]?.id ?? "");
   const [draftBadge, setDraftBadge] = useState<FeaturedPricingBadge>("featured");
   const room = rooms.find(r => r.id === roomId) ?? rooms[0];
   if (!room) return null;
   const selected = effectiveFeaturedPricing(state, room.id);
   const badge = selected?.badge ?? draftBadge;
   const rates = effectivePricingPlans(state, room.id);
-  function select(plan: (typeof rates)[number]["plan"], nextBadge = badge) {
-    if (dispatch({ type: "featured_pricing", roomId: room!.id, selection: { plan, badge: nextBadge } }))
+  async function select(plan: (typeof rates)[number]["plan"], nextBadge = badge) {
+    if ((await dispatch({ type: "featured_pricing", roomId: room!.id, selection: { plan, badge: nextBadge } })))
       notice(`Đã đặt gói nổi bật cho ${room!.code}. Giá thuê không thay đổi.`);
   }
   return <section className={styles.manager} aria-labelledby={`featured-heading-${typeId}`} data-featured-manager={typeId}>
@@ -38,8 +38,8 @@ export function FeaturedPricingManager({ typeId }: { typeId: string }) {
       }}>
         {Object.entries(featuredPricingLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
-      <button className="text-button" type="button" disabled={!room.featuredPricing} onClick={() => {
-        if (dispatch({ type: "featured_pricing", roomId: room.id, selection: null })) notice(`Đã bỏ nổi bật cho ${room.code}.`);
+      <button className="text-button" type="button" disabled={!room.featuredPricing} onClick={async () => {
+        if ((await dispatch({ type: "featured_pricing", roomId: room.id, selection: null }))) notice(`Đã bỏ nổi bật cho ${room.code}.`);
       }}>Bỏ nổi bật</button>
     </div>
     <div className={styles.manageRates} aria-label={`Chọn gói nổi bật cho ${room.code}`}>

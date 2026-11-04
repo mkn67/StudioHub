@@ -1,6 +1,6 @@
 "use client";
 import { Presence, SharedPhoto, useContentMotion } from "./motion/system";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useState } from "react";
 import Link from "./motion/navigation-link";
 import { useRouter } from "next/navigation";
@@ -121,8 +121,8 @@ export function Payment({
   const canPay =
     b.status === "awaiting_payment" &&
     (state.now < b.deadline || b.payment === "processing");
-  const pay = (outcome: "paid" | "failed" | "processing") => {
-    if (dispatch({ type: "payment", id, outcome }) && outcome !== "processing")
+  const pay = async (outcome: "paid" | "failed" | "processing") => {
+    if ((await dispatch({ type: "payment", id, outcome })) && outcome !== "processing")
       router.push(`/payment/${id}/result`);
   };
   return (
@@ -157,7 +157,7 @@ export function Payment({
               {b.payment === "paid"
                 ? "Chủ Studio có 2 giờ để xác nhận. Hệ thống tự hủy và hoàn 100% cọc nếu quá hạn."
                 : b.reconciliation
-                  ? "Đơn hết hiệu lực. Giao dịch chưa rõ kết quả cần đối soát; không tính vi phạm."
+                  ? "Giao dịch chưa rõ kết quả cần đối soát; không tính vi phạm. Máy chủ giữ tài nguyên cho đến khi xác minh."
                   : b.status === "expired"
                     ? "Giữ chỗ đã hết hiệu lực. Hãy chọn lại lịch phù hợp."
                     : b.payment === "processing"
@@ -292,7 +292,7 @@ export function BookingDetail({ id }: { id: string }) {
     checkin: "Xác nhận đã nhận phòng",
     approve: "Xác nhận cho thuê",
   };
-  const submit = (outcome?: "failed" | "refunded") => {
+  const submit = async (outcome?: "failed" | "refunded") => {
     if (!action) return;
     let command: Command;
     if (action === "collect")
@@ -310,7 +310,7 @@ export function BookingDetail({ id }: { id: string }) {
     else if (action === "resolve_refund")
       command = { type: "resolve_refund", id, reason };
     else command = { type: action, id, reason };
-    if (dispatch(command)) {
+    if ((await dispatch(command))) {
       setAction(null);
       setReason("");
       notice("Đã cập nhật đơn.");
@@ -457,16 +457,16 @@ export function BookingDetail({ id }: { id: string }) {
                           <>
                             <button
                               className="btn"
-                              onClick={() =>
-                                dispatch({ type: "approve_change", id })
+                              onClick={async () =>
+                                (await dispatch({ type: "approve_change", id }))
                               }
                             >
                               Duyệt thay đổi
                             </button>
                             <button
                               className="btn secondary"
-                              onClick={() =>
-                                dispatch({ type: "reject_change", id })
+                              onClick={async () =>
+                                (await dispatch({ type: "reject_change", id }))
                               }
                             >
                               Từ chối thay đổi
@@ -476,8 +476,8 @@ export function BookingDetail({ id }: { id: string }) {
                           user.role === "customer" && (
                             <button
                               className="btn secondary"
-                              onClick={() =>
-                                dispatch({ type: "withdraw_change", id })
+                              onClick={async () =>
+                                (await dispatch({ type: "withdraw_change", id }))
                               }
                             >
                               Rút yêu cầu

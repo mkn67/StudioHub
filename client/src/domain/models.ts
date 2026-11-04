@@ -127,6 +127,7 @@ export interface Room {
   crewPolicy?: CrewPolicy;
 }
 export interface Equipment {
+  pricingUnit?: "hour" | "session";
   id: string;
   studioId: string;
   name: string;
@@ -170,6 +171,7 @@ export interface ChangeRequest {
   at: number;
 }
 export interface Booking extends Selection {
+  refundHistory?: Refund[];
   rentalSnapshot?: RentalSnapshot;
   id: string;
   customerId: string;
@@ -212,6 +214,8 @@ export interface AuditEvent {
   after?: string;
 }
 export interface State {
+  report?: { bookingCount: number; deposits: number; collections: number; refunded: number; refundDue: number; outstanding: number; netCollected: number; weeklyRooms: Record<string, Record<string, number>>; monthlyRooms: Record<string, Record<string, number>>; timezone: string };
+  availability?: { roomId: string; start: number; end: number; equipment: Record<string, number> }[];
   supportRequests?: {
     id: string;
     userId: string;

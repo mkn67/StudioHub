@@ -125,7 +125,7 @@ export function quoteRental(state: State, selection: Selection): RentalSnapshot 
   const rental = Math.round(planAmount(plan, localDate(selection.start)) * (plan.kind === "hourly" ? hours : 1));
   const promotion = promotionAt(plan, localDate(selection.start));
   const discountSavings = promotion ? Math.round(promotion.savings * (plan.kind === "hourly" ? hours : 1)) : 0;
-  const equipment = Math.round(Object.entries(selection.equipment).reduce((sum, [id, q]) => sum + (state.equipment.find(e => e.id === id)?.hourlyRate ?? 0) * q * hours, 0));
+  const equipment = Object.entries(selection.equipment).reduce((sum, [id, q]) => { const item = state.equipment.find(e => e.id === id); return sum + Math.round((item?.hourlyRate ?? 0) * q * (item?.pricingUnit === "session" ? 1 : hours)); }, 0);
   const eligible = surchargeMinutes(selection.start, selection.end, studio.timeSurcharge);
   const timeSurcharge = !studio.timeSurcharge?.enabled ? 0 : Math.round(studio.timeSurcharge.method === "fixed" ? studio.timeSurcharge.value * eligible / 60 : rental * studio.timeSurcharge.value * eligible / (100 * minutes));
   const crew = effectiveCrew(state, selection.roomId, plan), extraPeople = crew ? Math.max(0, selection.participants - crew.included) : 0;
@@ -136,6 +136,7 @@ export function quoteRental(state: State, selection: Selection): RentalSnapshot 
     totalEquipment: combinedEquipment(plan.includedEquipment, selection.equipment), crewPolicy: crew, operatingHours: effectiveOperatingHours(studio), timeSurcharge: studio.timeSurcharge });
 }
 export function blocksAt(booking: Booking, now: number) {
+  if (booking.status === "awaiting_payment" && booking.reconciliation) return true;
   if (booking.status === "awaiting_payment") return now < booking.deadline || (now < booking.deadline + 5 * MINUTE && booking.paymentAttempts.some(a => a.status === "processing" && a.at < booking.deadline));
   if (booking.status === "pending") return now < (booking.paidAt ?? 0) + 2 * HOUR;
   return booking.status === "checked_in" || (booking.status === "confirmed" && now < booking.end);
@@ -156,6 +157,8 @@ export function rentalSelectionError(state: State, x: Selection, ignoreId?: stri
   const active = state.bookings.filter(b => b.id !== ignoreId && blocksAt(b, state.now));
   const overlap = (b: Booking) => x.start < b.end + BUFFER && b.start < x.end + BUFFER;
   if (active.some(b => b.roomId === x.roomId && overlap(b))) return "Phòng đã được giữ trong khoảng thuê hoặc 30 phút chuẩn bị.";
+  const external = state.availability ?? [];
+  if (external.some(b => b.roomId === x.roomId && x.start < b.end + BUFFER && b.start < x.end + BUFFER)) return "Phòng đã được giữ trong khoảng thuê hoặc 30 phút chuẩn bị.";
   for (const q of Object.values(x.equipment)) if (!Number.isInteger(q) || q < 0) return "Số lượng thiết bị không hợp lệ.";
   const demand = combinedEquipment(plan.includedEquipment, x.equipment);
   for (const [id, q] of Object.entries(demand)) {
@@ -163,8 +166,9 @@ export function rentalSelectionError(state: State, x: Selection, ignoreId?: stri
     const item = state.equipment.find(e => e.id === id && e.studioId === studio.id);
     if (!Number.isInteger(q) || q < 0 || !item?.active) return "Thiết bị không khả dụng tại Studio này.";
     const relevant = active.filter(b => overlap(b) && (bookingEquipment(b)[id] ?? 0) > 0);
-    const points = [x.start, ...relevant.flatMap(b => [b.start, b.end + BUFFER]).filter(t => t >= x.start && t < x.end + BUFFER)];
-    if (points.some(t => q + relevant.filter(b => b.start <= t && t < b.end + BUFFER).reduce((sum, b) => sum + (bookingEquipment(b)[id] ?? 0), 0) > item.quantity))
+    const occupied = [...relevant.map(b => ({ start: b.start, end: b.end, quantity: bookingEquipment(b)[id] ?? 0 })), ...external.filter(b => x.start < b.end + BUFFER && b.start < x.end + BUFFER).map(b => ({ start: b.start, end: b.end, quantity: b.equipment[id] ?? 0 }))];
+    const points = [x.start, ...occupied.flatMap(b => [b.start, b.end + BUFFER]).filter(t => t >= x.start && t < x.end + BUFFER)];
+    if (points.some(t => q + occupied.filter(b => b.start <= t && t < b.end + BUFFER).reduce((sum, b) => sum + b.quantity, 0) > item.quantity))
       return `${item.name}: không đủ số lượng trong khoảng thuê và chuẩn bị${plan.includedEquipment[id] ? " (thiết bị kèm gói)" : ""}.`;
   }
   return null;

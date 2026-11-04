@@ -32,7 +32,7 @@ class BookingController
      */
     public function checkAvailability(Request $request): void
     {
-        $body = $request->json() ?? [];
+        $body = $request->json();
         $result = $this->availabilityService->evaluate($body, false);
 
         ApiResponse::ok([
@@ -56,7 +56,7 @@ class BookingController
      */
     public function create(Request $request): void
     {
-        $body = $request->json() ?? [];
+        $body = $request->json();
         $user = $request->getAttribute('user');
 
         $result = $this->bookingService->create($body, $user);
@@ -99,7 +99,7 @@ class BookingController
     public function updateStatus(Request $request, array $vars = []): void
     {
         $id = (int) ($vars['id'] ?? $request->param('id') ?? 0);
-        $body = $request->json() ?? [];
+        $body = $request->json();
         $user = $request->getAttribute('user');
 
         $status = trim((string) ($body['status'] ?? ''));
@@ -129,7 +129,7 @@ class BookingController
     public function pay(Request $request, array $vars = []): void
     {
         $id = (int) ($vars['id'] ?? $request->param('id') ?? 0);
-        $body = $request->json() ?? [];
+        $body = $request->json();
         $user = $request->getAttribute('user');
 
         $result = $this->paymentService->processSandboxPayment($id, $body, $user);

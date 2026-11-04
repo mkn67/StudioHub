@@ -12,11 +12,13 @@ class AuthService
 {
     private UserRepository $userRepository;
     private JwtService $jwtService;
+    private TokenRevocationRepository $tokenRevocations;
 
-    public function __construct(?UserRepository $userRepository = null, ?JwtService $jwtService = null)
+    public function __construct(?UserRepository $userRepository = null, ?JwtService $jwtService = null, ?TokenRevocationRepository $tokenRevocations = null)
     {
         $this->userRepository = $userRepository ?? new UserRepository();
         $this->jwtService = $jwtService ?? new JwtService();
+        $this->tokenRevocations = $tokenRevocations ?? new TokenRevocationRepository();
     }
 
     /**
@@ -29,6 +31,7 @@ class AuthService
      */
     public function register(array $input): array
     {
+        $this->validateStrings($input);
         // 1. Validate input
         Validator::assertValid($input, [
             'full_name' => 'required|min:2|max:100',
@@ -93,6 +96,7 @@ class AuthService
      */
     public function login(array $input): array
     {
+        $this->validateStrings($input);
         Validator::assertValid($input, [
             'email'    => 'required|email',
             'password' => 'required',
@@ -148,6 +152,17 @@ class AuthService
         ];
     }
 
+    /** Revoke the authenticated JWT until its original expiry. */
+    public function logout(array $claims): void
+    {
+        $jti = $claims['jti'] ?? null;
+        $expiresAt = filter_var($claims['exp'] ?? null, FILTER_VALIDATE_INT);
+        if (!is_string($jti) || !preg_match('/^[a-f0-9]{64}$/', $jti) || $expiresAt === false || $expiresAt <= time()) {
+            throw new ApiException(401, 'unauthorized', 'Token không hợp lệ hoặc đã hết hạn');
+        }
+        $this->tokenRevocations->revoke($jti, $expiresAt);
+    }
+
     /**
      * Retrieve the profile of an authenticated user.
      *
@@ -182,6 +197,7 @@ class AuthService
      */
     public function updateProfile(int $userId, array $input): array
     {
+        $this->validateStrings($input);
         $user = $this->userRepository->findById($userId);
 
         if (!$user) {
@@ -264,6 +280,13 @@ class AuthService
         }
 
         return $this->getProfile($userId);
+    }
+    private function validateStrings(array $input): void
+    {
+        foreach(['full_name','email','password','phone','avatar_url','new_password','current_password'] as $field) {
+            if(isset($input[$field]) && !is_string($input[$field])) throw new ApiException(422,'validation_failed','Thông tin phải là chuỗi.',[['field'=>$field,'code'=>'invalid_type','message'=>'Thông tin phải là chuỗi.']]);
+        }
+        foreach(['password','new_password'] as $field) if(isset($input[$field]) && strlen($input[$field])>72) throw new ApiException(422,'validation_failed','Mật khẩu tối đa 72 byte.',[['field'=>$field,'code'=>'too_long','message'=>'Mật khẩu tối đa 72 byte.']]);
     }
 }
 

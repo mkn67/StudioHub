@@ -40,6 +40,8 @@ class AuthController
      */
     public function logout(Request $request): void
     {
+        $claims = $request->getAttribute('jwt_claims', []);
+        $this->authService->logout(is_array($claims) ? $claims : []);
         ApiResponse::success(null, 'Đăng xuất thành công', 200);
     }
 

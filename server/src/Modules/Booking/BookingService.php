@@ -52,12 +52,12 @@ class BookingService
 
         $customerName = trim((string) ($request['customer_name'] ?? ''));
         if ($customerName === '') {
-            $customerName = (string) ($authUser['full_name'] ?? $authUser['name'] ?? '');
+            $customerName = $authUser['name'];
         }
 
         $customerEmail = trim((string) ($request['customer_email'] ?? ''));
         if ($customerEmail === '') {
-            $customerEmail = $authUser['email'] ?? '';
+            $customerEmail = $authUser['email'];
         }
 
         $customerPhone = trim((string) ($request['customer_phone'] ?? ''));
@@ -86,7 +86,7 @@ class BookingService
         $attempts = 0;
         $maxAttempts = 2;
 
-        while ($attempts < $maxAttempts) {
+        while (true) {
             $attempts++;
             try {
                 $this->pdo->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
@@ -240,6 +240,10 @@ class BookingService
                     continue;
                 }
 
+                if (in_array($errCode, [1205, 1213], true)) {
+                    throw new ApiException(500, 'concurrency_timeout', 'Không thể hoàn tất đặt phòng do xung đột tài nguyên, vui lòng thử lại');
+                }
+
                 if (($e->errorInfo[0] ?? '') === '45000' || str_contains($e->getMessage(), 'ROOM_OCCUPIED')) {
                     throw new ApiException(
                         409,
@@ -266,7 +270,6 @@ class BookingService
             }
         }
 
-        throw new ApiException(500, 'concurrency_timeout', 'Không thể hoàn tất đặt phòng do xung đột tài nguyên, vui lòng thử lại');
     }
 
     /**
@@ -329,9 +332,10 @@ class BookingService
             }
 
             $reason = $paidTotal > 0 ? 'host_no_response' : 'unpaid_hold_timeout';
-            $refundDue = $paidTotal;
-
             $this->bookingRepo->updateBookingStatus($bookingId, 'expired', null, null, $db);
+            $releaseReservations = $db->prepare("UPDATE inventory_reservations SET status = 'released' WHERE booking_id = ? AND status = 'reserved'");
+            $releaseReservations->execute([$bookingId]);
+            $refundTotal = $this->recordSandboxRefunds($bookingId, 'booking_expired', $db);
 
             $this->bookingRepo->insertAuditLog(
                 null,
@@ -343,8 +347,9 @@ class BookingService
                     'to'            => 'expired',
                     'reason'        => $reason,
                     'paid_total'    => $paidTotal,
-                    'refund_due'    => $refundDue,
-                    'refund_status' => 'recorded_only',
+                    'refund_due'    => 0,
+                    'refunded_total' => $refundTotal,
+                    'refund_status' => 'sandbox_success',
                     'payments'      => $paymentRecords,
                 ],
                 $db
@@ -360,7 +365,15 @@ class BookingService
                 $db->rollBack();
             }
             error_log("[BookingService::expireIfDue] Error expiring booking {$bookingId}: " . $e->getMessage());
-            return false;
+            // A storage/transaction failure is not the same as "not due". Callers
+            // must stop the payment/status operation instead of proceeding.
+            throw new ApiException(
+                500,
+                'booking_expiration_failed',
+                'Không thể xác nhận trạng thái hết hạn của đơn. Vui lòng thử lại.',
+                [],
+                $e
+            );
         }
     }
 
@@ -402,6 +415,7 @@ class BookingService
             if ($booking['status'] === 'pending') {
                 $didExpire = $this->expireIfDue($bookingId, $this->pdo);
                 if ($didExpire) {
+                    $this->pdo->commit();
                     throw new ApiException(400, 'booking_expired', 'Đơn đặt phòng đã hết hạn');
                 }
                 $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $this->pdo);
@@ -453,6 +467,12 @@ class BookingService
 
             // Update status in DB
             $this->bookingRepo->updateBookingStatus($bookingId, $newStatus, $completedAt, null, $this->pdo);
+            $refundTotal = 0;
+            if (in_array($newStatus, ['rejected', 'cancelled'], true)) {
+                $releaseReservations = $this->pdo->prepare("UPDATE inventory_reservations SET status = 'released' WHERE booking_id = ? AND status = 'reserved'");
+                $releaseReservations->execute([$bookingId]);
+                $refundTotal = $this->recordSandboxRefunds($bookingId, $newStatus === 'rejected' ? 'host_rejected' : 'host_cancelled', $this->pdo);
+            }
 
             // Audit log
             if (in_array($newStatus, ['rejected', 'cancelled'], true) && $paidTotal > 0) {
@@ -461,8 +481,9 @@ class BookingService
                     'to'            => $newStatus,
                     'reason'        => $newStatus === 'rejected' ? 'host_rejected' : 'host_cancelled',
                     'paid_total'    => $paidTotal,
-                    'refund_due'    => $paidTotal,
-                    'refund_status' => 'recorded_only',
+                    'refund_due'    => 0,
+                    'refunded_total' => $refundTotal,
+                    'refund_status' => 'sandbox_success',
                     'payments'      => $paymentRecords,
                 ];
             } else {
@@ -522,6 +543,7 @@ class BookingService
             if ($booking['status'] === 'pending') {
                 $didExpire = $this->expireIfDue($bookingId, $this->pdo);
                 if ($didExpire) {
+                    $this->pdo->commit();
                     throw new ApiException(400, 'booking_expired', 'Đơn đặt phòng đã hết hạn');
                 }
                 $booking = $this->bookingRepo->findBookingByIdForUpdate($bookingId, $this->pdo);
@@ -545,6 +567,9 @@ class BookingService
             }
 
             $this->bookingRepo->updateBookingStatus($bookingId, 'cancelled', null, null, $this->pdo);
+            $releaseReservations = $this->pdo->prepare("UPDATE inventory_reservations SET status = 'released' WHERE booking_id = ? AND status = 'reserved'");
+            $releaseReservations->execute([$bookingId]);
+            $refundTotal = $this->recordSandboxRefunds($bookingId, 'customer_cancelled', $this->pdo);
 
             $this->bookingRepo->insertAuditLog(
                 (int) $authUser['user_id'],
@@ -556,8 +581,9 @@ class BookingService
                     'to'            => 'cancelled',
                     'reason'        => 'customer_cancelled',
                     'paid_total'    => $paidTotal,
-                    'refund_due'    => $paidTotal,
-                    'refund_status' => 'recorded_only',
+                    'refund_due'    => 0,
+                    'refunded_total' => $refundTotal,
+                    'refund_status' => 'sandbox_success',
                     'payments'      => $paymentRecords,
                 ],
                 $this->pdo
@@ -640,5 +666,29 @@ class BookingService
             'equipments' => $equipments,
             'payments'   => $payments,
         ]);
+    }
+
+    private function recordSandboxRefunds(int $bookingId, string $reason, PDO $pdo): int
+    {
+        $payments = $this->bookingRepo->getSuccessfulPayments($bookingId, $pdo);
+        $refundTotal = 0;
+        foreach ($payments as $payment) {
+            $amount = (int) $payment['amount'];
+            if ($amount <= 0) continue;
+            $paymentId = (int) $payment['payment_id'];
+            $check = $pdo->prepare('SELECT amount FROM booking_refunds WHERE payment_id = ?');
+            $check->execute([$paymentId]);
+            $existing = $check->fetchColumn();
+            if ($existing !== false) {
+                $refundTotal += (int) $existing;
+                continue;
+            }
+            $key = "booking-refund-{$bookingId}-{$paymentId}";
+            $transactionCode = 'BRF-' . bin2hex(random_bytes(12));
+            $insert = $pdo->prepare("INSERT INTO booking_refunds (payment_id, booking_id, amount, status, reason, transaction_code, idempotency_key) VALUES (?, ?, ?, 'success', ?, ?, ?)");
+            $insert->execute([$paymentId, $bookingId, $amount, $reason, $transactionCode, $key]);
+            $refundTotal += $amount;
+        }
+        return $refundTotal;
     }
 }

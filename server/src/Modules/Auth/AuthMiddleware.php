@@ -13,10 +13,12 @@ use PDO;
 class AuthMiddleware
 {
     private JwtService $jwtService;
+    private TokenRevocationRepository $revocations;
 
-    public function __construct(?JwtService $jwtService = null)
+    public function __construct(?JwtService $jwtService = null, ?TokenRevocationRepository $revocations = null)
     {
         $this->jwtService = $jwtService ?? new JwtService();
+        $this->revocations = $revocations ?? new TokenRevocationRepository();
     }
 
     /**
@@ -49,20 +51,27 @@ class AuthMiddleware
         // Verify token signature and expiration
         $claims = $this->jwtService->verify($token);
         $userId = (int) ($claims['sub'] ?? 0);
+        $jti = $claims['jti'] ?? null;
 
-        if ($userId <= 0) {
+        if ($userId <= 0 || !is_string($jti) || !preg_match('/^[a-f0-9]{64}$/', $jti)) {
             throw new ApiException(
                 401,
                 'unauthorized',
-                'Token không chứa định danh người dùng hợp lệ',
+                'Token thiếu claim định danh hợp lệ',
                 [
                     [
                         'field'   => 'token',
-                        'code'    => 'invalid_sub',
-                        'message' => 'Token claim sub không hợp lệ',
+                        'code'    => 'invalid_claims',
+                        'message' => 'Token cần claim sub và jti hợp lệ',
                     ]
                 ]
             );
+        }
+
+        if ($this->revocations->isRevoked($jti)) {
+            throw new ApiException(401, 'unauthorized', 'Token đã bị thu hồi', [
+                ['field' => 'token', 'code' => 'token_revoked', 'message' => 'Đăng nhập lại để tiếp tục'],
+            ]);
         }
 
         // CRITICAL REQUIREMENT (Section 1 & 5.8):
@@ -110,6 +119,7 @@ class AuthMiddleware
 
         // Attach live user to request attributes
         $request->setAttribute('user', $user);
+        $request->setAttribute('jwt_claims', $claims);
 
         return $next($request);
     }

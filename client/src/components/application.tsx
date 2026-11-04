@@ -8,7 +8,7 @@ import { useSession, useStore, DemoTools } from "./store";
 import { Home, SearchRooms, RoomDetail } from "./marketplace";
 import { Auth, Profile, Support } from "./accounts";
 import { CustomerBookings, Payment, BookingDetail } from "./bookings";
-import { Operations, hostLinks, adminLinks } from "./operations";
+import { Operations } from "./operations";
 import { Empty, Modal } from "./ui";
 import { backendEnabled } from "@/services/api/client";
 import { useApiSession } from "./api-session";
@@ -18,6 +18,7 @@ import { BackendSearchResults, BackendRoomDetail } from "@/features/marketplace/
 import { BackendBookingWizard, BackendBookings, BackendBookingDetail } from "@/features/booking/backend-booking";
 import { BackendOperations } from "@/features/host/backend-host";
 import { CustomerAccountMenu } from "@/features/customer/account-menu";
+import { demoMode } from "@/data/api";
 export default function Application() {
   const apiSession = useApiSession();
   const demoUser = useSession();
@@ -105,7 +106,7 @@ export default function Application() {
       <a className="skip-link" href="#main-content">
         Đến nội dung chính
       </a>
-      {!(backendEnabled && ops) && <header className={`site-header ${hero ? "over-hero" : ""}`}>
+      {!ops && <header className={`site-header ${hero ? "over-hero" : ""}`}>
         <Link className="brand" href="/">
           StudioHub<span>®</span>
         </Link>
@@ -146,7 +147,7 @@ export default function Application() {
                 className="text-button logout"
                 onClick={async () => {
                   if (backendEnabled) await apiSession.logout();
-                  else dispatch({ type: "login", userId: null });
+                  else await dispatch({ type: "login", userId: null });
                   router.push("/");
                 }}
               >
@@ -170,7 +171,7 @@ export default function Application() {
         </div>
       </header>}
       {backendEnabled && !ops && apiSession.error && <div className="container"><ApiMessage error={apiSession.error} /></div>}
-      <Presence>{menu && !(backendEnabled && ops) && (
+      <Presence>{menu && !ops && (
         <Modal title="Điều hướng StudioHub" onClose={() => setMenu(false)} className="navigation-drawer">
         <nav
           className="mobile-nav"
@@ -181,12 +182,6 @@ export default function Application() {
           <Link href="/my-bookings" aria-current={segments[0] === "my-bookings" ? "page" : undefined}>Đơn của tôi</Link>
           {!ops && user?.role === "host" && <Link href="/host">Quản lý Studio</Link>}
           {!ops && user?.role === "admin" && <Link href="/admin">Quản trị</Link>}
-          {ops &&
-            (segments[0] === "host" ? hostLinks : adminLinks).map(([p, l]) => (
-              <Link key={p} href={`/${segments[0]}${p ? "/" + p : ""}`}>
-                {l}
-              </Link>
-            ))}
           {!(backendEnabled && user?.role === "customer") && <Link href={user ? accountHref : "/login"}>
             {user ? "Hồ sơ" : "Đăng nhập"}
           </Link>}
@@ -237,7 +232,7 @@ export default function Application() {
           <div className="footer-bottom container">
             <span>© 2026 StudioHub</span>
             <span>
-              {backendEnabled ? "Kết nối API · Thanh toán sandbox, không chuyển tiền thật" : "Môi trường demo · Dữ liệu minh họa · Không thanh toán thật"}
+              {backendEnabled ? "Kết nối API · Thanh toán sandbox, không chuyển tiền thật" : demoMode ? "Môi trường demo · Dữ liệu minh họa · Không thanh toán thật" : "StudioHub · Đặt thuê không gian sáng tạo"}
             </span>
           </div>
         </footer>

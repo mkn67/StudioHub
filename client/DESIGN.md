@@ -141,6 +141,12 @@ Keep native scrolling; no pinning, scrub, scroll proxy or artificial operation d
 
 ## Do's and Don'ts
 
+### Host/Admin operational variant
+
+For descendants of `.ops-shell` only, [Dashboard Design System](../docs/DASHBOARD_DESIGN_SYSTEM.md) defines the current **Cool Neubrutalist Operations** variant. It supersedes the earlier quiet-only operational styling and 0/4/8px radius restriction in this document for Host/Admin. Customer typography, geometry, tokens and all Helpdesk styling remain governed by their existing rules. Operational panels may use 12–16px corners, selected navigation and KPI cards receive selective hard shadows, and dense calendars/tables remain quiet. Dashboard-only tokens live in `src/features/dashboard/styles/dashboard.css`; do not promote them to `:root`.
+
+The current [workspace typography/shell refinement](../docs/DASHBOARD_TYPOGRAPHY_SHELL_REFINEMENT.md) uses Space Grotesk Variable for Host/Admin UI and Space Mono selectively for references, both self-hosted with Vietnamese subsets. Workspace page titles use 28px/700, not global editorial display weights. The public header is absent from Host/Admin render trees; their own 56px toolbar, sidebar, mobile drawer and account/logout controls provide navigation. Scoped booking semantics are defined in `src/features/dashboard/booking-status.ts`; they never replace Customer, payment, refund or equipment status colors.
+
 No invented claims, metrics, categories or policies. Do not change booking holds/buffers, inventory, pricing, deposits, payment, refunds, rescheduling, check-in/out, no-show, overtime, restrictions or Admin authority. Historical design reports remain explicitly historical. The final build requires actual rendered inspection, relevant checks and documented verification; a clean detector is not a visual review.
 
 ### Do
@@ -156,3 +162,7 @@ No invented claims, metrics, categories or policies. Do not change booking holds
 - Don't restore warm retro grounds, generic rounded SaaS cards, competing dominant blue or pill-shaped branding.
 - Don't apply glass to financial, transactional or operational data.
 - Don't change booking, payment, inventory, scheduling or role authority through visual work.
+
+### Current Host/Admin refinements
+
+Within `.ops-shell`, [Colored dashboard refinement](../docs/COLORED_DASHBOARD_REFINEMENT.md) defines the current soft color zoning, larger operational typography, tactile primary/secondary buttons, Pricing editor layout and Reports hierarchy. It supersedes earlier white-first operational guidance above. Dense rows/tables stay neutral. [Calendar timetable refinement](../docs/HOST_CALENDAR_TIMETABLE_REFINEMENT.md) specifies exact time geometry, progressive labels and initial viewport behavior. Customer and Helpdesk styling remain separate.

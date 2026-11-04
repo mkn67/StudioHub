@@ -6,6 +6,7 @@ const nextConfig = {
   poweredByHeader: false,
   devIndicators: false,
   outputFileTracingRoot: fileURLToPath(new URL(".", import.meta.url)),
+  turbopack: { root: fileURLToPath(new URL(".", import.meta.url)) },
 };
 
 export default nextConfig;

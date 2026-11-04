@@ -1,4 +1,4 @@
-﻿# StudioHub frontend
+# StudioHub frontend
 
 Next.js App Router, React 19, TypeScript và Tailwind CSS. Giữ hệ thiết kế hiện tại với Bricolage Grotesque / DM Mono, hình ảnh, bảng màu và bố cục trang chủ.
 
@@ -72,3 +72,10 @@ node scripts/integration-qa.mjs
 Script Playwright intercept HTTP bằng dữ liệu kiểm thử, không khởi chạy PHP, không ghi database và không xác nhận thanh toán thật. Nó kiểm tra hành vi frontend với contract dự kiến. Hai bộ test component từ kiến trúc frontend cũ được lưu nguyên dưới `tests/components/*.legacy.txt`; chúng tham chiếu module/fixture đã mất và dependency không có trong manifest. Bộ kiểm tra mới nằm trong `src/services/api/` và `scripts/integration-qa.mjs`.
 
 Để chạy backend, migrate hoặc seed, dùng đúng [server/README.md](../server/README.md) với database phát triển riêng. Đợt thay đổi này không sửa hoặc chạy migration/seed/backend test ghi dữ liệu. [Báo cáo xác minh](../docs/integration-verification.md) phân biệt kết quả kiểm thử frontend và phần còn cần PHP/MySQL.
+
+
+## Chế độ API sau khi ghép hai nhánh
+
+REST/JWT vẫn là mặc định với `.env.local` hiện có. `NEXT_PUBLIC_APP_MODE=demo` (hoặc `NEXT_PUBLIC_DEMO_MODE=true` khi chưa đặt APP_MODE rõ ràng) chọn demo trên trình duyệt. `NEXT_PUBLIC_APP_MODE=connected` chọn riêng workspace API dùng cookie từ nhánh incoming; khả năng tương thích database của chế độ này chưa được kiểm chứng trong lượt sửa conflict. Không chạy migration chỉ để giải quyết conflict frontend.
+
+README và báo cáo tích hợp của nhánh incoming được giữ nguyên tại [merge-history](../docs/merge-history/README.md). Xem [báo cáo sửa merge](../docs/MERGE_RESOLUTION_REPORT.md) để biết quyết định ghép code và kết quả kiểm chứng.

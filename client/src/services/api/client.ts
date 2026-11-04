@@ -1,3 +1,5 @@
+import { apiMode } from "@/data/api-mode";
+
 export type ApiEnvelope<T> = {
   status: "success";
   code: number;
@@ -30,7 +32,7 @@ export function getStoredApiToken(): string | null {
 export const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 export const backendEnabled =
-  process.env.NEXT_PUBLIC_DEMO_MODE !== "true";
+  apiMode === "rest";
 
 export function setStoredApiToken(token: string | null) {
   if (token) window.sessionStorage.setItem("studiohub.api-token", token);
