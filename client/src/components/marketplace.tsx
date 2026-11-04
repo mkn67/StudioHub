@@ -22,6 +22,12 @@ import { effectivePricingPlans } from "@/domain/featured-pricing";
 import { StudioCategoryIllustration } from "./studio-category-illustration";
 import { RoomEditorialContent } from "@/features/pricing/components/RoomEditorialContent";
 import { money, localDate, atDate } from "@/domain/models";
+import { backendEnabled } from "@/services/api/client";
+import { useResource } from "@/services/api/use-resource";
+import type { ApiRoom } from "@/services/api/contracts";
+import { unitLabels } from "@/services/api/contracts";
+import { ApiImage } from "@/features/marketplace/backend-pages";
+import { ApiMessage } from "./api-ui";
 import {
   roomRate,
   studioFor,
@@ -30,11 +36,14 @@ import {
   overlaps,
 } from "@/domain/engine";
 export function Home() {
+  const catalog = useResource<{ space_type_id: number; name: string }[]>(backendEnabled ? "/api/space-types" : null);
+  const featured = useResource<{ items: ApiRoom[] }>(backendEnabled ? "/api/rooms?limit=3" : null);
   const { state } = useStore(),
     router = useRouter();
   const [location, setLocation] = useState(""),
     [category, setCategory] = useState(""),
     [date, setDate] = useState("");
+  const categories = backendEnabled ? (catalog.data ?? []).map(t => ({ id: String(t.space_type_id), category: t.name })) : state.types;
   return (
     <>
       <section className="hero">
@@ -62,21 +71,21 @@ export function Home() {
             onSubmit={(e) => {
               e.preventDefault();
               const p = new URLSearchParams();
-              if (location) p.set("location", location);
-              if (category) p.set("category", category);
-              if (date) p.set("date", date);
+              if (location) p.set(backendEnabled ? "keyword" : "location", location);
+              if (category) p.set(backendEnabled ? "space_type_id" : "category", category);
+              if (date && !backendEnabled) p.set("date", date);
               router.push("/rooms?" + p.toString());
             }}
           >
             <label>
-              <span>Địa điểm</span>
-              <select
+              <span>{backendEnabled ? "Studio / phòng" : "Địa điểm"}</span>
+              {backendEnabled ? <input aria-label="Tên Studio hoặc phòng" placeholder="Tên Studio hoặc phòng" value={location} onChange={e => setLocation(e.target.value)} /> : <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               >
                 <option value="">Bạn muốn sáng tạo ở đâu?</option>
                 <option>Thảo Điền</option>
-              </select>
+              </select>}
             </label>
             <label>
               <span>Không gian</span>
@@ -85,8 +94,8 @@ export function Home() {
                 onChange={(e) => setCategory(e.target.value)}
               >
                 <option value="">Mọi loại Studio</option>
-                {state.types.map((t) => (
-                  <option key={t.id} value={t.category}>
+                {categories.map((t) => (
+                  <option key={t.id} value={backendEnabled ? t.id : t.category}>
                     {t.category}
                   </option>
                 ))}
@@ -94,13 +103,13 @@ export function Home() {
             </label>
             <label>
               <span>Ngày thuê</span>
-              <input
+              {backendEnabled ? <span>Chọn lịch tại trang phòng</span> : <input
                 aria-label="Ngày thuê"
                 type="date"
                 min={localDate(state.now)}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-              />
+              />}
             </label>
             <button className="btn" type="submit">
               <Search size={18} />
@@ -129,10 +138,10 @@ export function Home() {
           </p>
         </div>
         <div className="categories">
-          {state.types.map((t, i) => (
+          {categories.map((t, i) => (
             <Link
               key={t.id}
-              href={`/rooms?category=${encodeURIComponent(t.category)}`}
+              href={backendEnabled ? `/rooms?space_type_id=${t.id}` : `/rooms?category=${encodeURIComponent(t.category)}`}
             >
               <StudioCategoryIllustration category={t.category} />
               <span>{t.category}</span>
@@ -156,7 +165,7 @@ export function Home() {
           <div>
             <h2>Chọn nơi bắt đầu.</h2>
             <p className="muted">
-              Những phòng Studio trong bộ dữ liệu minh họa.
+              {backendEnabled ? "Những phòng Studio đang mở cho thuê." : "Những phòng Studio trong bộ dữ liệu minh họa."}
             </p>
           </div>
           <Link className="text-link" href="/rooms">
@@ -164,7 +173,7 @@ export function Home() {
           </Link>
         </div>
         <div className="featured-grid">
-          {state.rooms
+          {backendEnabled ? <><ApiMessage loading={featured.loading} error={featured.error || catalog.error} />{featured.data?.items.map(r => <Link className="room-card" key={r.room_id} href={`/rooms/${r.room_id}`}><div className="room-image"><ApiImage src={r.thumbnail_url} alt={r.name} /></div><div className="room-copy"><p>{r.studio.name}</p><h3>{r.name}</h3><p>{r.area} m² · {r.capacity} người</p><strong>{r.display_rate ? `${money(r.display_rate.unit_price)} / ${unitLabels[r.display_rate.rate_unit]}` : "Xem bảng giá"}</strong></div></Link>)}{featured.data && !featured.data.items.length && <p>Chưa có phòng đang mở cho thuê.</p>}</> : state.rooms
             .filter((_, i) => [0, 2, 4].includes(i))
             .map((room) => (
               <RoomCard key={room.id} room={room} editorial />

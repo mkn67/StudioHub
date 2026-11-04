@@ -6,8 +6,10 @@ import "@fontsource/ibm-plex-mono/vietnamese-400.css";
 import "./globals.css";
 import "./editorial.css";
 import "./motion.css";
+import "./explore.css";
 import { motionTokenCSS } from "@/components/motion/tokens";
 import { Provider } from "@/components/store";
+import { ApiSessionProvider } from "@/components/api-session";
 import { HelpdeskWidget } from "@/features/helpdesk";
 export const metadata: Metadata = {
   title: "StudioHub — Không gian cho ý tưởng của bạn",
@@ -23,7 +25,7 @@ export default function RootLayout({
     <html lang="vi">
       <head><style id="studiohub-motion-tokens">{motionTokenCSS}</style></head>
       <body>
-        <Provider>{children}</Provider>
+        <ApiSessionProvider><Provider>{children}</Provider></ApiSessionProvider>
         <HelpdeskWidget />
       </body>
     </html>

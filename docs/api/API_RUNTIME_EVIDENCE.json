@@ -1,0 +1,869 @@
+{
+  "capturedAt": "2026-11-04T05:45:23.538Z",
+  "scope": "PHP API StudioHub, không gồm Helpdesk; không chạy mutation tài nguyên/hồ sơ/quyền",
+  "registeredRoutes": [
+    {
+      "method": "GET",
+      "path": "/api/health"
+    },
+    {
+      "method": "GET",
+      "path": "/health"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/profile"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/auth/profile"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/{id:\\d+}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/{id:\\d+}/calendar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/{id:\\d+}/rates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/equipments"
+    },
+    {
+      "method": "GET",
+      "path": "/api/space-types"
+    },
+    {
+      "method": "GET",
+      "path": "/api/amenities"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studios/mine"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studios"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/studios/{id:\\d+}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/equipment-categories"
+    },
+    {
+      "method": "POST",
+      "path": "/api/equipment-categories"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/rooms/{id:\\d+}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/{id:\\d+}/rates"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/rooms/{id:\\d+}/rates/{rate_id:\\d+}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/{id:\\d+}/images"
+    },
+    {
+      "method": "POST",
+      "path": "/api/equipments"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/equipments/{id:\\d+}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings/check-availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bookings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bookings/{id:\\d+}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/bookings/{id:\\d+}/status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings/{id:\\d+}/cancel"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings/{id:\\d+}/payments"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/users/{id:\\d+}/status"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/users/{id:\\d+}/role"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/statistics"
+    },
+    {
+      "method": "GET",
+      "path": "/api/host/statistics"
+    },
+    {
+      "method": "GET",
+      "path": "/api/test/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/test/host-only"
+    },
+    {
+      "method": "GET",
+      "path": "/api/test/admin-only"
+    }
+  ],
+  "productionApiRoutes": [
+    {
+      "method": "GET",
+      "path": "/api/health"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/profile"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/auth/profile"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/{id:\\d+}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/{id:\\d+}/calendar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/{id:\\d+}/rates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/equipments"
+    },
+    {
+      "method": "GET",
+      "path": "/api/space-types"
+    },
+    {
+      "method": "GET",
+      "path": "/api/amenities"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studios/mine"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studios"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/studios/{id:\\d+}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/equipment-categories"
+    },
+    {
+      "method": "POST",
+      "path": "/api/equipment-categories"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/rooms/{id:\\d+}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/{id:\\d+}/rates"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/rooms/{id:\\d+}/rates/{rate_id:\\d+}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms/{id:\\d+}/images"
+    },
+    {
+      "method": "POST",
+      "path": "/api/equipments"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/equipments/{id:\\d+}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings/check-availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bookings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bookings/{id:\\d+}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/bookings/{id:\\d+}/status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings/{id:\\d+}/cancel"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bookings/{id:\\d+}/payments"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/users/{id:\\d+}/status"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/users/{id:\\d+}/role"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/statistics"
+    },
+    {
+      "method": "GET",
+      "path": "/api/host/statistics"
+    }
+  ],
+  "runtimeChecks": [
+    {
+      "role": "admin",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "actual": 200,
+      "passed": true,
+      "note": "Source AuthService::login chỉ SELECT và tạo JWT, không cập nhật DB."
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "user_id",
+        "role_id",
+        "role",
+        "full_name",
+        "email",
+        "phone",
+        "avatar_url",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "host",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "actual": 200,
+      "passed": true,
+      "note": "Source AuthService::login chỉ SELECT và tạo JWT, không cập nhật DB."
+    },
+    {
+      "role": "host",
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "user_id",
+        "role_id",
+        "role",
+        "full_name",
+        "email",
+        "phone",
+        "avatar_url",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "customer",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "actual": 200,
+      "passed": true,
+      "note": "Source AuthService::login chỉ SELECT và tạo JWT, không cập nhật DB."
+    },
+    {
+      "role": "customer",
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "user_id",
+        "role_id",
+        "role",
+        "full_name",
+        "email",
+        "phone",
+        "avatar_url",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/health",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "server",
+        "database",
+        "mysql_version",
+        "timestamp"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/admin/users?page=1&limit=12",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "items",
+        "total_items",
+        "total_pages",
+        "page",
+        "limit"
+      ],
+      "itemFields": [
+        "user_id",
+        "role_id",
+        "role",
+        "full_name",
+        "email",
+        "phone",
+        "avatar_url",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "total": 5
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/admin/users?page=1&limit=12&search=studio&role=host&status=active",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "items",
+        "total_items",
+        "total_pages",
+        "page",
+        "limit"
+      ],
+      "itemFields": [
+        "user_id",
+        "role_id",
+        "role",
+        "full_name",
+        "email",
+        "phone",
+        "avatar_url",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "total": 2
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/admin/users?page=1&limit=12&status=locked",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "items",
+        "total_items",
+        "total_pages",
+        "page",
+        "limit"
+      ],
+      "itemFields": [],
+      "total": 0
+    },
+    {
+      "role": "host",
+      "method": "GET",
+      "path": "/api/admin/users",
+      "expected": 403,
+      "actual": 403,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": []
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/admin/users",
+      "expected": 401,
+      "actual": 401,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": []
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/admin/statistics",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "period",
+        "total_bookings",
+        "total_revenue",
+        "occupancy_rate",
+        "total_studios",
+        "total_rooms",
+        "total_customers"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/admin/statistics?from=2026-10-01&to=2026-11-01",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "period",
+        "total_bookings",
+        "total_revenue",
+        "occupancy_rate",
+        "total_studios",
+        "total_rooms",
+        "total_customers"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "host",
+      "method": "GET",
+      "path": "/api/admin/statistics",
+      "expected": 403,
+      "actual": 403,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": []
+    },
+    {
+      "role": "host",
+      "method": "GET",
+      "path": "/api/host/statistics",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "period",
+        "total_bookings",
+        "total_revenue",
+        "occupancy_rate",
+        "total_studios",
+        "total_rooms"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/host/statistics",
+      "expected": 403,
+      "actual": 403,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": []
+    },
+    {
+      "role": "host",
+      "method": "GET",
+      "path": "/api/studios/mine",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": [
+        "studio_id",
+        "host_id",
+        "name",
+        "description",
+        "address",
+        "district",
+        "city",
+        "phone",
+        "status",
+        "created_at",
+        "updated_at",
+        "total_rooms",
+        "total_equipments"
+      ],
+      "total": 1
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/studios/mine",
+      "expected": 403,
+      "actual": 403,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": []
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/rooms?limit=50",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "items",
+        "pagination"
+      ],
+      "itemFields": [
+        "room_id",
+        "studio_id",
+        "name",
+        "description",
+        "area",
+        "ceiling_height",
+        "capacity",
+        "soundproof_level",
+        "status",
+        "studio",
+        "thumbnail_url",
+        "primary_space_type",
+        "display_rate",
+        "amenities"
+      ],
+      "total": 4
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/space-types",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": [
+        "space_type_id",
+        "name",
+        "description"
+      ],
+      "total": 7
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/amenities",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": [
+        "amenity_id",
+        "name",
+        "icon"
+      ],
+      "total": 8
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/rooms/1",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "room_id",
+        "studio_id",
+        "name",
+        "description",
+        "area",
+        "ceiling_height",
+        "capacity",
+        "soundproof_level",
+        "power_specs",
+        "rules",
+        "status",
+        "created_at",
+        "updated_at",
+        "studio",
+        "space_types",
+        "amenities",
+        "images",
+        "rates"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/rooms/1/rates",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": [
+        "rate_id",
+        "room_id",
+        "rate_unit",
+        "unit_minutes",
+        "unit_price",
+        "minimum_units",
+        "maximum_units",
+        "effective_from",
+        "effective_to",
+        "status"
+      ],
+      "total": 5
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/rooms/1/calendar",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "room_id",
+        "from",
+        "to",
+        "busy_slots"
+      ],
+      "itemFields": []
+    },
+    {
+      "role": "guest",
+      "method": "GET",
+      "path": "/api/equipments?studio_id=1",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": [
+        "equipment_id",
+        "studio_id",
+        "category_id",
+        "category_name",
+        "name",
+        "brand",
+        "description",
+        "unit_price",
+        "pricing_unit",
+        "total_quantity",
+        "image_url",
+        "status"
+      ],
+      "total": 4
+    },
+    {
+      "role": "host",
+      "method": "GET",
+      "path": "/api/equipment-categories?studio_id=1",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": [
+        "category_id",
+        "studio_id",
+        "name",
+        "description",
+        "created_at",
+        "total_equipments"
+      ],
+      "total": 3
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/equipment-categories?studio_id=1",
+      "expected": 403,
+      "actual": 403,
+      "passed": true,
+      "responseFields": [],
+      "itemFields": []
+    },
+    {
+      "role": "admin",
+      "method": "GET",
+      "path": "/api/bookings?page=1&limit=12&status=",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "items",
+        "total_items",
+        "total_pages",
+        "page",
+        "limit"
+      ],
+      "itemFields": [],
+      "total": 0
+    },
+    {
+      "role": "host",
+      "method": "GET",
+      "path": "/api/bookings?page=1&limit=12&status=pending",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "items",
+        "total_items",
+        "total_pages",
+        "page",
+        "limit"
+      ],
+      "itemFields": [],
+      "total": 0
+    },
+    {
+      "role": "customer",
+      "method": "GET",
+      "path": "/api/bookings?page=1&limit=12",
+      "expected": 200,
+      "actual": 200,
+      "passed": true,
+      "responseFields": [
+        "items",
+        "total_items",
+        "total_pages",
+        "page",
+        "limit"
+      ],
+      "itemFields": [],
+      "total": 0
+    },
+    {
+      "role": "admin",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "actual": 200,
+      "expected": 200,
+      "passed": true,
+      "note": "AuthController::logout chỉ trả success, không ghi DB hoặc thu hồi JWT phía server."
+    }
+  ],
+  "summary": {
+    "registered": 41,
+    "productionApi": 37,
+    "successfulChecks": 32,
+    "failedChecks": 0,
+    "runtimeVerifiedOperations": 17
+  }
+}

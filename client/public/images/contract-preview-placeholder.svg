@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="794" height="1123" viewBox="0 0 794 1123" role="img" aria-labelledby="title desc">
+  <title id="title">MẪU HỢP ĐỒNG — MINH HỌA</title>
+  <desc id="desc">Bố cục tài liệu A4 minh họa cho StudioHub. Không phải hợp đồng thật, không có chữ ký, con dấu hoặc dữ liệu cá nhân.</desc>
+  <rect width="794" height="1123" fill="#fff"/>
+  <rect x="38" y="38" width="718" height="1047" rx="3" fill="none" stroke="#cbd5e1"/>
+  <rect x="70" y="70" width="54" height="54" rx="8" fill="#cfeff5" stroke="#20323e" stroke-width="2"/>
+  <path d="M84 88h26M84 98h26M84 108h17" stroke="#0d7490" stroke-width="3"/>
+  <g font-family="Arial, sans-serif" fill="#20323e">
+    <text x="140" y="96" font-size="24" font-weight="700">StudioHub</text>
+    <text x="140" y="118" font-size="12" fill="#526675">KHÔNG GIAN CHO Ý TƯỞNG</text>
+    <rect x="70" y="162" width="654" height="98" rx="8" fill="#e8f5f8"/>
+    <text x="397" y="204" text-anchor="middle" font-size="25" font-weight="700">MẪU HỢP ĐỒNG — MINH HỌA</text>
+    <text x="397" y="234" text-anchor="middle" font-size="15">Hợp tác cho thuê Studio · Bố cục tham khảo</text>
+    <text x="70" y="310" font-size="16" font-weight="700">01 / THÔNG TIN CÁC BÊN</text>
+    <text x="70" y="340" font-size="14" fill="#526675">Vùng minh họa thông tin bên ký kết, chưa có dữ liệu thực tế.</text>
+    <text x="70" y="450" font-size="16" font-weight="700">02 / NỘI DUNG HỢP TÁC</text>
+    <text x="70" y="480" font-size="14" fill="#526675">Chưa có điều khoản hợp đồng được cung cấp.</text>
+    <text x="70" y="625" font-size="16" font-weight="700">03 / THỜI HẠN VÀ TRÁCH NHIỆM</text>
+    <text x="70" y="655" font-size="14" fill="#526675">Chưa xác định ngày hiệu lực, ngày hết hạn hoặc trách nhiệm.</text>
+    <text x="70" y="800" font-size="16" font-weight="700">04 / XÁC NHẬN THỎA THUẬN</text>
+    <text x="70" y="830" font-size="14" fill="#526675">Không có chữ ký, con dấu hoặc trạng thái ký kết.</text>
+    <text x="397" y="945" text-anchor="middle" font-size="18" font-weight="700" fill="#0d7490">CHỈ DÙNG ĐỂ MINH HỌA GIAO DIỆN</text>
+    <text x="397" y="976" text-anchor="middle" font-size="14" fill="#526675">Tài liệu này không xác nhận bất kỳ thỏa thuận nào.</text>
+    <text x="70" y="1051" font-size="12" fill="#526675">STUDIOHUB / BẢN XEM TRƯỚC</text>
+    <text x="724" y="1051" text-anchor="end" font-size="12" fill="#526675">MINH HỌA · 1/1</text>
+  </g>
+  <g stroke="#dbe3e9" stroke-width="5" stroke-linecap="round">
+    <path d="M72 372h650M72 394h480M72 512h650M72 534h650M72 556h540M72 687h650M72 709h650M72 731h420M72 862h650"/>
+  </g>
+</svg>

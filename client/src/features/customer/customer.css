@@ -1,0 +1,76 @@
+@font-face { font-family:"Customer Be Vietnam Pro"; src:url('/fonts/be-vietnam-pro/regular.ttf') format('truetype'); font-weight:400; font-display:swap; }
+@font-face { font-family:"Customer Be Vietnam Pro"; src:url('/fonts/be-vietnam-pro/medium.ttf') format('truetype'); font-weight:500; font-display:swap; }
+@font-face { font-family:"Customer Be Vietnam Pro"; src:url('/fonts/be-vietnam-pro/semibold.ttf') format('truetype'); font-weight:600; font-display:swap; }
+@font-face { font-family:"Customer Be Vietnam Pro"; src:url('/fonts/be-vietnam-pro/bold.ttf') format('truetype'); font-weight:700; font-display:swap; }
+.customer-profile,.customer-account { font-family:"Customer Be Vietnam Pro",sans-serif; color:#20323e; }
+.customer-profile { background:#f8fafc; padding:44px 32px 48px; }
+.customer-profile-container { max-width:1240px; margin:auto; }
+.customer-profile-heading { margin-bottom:30px; }
+.customer-eyebrow { color:#0d7490; font-size:11px; font-weight:700; letter-spacing:.12em; }
+.customer-profile h1 { font-size:clamp(30px,3.3vw,46px); letter-spacing:-.045em; line-height:1.2; margin:10px 0 12px; }
+.customer-profile h1>span { color:#0d7490; }
+.customer-profile p { line-height:1.7; margin:0; }
+.customer-profile-heading>p,.customer-profile small,.customer-section-title p,.customer-aside-note { color:#526675; }
+.customer-profile-layout { display:grid; grid-template-columns:300px minmax(0,1fr); gap:28px; align-items:start; }
+.customer-profile-aside { min-width:0; display:grid; gap:22px; }
+.customer-profile-summary { padding:28px 24px; background:#cfeff5; border:2px solid #20323e; border-radius:16px; box-shadow:4px 4px 0 #20323e; display:flex; flex-direction:column; align-items:flex-start; }
+.customer-avatar { width:72px; height:72px; display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; border:2px solid #20323e; border-radius:18px; background:white; font-weight:700; font-size:26px; box-shadow:3px 3px 0 #20323e; }
+.customer-avatar.small { width:32px; height:32px; font-size:12px; border-radius:8px; box-shadow:none; background:#cfeff5; }
+.customer-role { font-size:11px; font-weight:600; padding:4px 10px; background:#ffffffb8; border-radius:30px; margin-top:24px; }
+.customer-profile-summary h2 { font-size:24px; line-height:1.4; margin:10px 0 6px; overflow-wrap:anywhere; }
+.customer-profile-summary>p { font-size:13px; overflow-wrap:anywhere; max-width:100%; }
+.customer-status { display:flex; align-items:center; gap:8px; font-size:11px; margin-top:22px; padding-top:18px; border-top:1px solid #20323e35; width:100%; }
+.customer-status>span { width:7px; height:7px; border-radius:50%; background:#176344; }
+.customer-profile-links { display:grid; gap:5px; }
+.customer-profile-links a { display:flex; align-items:center; gap:10px; min-height:46px; padding:12px 14px; font-size:13px; border:1px solid transparent; border-radius:10px; }
+.customer-profile-links a[aria-current] { background:#dfeafd; border-color:#b7cce8; font-weight:600; }
+.customer-profile-links a:hover { background:#eaf2f5; }
+.customer-profile-links a>svg:last-child:not(:first-child) { margin-left:auto; }
+.customer-profile .customer-aside-note { display:flex; gap:10px; font-size:11px; padding:0 14px; }
+.customer-aside-note svg { flex-shrink:0; margin-top:3px; }
+.customer-profile-form { min-width:0; border:2px solid #20323e; border-radius:16px; box-shadow:4px 4px 0 #d5e0e7; background:#fff; overflow:hidden; }
+.customer-profile-section { padding:28px 30px; border-bottom:1px solid #dbe3e9; scroll-margin-top:100px; }
+.customer-section-title { display:flex; align-items:flex-start; gap:12px; margin-bottom:24px; }
+.customer-section-title>svg { margin-top:3px; flex-shrink:0; color:#0d7490; }
+.customer-profile h2 { letter-spacing:-.03em; }
+.customer-section-title h2 { font-size:19px; line-height:1.4; margin:0 0 6px; }
+.customer-section-title p { font-size:12px; }
+.customer-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 20px; border:0; margin:0; padding:0; min-width:0; }
+.customer-fields label { display:flex; flex-direction:column; gap:9px; font-size:14px; font-weight:600; min-width:0; margin:0; }
+.customer-field-wide { grid-column:1/-1; }
+.customer-profile .customer-fields input { width:100%; min-width:0; min-height:50px; border:1px solid #889ba8; border-radius:9px; padding:12px 14px; background:white; color:#20323e; font:400 15px/1.5 "Customer Be Vietnam Pro",sans-serif; box-shadow:none; }
+.customer-fields input[readonly] { background:#f4f7fa; border-color:#cbd5e1; }
+.customer-fields input:disabled { background:#f0f3f6; color:#647586; border:1px dashed #a9bac6; opacity:1; cursor:not-allowed; }
+.customer-profile :is(input,button,a):focus-visible,.customer-account :is(button,a):focus-visible { outline:3px solid #0d7490; outline-offset:3px; }
+.customer-fields small { font-size:11px; font-weight:400; line-height:1.6; }
+.customer-fields label>span[aria-hidden] { display:none; }
+.customer-fields label>.customer-unavailable-tag { align-self:flex-start; }
+.customer-unavailable-tag { display:inline-block; font-size:10px; font-weight:500; padding:3px 8px; border-radius:5px; background:#edf1f5; color:#526675; }
+.customer-unavailable p { margin-top:10px; font-size:13px; color:#526675; }
+.customer-identity { background:#f6f9fc; }
+.customer-identity>p { font-size:13px; color:#526675; }
+.customer-save-area { padding:24px 30px; }
+.customer-save-row { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:16px; }
+.customer-save-row>p { font-size:11px; color:#526675; }
+.customer-save-row>div { display:flex; flex-wrap:wrap; gap:12px; }
+.customer-profile .btn { font-family:inherit; font-size:12px; min-height:46px; border:2px solid #20323e; border-radius:9px; background:#8ddfee; color:#20323e; box-shadow:3px 3px 0 #20323e; transition:box-shadow .15s,transform .15s; }
+.customer-profile .btn.secondary { background:white; box-shadow:none; }
+.customer-profile .btn:active:not(:disabled) { transform:translate(2px,2px); box-shadow:none; }
+.customer-profile .btn:disabled { opacity:.5; cursor:not-allowed; }
+.customer-profile .customer-error { color:#a51e2d; font-size:13px; margin-bottom:14px; }
+.customer-profile .customer-success { color:#176344; display:flex; gap:8px; font-size:13px; margin-bottom:16px; }
+.customer-profile-state { max-width:1240px; margin:auto; padding:45px 0; min-height:40vh; }
+.customer-profile-state .btn { margin-top:24px; }
+.customer-account { position:relative; }
+.customer-account-trigger { display:flex; align-items:center; gap:9px; min-height:44px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:10px; background:white; color:#20323e; cursor:pointer; font:600 13px "Customer Be Vietnam Pro",sans-serif; }
+.customer-account-menu { position:absolute; right:0; top:calc(100% + 12px); width:272px; max-width:calc(100vw - 28px); background:white; color:#20323e; border:2px solid #20323e; border-radius:12px; box-shadow:4px 4px 0 #20323e; padding:8px; z-index:200; animation:customer-menu-in .12s ease-out; }
+.customer-menu-identity { padding:12px; border-bottom:1px solid #dbe3e9; margin-bottom:6px; display:grid; gap:4px; overflow-wrap:anywhere; }
+.customer-menu-identity strong { font-size:14px; }.customer-menu-identity span { font-size:12px; color:#526675; }
+.customer-account-menu :is(a,button) { display:flex; align-items:center; gap:10px; min-height:46px; padding:12px; border:0; width:100%; background:transparent; border-radius:7px; color:inherit; cursor:pointer; font:400 13px "Customer Be Vietnam Pro",sans-serif; text-align:left; }
+.customer-account-menu :is(a,button):hover,.customer-account-menu :is(a,button):focus { background:#eaf5f8; }
+@keyframes customer-menu-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+@media(min-width:540px) { .customer-fields label:has(#customer-birthday) { position:relative; }.customer-fields label:has(#customer-birthday)>.customer-unavailable-tag { position:absolute; right:0; top:0; } }
+@media(max-width:1000px) { .customer-profile-layout { grid-template-columns:250px minmax(0,1fr); gap:22px; }.customer-profile-section,.customer-save-area { padding:24px; } }
+@media(max-width:849px) { .customer-profile-layout { grid-template-columns:minmax(0,1fr); }.customer-profile-summary { display:grid; grid-template-columns:64px minmax(0,1fr); gap:8px 18px; }.customer-profile-summary>.customer-avatar { grid-row:1/5; width:60px; height:60px; }.customer-role { margin:0; justify-self:start; }.customer-profile-summary h2 { margin:0; font-size:22px; }.customer-profile-summary>p { grid-column:2; }.customer-profile-summary>.customer-status { grid-column:1/-1; margin-top:10px; }.customer-profile-links { grid-template-columns:1fr 1fr; gap:5px; }.customer-aside-note { display:none!important; }.customer-profile-heading { margin-bottom:24px; }.customer-fields label:has(#customer-birthday)>.customer-unavailable-tag { font-size:10px; }.customer-fields { align-items:start; } }
+@media(max-width:539px) { .customer-profile { padding:30px 18px 36px; }.customer-profile h1 { font-size:32px; }.customer-profile-heading>p { font-size:13px; }.customer-profile-summary { padding:22px 18px; }.customer-profile-section,.customer-save-area { padding:23px 18px; }.customer-fields { grid-template-columns:minmax(0,1fr); gap:20px; }.customer-fields label:has(#customer-birthday) { display:grid; grid-template-columns:1fr auto; align-items:center; }.customer-fields label:has(#customer-birthday)>input,.customer-fields label:has(#customer-birthday)>small { grid-column:1/-1; }.customer-profile-links a { font-size:11px; padding:10px; gap:7px; }.customer-profile-links a>svg { width:16px; }.customer-section-title h2 { font-size:18px; }.customer-save-row>div { width:100%; }.customer-save-row .btn { flex:1; padding:12px 8px; }.customer-short-name { display:none; }.customer-account-trigger { padding:4px 6px; gap:4px; }.customer-section-title { gap:9px; } }
+@media(prefers-reduced-motion:reduce) { .customer-account-menu { animation:none; }.customer-profile .btn { transition:none; } }

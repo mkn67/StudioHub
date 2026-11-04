@@ -422,7 +422,7 @@ td small { font-size:11px; }
 }
 
 /* Public identity; dense operational controls retain their quieter variants. */
-.public-nav a.active { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:8px; }
+.public-nav a.active { color:var(--brand-primary); font-weight:700; }
 .editorial .room-image { border-radius:var(--radius-editorial); }
 .hero-search label { border-color:var(--line-strong); }
 

@@ -1,5 +1,2 @@
-import { AdminEquipments } from "@/features/admin/system-pages";
-
-export default function Page() {
-  return <AdminEquipments />;
-}
+import Application from "@/components/application";
+export default function Page() { return <Application />; }

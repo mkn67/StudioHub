@@ -1,8 +1,10 @@
 # 🎬 Studio & Equipment Rental Web Platform
 
-> **Trạng thái frontend hiện tại:** `client/` sử dụng Next.js 16, React 19 và Node.js 24. Đây là bản demo độc lập, lưu dữ liệu trong localStorage và mô phỏng thanh toán; chưa kết nối PHP API/MySQL. Xem [hướng dẫn frontend](client/README.md) để chạy và kiểm thử bản hiện tại. Các mô tả Next.js 14/React 18 và luồng tích hợp bên dưới là tài liệu của phiên bản trước.
+> **Tích hợp frontend:** `client/` sử dụng Next.js, React 19 và TypeScript, có chế độ API PHP/MySQL và demo tách biệt. Xem [hướng dẫn frontend](client/README.md), [audit](docs/integration-audit.md) và [kết quả xác minh](docs/integration-verification.md). Backend/database không được chỉnh sửa trong đợt tích hợp này. Các mô tả Next.js 14/React 18 bên dưới là tài liệu của phiên bản trước.
 > Hệ thống Web cho thuê Studio và Nội thất / Thiết bị quay chụp nghệ thuật.
 > Kiến trúc Monorepo tiêu chuẩn, hỗ trợ cả **Podman Compose** và **Docker Compose**.
+
+Chạy stack Docker hiện tại: `node scripts/setup-docker.mjs`, sau đó `docker compose up -d --build`. Xem [hướng dẫn Compose](docs/docker-compose.md) để biết service, volume, cấu hình và cách kiểm tra. Các hướng dẫn cũ bên dưới có thể khác cấu hình hiện tại.
 
 ---
 

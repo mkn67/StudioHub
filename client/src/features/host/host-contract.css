@@ -1,0 +1,46 @@
+.host-workspace .host-table-actions { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.host-workspace .host-retire-button.btn { background:white; color:#953d35; border:1px solid #20323e; box-shadow:none; }
+.host-workspace .host-retire-button.btn:hover:not(:disabled) { background:#fde6e3; color:#76271f; }
+.host-retirement-dialog .host-retirement-form { padding:24px; }
+.host-retirement-dialog p { font-size:14px; line-height:1.7; margin:12px 0; }
+.host-retirement-icon { display:inline-flex; background:#fde6e3; padding:12px; border-radius:12px; color:#953d35; }
+.host-retirement-resource { display:grid; gap:7px; border:1px solid #cbd5e1; background:#f8fafc; padding:16px; border-radius:10px; font-size:14px; margin:18px 0; overflow-wrap:anywhere; }
+.host-retirement-dialog .host-retirement-note { color:#526675; font-size:13px; }
+.host-retirement-footer { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; margin-top:24px; padding-top:20px; border-top:1px solid #cbd5e1; }
+.host-retirement-dialog .btn.destructive { background:#fde6e3; color:#76271f; border:2px solid #20323e; }
+.host-workspace .workspace-settings-grid.host-extended-settings { grid-template-columns:minmax(0,1fr); gap:0; }
+.host-extended-settings .workspace-account-form .workspace-email-field { grid-column:auto; }
+.host-extended-settings label:has([aria-label="Ngày sinh"]) { position:relative; }
+.host-extended-settings label:has([aria-label="Ngày sinh"])>.host-legal-tag { position:absolute; top:0; right:0; font-size:10px; padding:2px 6px; }
+.host-extended-settings input:disabled { cursor:not-allowed; border-style:dashed; opacity:1; background:#edf1f5; }
+.host-workspace .host-legal-tag { display:inline-flex; align-items:center; gap:7px; padding:5px 9px; border-radius:6px; background:#edf1f5; color:#526675; font-size:12px; font-weight:500; }
+.host-legal-intro { display:flex; align-items:flex-start; gap:16px; margin-bottom:24px; }
+.host-legal-intro .host-legal-tag { flex-shrink:0; }
+.host-legal-intro p,.host-legal-parties p,.host-legal-privacy p { margin:0; font-size:14px; line-height:1.7; color:#526675; }
+.host-legal-parties { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border:1px solid #cbd5e1; border-radius:12px; overflow:hidden; }
+.host-legal-parties>section { padding:24px; background:#f8fafc; }
+.host-legal-parties>section+section { border-left:1px solid #cbd5e1; background:#f1f5fc; }
+.host-legal-parties svg { color:#0d7490; }
+.host-legal-parties h3 { margin:12px 0 9px; font-size:17px; }
+.host-legal-parties .host-legal-muted { font-size:12px; margin-top:12px; }
+.host-legal-privacy { display:flex; align-items:flex-start; gap:12px; border-top:1px solid #cbd5e1; margin-top:22px; padding-top:20px; }
+.host-legal-privacy svg { flex-shrink:0; color:#0d7490; margin-top:3px; }
+.host-contract-card { display:grid; grid-template-columns:148px minmax(0,1fr); gap:28px; align-items:center; }
+.host-contract-thumbnail { position:relative; padding:0; background:white; border:2px solid #20323e; border-radius:8px; overflow:hidden; box-shadow:3px 3px 0 #20323e; cursor:pointer; }
+.host-contract-thumbnail img { display:block; width:100%; height:auto; object-fit:contain; }
+.host-contract-thumbnail>span { position:absolute; bottom:0; left:0; width:100%; padding:8px; display:flex; align-items:center; justify-content:center; gap:7px; background:#dfeafd; font-size:12px; border-top:1px solid #20323e; }
+.host-contract-copy h3 { font-size:19px; line-height:1.5; margin:14px 0 8px; }
+.host-contract-copy p { color:#526675; font-size:14px; line-height:1.7; margin:0 0 8px; }
+.host-contract-copy small { display:block; color:#526675; font-size:12px; line-height:1.6; margin-bottom:20px; }
+.host-contract-dialog.dialog { width:min(960px,calc(100vw - 48px)); }
+.host-contract-preview-tools { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:20px 24px; border-bottom:1px solid #cbd5e1; }
+.host-contract-preview-tools strong { font-size:11px; color:#0d7490; letter-spacing:.05em; }
+.host-contract-preview-tools p { font-size:13px; color:#526675; line-height:1.6; margin:5px 0 0; }
+.host-contract-preview-tools output { font-size:13px; min-width:43px; text-align:center; }
+.host-contract-preview-tools .btn { padding:9px 12px; }
+.host-contract-viewport { height:min(68dvh,900px); overflow:auto; padding:24px; background:#e9eff3; overscroll-behavior:contain; }
+.host-contract-document { min-width:100%; margin:auto; box-shadow:0 2px 8px #20323e25; background:white; }
+.host-contract-document img { display:block; width:100%; height:auto; object-fit:contain; }
+.host-contract-viewport:focus-visible { outline:3px solid #0d7490; outline-offset:-3px; }
+@media(max-width:767px) { .host-legal-parties { grid-template-columns:minmax(0,1fr); }.host-legal-parties>section+section { border-left:0; border-top:1px solid #cbd5e1; }.host-legal-intro { flex-direction:column; gap:12px; }.host-contract-card { grid-template-columns:100px minmax(0,1fr); gap:18px; }.host-contract-copy h3 { font-size:16px; }.host-contract-thumbnail>span { font-size:10px; }.host-contract-dialog.dialog { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; }.host-contract-viewport { height:calc(100dvh - 240px); min-height:150px; padding:12px; }.host-contract-preview-tools { padding:16px; gap:12px; }.host-contract-preview-tools .host-actions { width:100%; justify-content:flex-end; }.host-retirement-footer .btn { flex:1; }.host-retirement-dialog .host-retirement-form { padding:20px; } }
+@media(max-width:419px) { .host-contract-card { grid-template-columns:minmax(0,1fr); }.host-contract-thumbnail { width:110px; }.host-contract-copy .btn { width:100%; }.host-contract-copy .host-legal-tag { font-size:11px; } }

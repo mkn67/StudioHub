@@ -17,6 +17,7 @@ import {
   type DemoScenario,
 } from "@/data/fixtures";
 import { browserRepository } from "@/data/repository";
+import { backendEnabled } from "@/services/api/client";
 type Context = {
   state: State;
   ready: boolean;
@@ -36,7 +37,7 @@ export function Provider({ children }: { children: ReactNode }) {
     let mounted = true;
     queueMicrotask(() => {
       if (!mounted) return;
-      const s = browserRepository.load();
+      const s = backendEnabled ? initialState() : browserRepository.load();
       ref.current = s;
       setState(s);
       setReady(true);
@@ -64,6 +65,7 @@ export function Provider({ children }: { children: ReactNode }) {
     return s;
   };
   const dispatch = (c: Command) => {
+    if (backendEnabled) { notice("Thao tác demo không khả dụng trong chế độ API."); return null; }
     try {
       return persist(execute(ref.current, c));
     } catch (e) {
@@ -109,7 +111,7 @@ export function DemoTools() {
   const { state, dispatch, reset, loadScenario } = useStore(),
     router = useRouter();
   const [open, setOpen] = useState(false);
-  if (process.env.NODE_ENV === "production") return null;
+  if (backendEnabled || process.env.NODE_ENV === "production") return null;
   return (
     <div className="demo-tools">
       <button className="demo-toggle" onClick={() => setOpen(!open)}>

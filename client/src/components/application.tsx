@@ -10,13 +10,24 @@ import { Auth, Profile, Support } from "./accounts";
 import { CustomerBookings, Payment, BookingDetail } from "./bookings";
 import { Operations, hostLinks, adminLinks } from "./operations";
 import { Empty, Modal } from "./ui";
+import { backendEnabled } from "@/services/api/client";
+import { useApiSession } from "./api-session";
+import { ApiAuth, ApiProfile } from "./api-accounts";
+import { ApiMessage, Unavailable } from "./api-ui";
+import { BackendSearchResults, BackendRoomDetail } from "@/features/marketplace/backend-pages";
+import { BackendBookingWizard, BackendBookings, BackendBookingDetail } from "@/features/booking/backend-booking";
+import { BackendOperations } from "@/features/host/backend-host";
+import { CustomerAccountMenu } from "@/features/customer/account-menu";
 export default function Application() {
+  const apiSession = useApiSession();
+  const demoUser = useSession();
   const path = usePathname(),
     segments = path.split("/").filter(Boolean),
     router = useRouter(),
-    user = useSession(),
+    user = backendEnabled ? (apiSession.user ? { name: apiSession.user.full_name, id: String(apiSession.user.user_id), role: apiSession.user.role } : undefined) : demoUser,
     { ready, dispatch } = useStore();
   const [menu, setMenu] = useState(false);
+  const accountHref = backendEnabled && (user?.role === "host" || user?.role === "admin") ? `/${user.role}/settings` : "/profile";
   const ops = segments[0] === "host" || segments[0] === "admin";
   const hero = path === "/";
   let content;
@@ -79,12 +90,22 @@ export default function Application() {
         href="/rooms"
       />
     );
+  if (backendEnabled) {
+    if (!segments.length) content = <Home />;
+    else if (segments[0] === "rooms" && !segments[1]) content = <BackendSearchResults key={path} />;
+    else if (segments[0] === "rooms") content = segments[2] === "book" ? <BackendBookingWizard key={segments[1]} id={segments[1]} /> : <BackendRoomDetail key={segments[1]} id={segments[1]} />;
+    else if (["login", "register"].includes(segments[0])) content = <ApiAuth key={path} register={segments[0] === "register"} host={segments[1] === "host"} />;
+    else if (segments[0] === "profile") content = <ApiProfile key={user?.id ?? "guest"} />;
+    else if (ops) content = <BackendOperations key={user?.id ?? "guest"} role={segments[0] as "host" | "admin"} segments={segments.slice(1)} />;
+    else if (["my-bookings", "payment"].includes(segments[0])) content = <div className="container account-page">{!apiSession.ready ? <ApiMessage loading /> : apiSession.user?.role !== "customer" ? <Empty title="Đơn thuê của khách hàng" text="Đăng nhập bằng tài khoản khách hàng để tiếp tục." href="/login" label="Đăng nhập" /> : segments[1] && segments[1] !== "history" ? <BackendBookingDetail key={`${user?.id}:${segments[1]}`} id={segments[1]} payment={segments[0] === "payment"} /> : <BackendBookings key={user?.id} />}</div>;
+    else content = <div className="container account-page"><Unavailable>Trang này chưa có luồng tương ứng trong API hiện tại. Vui lòng quay lại danh sách phòng hoặc đơn thuê.</Unavailable></div>;
+  }
   return (
     <>
       <a className="skip-link" href="#main-content">
         Đến nội dung chính
       </a>
-      <header className={`site-header ${hero ? "over-hero" : ""}`}>
+      {!(backendEnabled && ops) && <header className={`site-header ${hero ? "over-hero" : ""}`}>
         <Link className="brand" href="/">
           StudioHub<span>®</span>
         </Link>
@@ -92,12 +113,14 @@ export default function Application() {
           <Link
             href="/rooms"
             className={segments[0] === "rooms" ? "active" : ""}
+            aria-current={segments[0] === "rooms" ? "page" : undefined}
           >
             Khám phá Studio
           </Link>
           <Link
             href="/my-bookings"
             className={segments[0] === "my-bookings" ? "active" : ""}
+            aria-current={segments[0] === "my-bookings" ? "page" : undefined}
           >
             Đơn của tôi
           </Link>
@@ -111,23 +134,19 @@ export default function Application() {
               Quản trị
               <ArrowUpRight size={13} />
             </Link>
-          ) : (
-            <Link href="/register/host">
-              Dành cho chủ Studio
-              <ArrowUpRight size={13} />
-            </Link>
-          )}
+          ) : null}
         </nav>
         <div className="header-end">
-          {user ? (
+          {backendEnabled && apiSession.ready && apiSession.user?.role === "customer" ? <CustomerAccountMenu/> : user ? (
             <>
-              <Link className="account-link" href="/profile">
+              <Link className="account-link" href={accountHref}>
                 {user.name.split(" ").at(-1)}
               </Link>
               <button
                 className="text-button logout"
-                onClick={() => {
-                  dispatch({ type: "login", userId: null });
+                onClick={async () => {
+                  if (backendEnabled) await apiSession.logout();
+                  else dispatch({ type: "login", userId: null });
                   router.push("/");
                 }}
               >
@@ -149,17 +168,17 @@ export default function Application() {
             {menu ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
-      </header>
-      <Presence>{menu && (
+      </header>}
+      {backendEnabled && !ops && apiSession.error && <div className="container"><ApiMessage error={apiSession.error} /></div>}
+      <Presence>{menu && !(backendEnabled && ops) && (
         <Modal title="Điều hướng StudioHub" onClose={() => setMenu(false)} className="navigation-drawer">
         <nav
           className="mobile-nav"
           aria-label="Điều hướng di động"
           onClick={() => setMenu(false)}
         >
-          <Link href="/rooms">Khám phá Studio</Link>
-          <Link href="/my-bookings">Đơn của tôi</Link>
-          <Link href="/register/host">Dành cho chủ Studio</Link>
+          <Link href="/rooms" aria-current={segments[0] === "rooms" ? "page" : undefined}>Khám phá Studio</Link>
+          <Link href="/my-bookings" aria-current={segments[0] === "my-bookings" ? "page" : undefined}>Đơn của tôi</Link>
           {!ops && user?.role === "host" && <Link href="/host">Quản lý Studio</Link>}
           {!ops && user?.role === "admin" && <Link href="/admin">Quản trị</Link>}
           {ops &&
@@ -168,9 +187,9 @@ export default function Application() {
                 {l}
               </Link>
             ))}
-          <Link href={user ? "/profile" : "/login"}>
+          {!(backendEnabled && user?.role === "customer") && <Link href={user ? accountHref : "/login"}>
             {user ? "Hồ sơ" : "Đăng nhập"}
-          </Link>
+          </Link>}
         </nav>
         </Modal>
       )}</Presence>
@@ -218,8 +237,7 @@ export default function Application() {
           <div className="footer-bottom container">
             <span>© 2026 StudioHub</span>
             <span>
-              Bản frontend minh họa · Không thanh toán thật · Ảnh không gian
-              minh họa
+              {backendEnabled ? "Kết nối API · Thanh toán sandbox, không chuyển tiền thật" : "Môi trường demo · Dữ liệu minh họa · Không thanh toán thật"}
             </span>
           </div>
         </footer>

@@ -1,17 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-<<<<<<< HEAD
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-=======
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": false,
->>>>>>> 76c7a39 (fix(client): configure Next.js with next.config.mjs, bind 0.0.0.0, and update dependencies)
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,

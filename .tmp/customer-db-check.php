@@ -1,0 +1,1 @@
+<?php $p=new PDO("mysql:host=".getenv("DB_HOST").";port=".getenv("DB_PORT").";dbname=".getenv("DB_NAME"),getenv("DB_USER"),getenv("DB_PASS")); $s=[]; foreach($p->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN) as $t){$s[$t]=$p->query("CHECKSUM TABLE `".$t."`")->fetch(PDO::FETCH_ASSOC);} echo hash("sha256",json_encode($s));

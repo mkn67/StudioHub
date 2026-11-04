@@ -67,3 +67,46 @@ test("bridge forwards only allowlisted server headers", async () => {
     assert.equal(r.status, 200); assert.ok(called);
   } finally { if (old === undefined) delete process.env.HELPDESK_BRIDGE_SECRET; else process.env.HELPDESK_BRIDGE_SECRET = old; }
 });
+
+test("Docker HTTP upstream needs an exact server-configured hostname", async () => {
+  const keys = ["HELPDESK_API_URL", "HELPDESK_HTTP_HOSTS", "HELPDESK_BRIDGE_SECRET"] as const;
+  const previous = keys.map(key => process.env[key]);
+  process.env.HELPDESK_BRIDGE_SECRET = "test-only-".repeat(5);
+  process.env.HELPDESK_API_URL = "http://helpdesk-php";
+  delete process.env.HELPDESK_HTTP_HOSTS;
+  const request = () => new Request("http://localhost:3000/api/helpdesk/conversations", {
+    method: "POST", headers: { origin: "http://localhost:3000", "content-type": "application/json" }, body: "{}",
+  });
+  let calls = 0;
+  const fake: typeof fetch = async url => {
+    calls++;
+    assert.equal(String(url), "http://helpdesk-php/api/v1/helpdesk/conversations");
+    return ok({ conversation: { id: "example" } });
+  };
+  try {
+    assert.equal((await proxyHelpdesk(request(), ["conversations"], "a".repeat(64), fake)).status, 503);
+    process.env.HELPDESK_HTTP_HOSTS = "helpdesk-php";
+    assert.equal((await proxyHelpdesk(request(), ["conversations"], "a".repeat(64), fake)).status, 200);
+    process.env.HELPDESK_API_URL = "http://helpdesk-php.attacker.invalid";
+    assert.equal((await proxyHelpdesk(request(), ["conversations"], "a".repeat(64), fake)).status, 503);
+    assert.equal(calls, 1);
+  } finally {
+    keys.forEach((key, index) => { if (previous[index] === undefined) delete process.env[key]; else process.env[key] = previous[index]; });
+  }
+});
+
+test("container GET validates public Host with same-origin fetch metadata", async () => {
+  const previous = process.env.HELPDESK_BRIDGE_SECRET;
+  process.env.HELPDESK_BRIDGE_SECRET = "test-only-".repeat(5);
+  const fake: typeof fetch = async () => ok({ conversation: { id: "example" } });
+  const request = (host: string, site = "same-origin") => new Request("http://0.0.0.0:3000/api/helpdesk/conversations", {
+    headers: { host, "sec-fetch-site": site },
+  });
+  try {
+    assert.equal((await proxyHelpdesk(request("localhost:3000"), ["conversations"], "a".repeat(64), fake)).status, 200);
+    assert.equal((await proxyHelpdesk(request("attacker.invalid"), ["conversations"], "a".repeat(64), fake)).status, 403);
+    assert.equal((await proxyHelpdesk(request("localhost:3000", "cross-site"), ["conversations"], "a".repeat(64), fake)).status, 403);
+  } finally {
+    if (previous === undefined) delete process.env.HELPDESK_BRIDGE_SECRET; else process.env.HELPDESK_BRIDGE_SECRET = previous;
+  }
+});

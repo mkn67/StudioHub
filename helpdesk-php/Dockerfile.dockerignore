@@ -1,0 +1,33 @@
+# This Dockerfile uses the repository root as its build context.
+# Allow only application code and the exact reviewed knowledge sources.
+**
+!helpdesk-php/
+!helpdesk-php/bootstrap.php
+!helpdesk-php/composer.json
+!helpdesk-php/src/
+!helpdesk-php/src/**
+!helpdesk-php/public/
+!helpdesk-php/public/**
+!helpdesk-php/config/
+!helpdesk-php/config/**
+!helpdesk-php/database/
+!helpdesk-php/database/**
+!helpdesk-php/bin/
+!helpdesk-php/bin/*.php
+!helpdesk-php/docker/
+!helpdesk-php/docker/apache.conf
+!docs/
+!docs/helpdesk/
+!docs/helpdesk/knowledge/
+!docs/helpdesk/knowledge/knowledge.v1.json
+!docs/helpdesk/evaluation.v1.json
+!client/
+!client/docs/
+!client/docs/references/
+!client/docs/references/StudioHub_Design_Business_Specification_v1.0.md
+!client/docs/references/StudioHub_Business_Policy_VI_v1.1.md
+# Keep secrets excluded even if application subdirectories are expanded later.
+**/.env
+**/.env.*
+**/*.sqlite*
+**/*.log

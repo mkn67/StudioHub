@@ -1,77 +1,50 @@
 "use client";
-
+import { useState } from "react";
 import Link from "next/link";
-import { useApp } from "@/providers/app-provider";
-import { Badge, EmptyState, PageHeading } from "@/components/shared/common";
-import { DataTable, type Column } from "@/components/data-table/table";
-import { money, unitLabels } from "@/lib/format";
-import type { Equipment } from "@/domain/schema";
+import { Search, RotateCcw, ShieldCheck, ArrowUpRight } from "lucide-react";
+import { useApiSession } from "@/components/api-session";
+import { useApiAction } from "@/components/api-ui";
+import { apiRequest } from "@/services/api/client";
+import { useResource } from "@/services/api/use-resource";
+import type { ApiUser } from "@/services/api/contracts";
+import type { HostRoom } from "@/features/host/host-types";
+import { HostPageHeader, HostPanel, HostResourceState, HostEmptyState, HostPagination, HostImage } from "@/features/host/host-ui";
 
-const roleDescriptions = [
-  { role: "customer", label: "Khách hàng", access: "Tìm Studio, đặt thuê và quản lý đơn của mình." },
-  { role: "host", label: "Chủ Studio", access: "Quản lý Studio, phòng, thiết bị, giá và đơn thuê." },
-  { role: "admin", label: "Quản trị viên", access: "Duyệt hồ sơ và giám sát tài khoản, tài nguyên, đơn thuê." },
-] as const;
-
-export function AdminRoles() {
-  const { db } = useApp();
-  if (!db) return null;
-  return (
-    <>
-      <PageHeading
-        eyebrow="QUẢN TRỊ STUDIOHUB"
-        title="Vai trò truy cập"
-        description="Ba vai trò cố định của bản demo. Vai trò được cấp qua đăng ký hoặc xét duyệt; không thể chuyển vai trò hay giả lập tài khoản khác."
-      />
-      <section className="surface">
-        <div className="table-scroll" role="region" aria-label="Vai trò truy cập — cuộn ngang để xem đủ cột" tabIndex={0}>
-          <table>
-            <caption className="sr-only">Vai trò truy cập và số tài khoản</caption>
-            <thead><tr><th scope="col">Vai trò</th><th scope="col">Tài khoản</th><th scope="col">Quyền hạn</th></tr></thead>
-            <tbody>
-              {roleDescriptions.map((item) => (
-                <tr key={item.role}>
-                  <th scope="row">{item.label}</th>
-                  <td>{db.users.filter((user) => user.role === item.role).length}</td>
-                  <td>{item.access}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </>
-  );
+const roles = { customer: "Khách hàng", host: "Chủ Studio", admin: "Quản trị viên" };
+export function AdminUsers({ permissions = false }: { permissions?: boolean }) {
+  const session = useApiSession(), action = useApiAction();
+  const [page, setPage] = useState(1), [query, setQuery] = useState("");
+  const [draft, setDraft] = useState({ search: "", role: "", status: "" }), [saved, setSaved] = useState(false);
+  const list = useResource<{ items: ApiUser[]; total_pages: number; total_items: number }>(`/api/admin/users?page=${page}&limit=12&${query}`);
+  function mutate(user: ApiUser, kind: "role" | "status", value: string) {
+    const consequence = kind === "role" ? `Đổi vai trò của ${user.email} thành ${roles[value as keyof typeof roles]}? Quyền truy cập của tài khoản sẽ thay đổi.` : `${value === "locked" ? "Khóa" : "Mở khóa"} tài khoản ${user.email}? ${value === "locked" ? "Tài khoản sẽ không thể tiếp tục truy cập các chức năng cần đăng nhập." : "Tài khoản được phép đăng nhập trở lại."}`;
+    if (!window.confirm(consequence)) return;
+    setSaved(false); void action.run(async () => { await apiRequest(`/api/admin/users/${user.user_id}/${kind}`, { method: "PATCH", body: { [kind]: value } }); list.reload(); setSaved(true); });
+  }
+  const reset = () => { setDraft({ search: "", role: "", status: "" }); setQuery(""); setPage(1); };
+  return <>
+    <HostPageHeader title={permissions ? "Vai trò & phân quyền" : "Quản lý tài khoản"} description={permissions ? "Xem vai trò tài khoản và các thao tác phân công hiện được hỗ trợ." : "Tra cứu và quản lý tài khoản trong hệ thống."}/>
+    {permissions && <><div className="workspace-role-explanation">{Object.entries(roles).map(([key, label]) => <div key={key}><ShieldCheck size={22}/><h2>{label}</h2><p>Vai trò {key} đang được hệ thống sử dụng.</p></div>)}</div><HostPanel title="Phạm vi phân quyền hiện tại"><p>Có thể phân công vai trò Chủ Studio hoặc Khách hàng cho tài khoản đủ điều kiện. Chưa có danh mục quyền chi tiết hoặc chức năng tạo vai trò tại đây.</p></HostPanel></>}
+    <form className="workspace-admin-filters" onSubmit={event => { event.preventDefault(); setQuery(new URLSearchParams(draft).toString()); setPage(1); }}>
+      <label>Tìm tài khoản<input aria-label="Tìm tài khoản" name="search" placeholder="Tên, email hoặc số điện thoại" value={draft.search} onChange={event => setDraft({ ...draft, search: event.target.value })}/></label>
+      <label>Vai trò<select aria-label="Vai trò" value={draft.role} onChange={event => setDraft({ ...draft, role: event.target.value })}><option value="">Tất cả vai trò</option>{Object.entries(roles).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      <label>Trạng thái<select aria-label="Trạng thái" value={draft.status} onChange={event => setDraft({ ...draft, status: event.target.value })}><option value="">Tất cả trạng thái</option><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
+      <button className="btn" type="submit"><Search size={17}/>Tìm kiếm</button><button className="btn secondary" type="button" onClick={reset}><RotateCcw size={17}/>Xóa bộ lọc</button>
+    </form>
+    {action.error && <p className="host-form-error" role="alert">{action.error}</p>}{saved && <p className="host-success" role="status">Thay đổi tài khoản đã được máy chủ xác nhận.</p>}
+    <HostPanel title={permissions ? "Phân công vai trò tài khoản" : "Danh sách tài khoản"} description={list.data ? `${list.data.total_items} tài khoản phù hợp` : undefined}>
+      <HostResourceState resource={list}/>
+      {list.data?.items.length === 0 && <HostEmptyState title="Không tìm thấy tài khoản" description="Thử tìm kiếm khác hoặc xóa bộ lọc đang áp dụng." action={<button className="btn secondary" onClick={reset}>Xóa bộ lọc</button>}/>}
+      {!!list.data?.items.length && <div className="host-table-scroll" tabIndex={0} aria-label="Bảng tài khoản có thể cuộn ngang"><table className="host-table"><thead><tr><th>Tài khoản</th><th>Email</th><th>Vai trò hiện tại</th><th>Trạng thái</th><th>{permissions ? "Phân công" : "Thao tác tài khoản"}</th></tr></thead><tbody>{list.data.items.map(user => <tr key={user.user_id}><td><strong>{user.full_name}</strong>{user.user_id === session.user?.user_id && <small>Phiên của bạn</small>}</td><td>{user.email}<small>{user.phone}</small></td><td><span className="host-badge">{roles[user.role]}</span></td><td><span className="host-badge" data-status={user.status === "locked" ? "rejected" : user.status}>{user.status === "locked" ? "Đã khóa" : user.status === "active" ? "Hoạt động" : user.status ?? "—"}</span></td><td>{user.user_id !== session.user?.user_id && (permissions ? user.role !== "admin" && <button className="btn secondary" disabled={action.busy} onClick={() => mutate(user, "role", user.role === "host" ? "customer" : "host")}>{user.role === "host" ? "Chuyển thành khách" : "Cấp vai trò Host"}</button> : <button className="btn secondary" disabled={action.busy} onClick={() => mutate(user, "status", user.status === "locked" ? "active" : "locked")}>{user.status === "locked" ? "Mở khóa" : "Khóa"}</button>)}</td></tr>)}</tbody></table></div>}
+      <p className="workspace-admin-note">Không thể tự khóa tài khoản hoặc tự đổi vai trò. Không cấp vai trò quản trị mới qua các thao tác này.</p>
+    </HostPanel><HostPagination page={page} total={list.data?.total_pages ?? 1} onChange={setPage} loading={list.loading}/>
+  </>;
 }
 
-export function AdminEquipments() {
-  const { db } = useApp();
-  if (!db) return null;
-  const studios = new Map(
-    db.studios.map((studio) => [studio.id, studio] as const),
-  );
-  const rows = db.equipment;
-  const columns: Column<Equipment>[] = [
-    { key: "name", label: "Thiết bị / nội thất", render: (item) => <strong>{item.name}</strong>, sort: (item) => item.name },
-    { key: "studio", label: "Studio", render: (item) => {
-      const studio = studios.get(item.studioId);
-      return studio ? <Link className="text-link" href={`/admin/studios/${studio.id}`}>{studio.name}</Link> : "Studio không tồn tại";
-    }, sort: (item) => studios.get(item.studioId)?.name ?? "" },
-    { key: "category", label: "Nhóm", render: (item) => item.category === "equipment" ? "Thiết bị" : "Nội thất" },
-    { key: "stock", label: "Tồn kho", render: (item) => item.quantity, sort: (item) => item.quantity },
-    { key: "price", label: "Giá thuê", render: (item) => <>{money(item.price)} / {unitLabels[item.unit]}</>, sort: (item) => item.price },
-    { key: "status", label: "Trạng thái", render: (item) => <Badge tone={item.status === "available" ? "success" : item.status === "maintenance" ? "warning" : "neutral"}>{item.status === "available" ? "Đang cho thuê" : item.status === "maintenance" ? "Bảo trì" : "Đã ẩn"}</Badge> },
-  ];
-  return (
-    <>
-      <PageHeading
-        eyebrow="QUẢN TRỊ STUDIOHUB"
-        title="Thiết bị & nội thất"
-        description="Danh mục thiết bị được khai báo tại các Studio. Mở Studio để kiểm tra thông tin phòng và tài nguyên liên quan."
-      />
-      <section className="surface">
-        {!rows.length ? <EmptyState title="Chưa có thiết bị hoặc nội thất" description="Tài nguyên sẽ xuất hiện ở đây khi Chủ Studio khai báo." /> : <DataTable rows={rows} columns={columns} id={(item) => item.id} label="Thiết bị và nội thất trên hệ thống" />}
-      </section>
-    </>
-  );
+export function AdminCatalog() {
+  const [page, setPage] = useState(1), [keyword, setKeyword] = useState(""), [draft, setDraft] = useState("");
+  const list = useResource<{ items: HostRoom[]; pagination: { total_items: number; total_pages: number } }>(`/api/rooms?page=${page}&limit=12&keyword=${encodeURIComponent(keyword)}`);
+  return <><HostPageHeader title="Studio & phòng" description="Tham khảo các phòng đang công khai trên StudioHub."/><HostPanel title="Phạm vi danh mục"><p>Danh sách dưới đây chỉ gồm các phòng đang công khai. Quản lý toàn bộ Studio, phòng ẩn hoặc bảo trì và các thao tác quản trị chưa được hỗ trợ tại đây.</p></HostPanel>
+    <form className="workspace-admin-filters" onSubmit={event => { event.preventDefault(); setKeyword(draft.trim()); setPage(1); }}><label>Tìm Studio / phòng<input aria-label="Tìm Studio / phòng" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Tên Studio hoặc phòng"/></label><button className="btn" type="submit"><Search size={17}/>Tìm kiếm</button><button className="btn secondary" type="button" onClick={() => { setDraft(""); setKeyword(""); setPage(1); }}>Xóa bộ lọc</button></form>
+    <HostPanel title="Phòng đang công khai" description={list.data ? `${list.data.pagination.total_items} phòng trong danh mục công khai` : undefined}><HostResourceState resource={list}/>{list.data?.items.length === 0 && <HostEmptyState title="Không tìm thấy phòng công khai" description="Thử một từ khóa khác hoặc xóa bộ lọc."/>}{!!list.data?.items.length && <div className="host-table-scroll" tabIndex={0} aria-label="Danh mục phòng công khai"><table className="host-table"><thead><tr><th>Phòng</th><th>Studio</th><th>Diện tích / sức chứa</th><th><span className="host-sr-only">Xem phòng</span></th></tr></thead><tbody>{list.data.items.map(room => <tr key={room.room_id}><td><div className="host-table-resource"><HostImage src={room.thumbnail_url} alt={room.name}/><strong>{room.name}</strong></div></td><td>{room.studio.name}<small>{room.studio.district}, {room.studio.city}</small></td><td>{room.area} m²<small>{room.capacity} người</small></td><td><Link className="host-icon-button" href={`/rooms/${room.room_id}`} target="_blank" rel="noopener noreferrer" aria-label={`Xem ${room.name}`}><ArrowUpRight size={18}/></Link></td></tr>)}</tbody></table></div>}</HostPanel><HostPagination page={page} total={list.data?.pagination.total_pages ?? 1} onChange={setPage} loading={list.loading}/></>;
 }

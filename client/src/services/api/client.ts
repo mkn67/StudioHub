@@ -18,21 +18,9 @@ export class ApiError extends Error {
 }
 
 export function getStoredApiToken(): string | null {
-  if (typeof window === "undefined" || !window.sessionStorage) return null;
+  if (typeof window === "undefined") return null;
   try {
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key && (key.endsWith(".api-token") || key === "api-token")) {
-        const val = sessionStorage.getItem(key);
-        if (val) {
-          try {
-            return JSON.parse(val);
-          } catch {
-            return val;
-          }
-        }
-      }
-    }
+    return window.sessionStorage.getItem("studiohub.api-token");
   } catch {
     return null;
   }
@@ -42,7 +30,12 @@ export function getStoredApiToken(): string | null {
 export const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 export const backendEnabled =
-  import.meta.env.MODE !== "test" && apiBaseUrl.length > 0;
+  process.env.NEXT_PUBLIC_DEMO_MODE !== "true";
+
+export function setStoredApiToken(token: string | null) {
+  if (token) window.sessionStorage.setItem("studiohub.api-token", token);
+  else window.sessionStorage.removeItem("studiohub.api-token");
+}
 
 export async function apiRequest<T>(
   path: string,
@@ -52,7 +45,7 @@ export async function apiRequest<T>(
     token?: string | null;
   } = {},
 ): Promise<T> {
-  if (!backendEnabled) throw new ApiError("Backend chưa được cấu hình.", 0);
+  if (!apiBaseUrl) throw new ApiError("Backend chưa được cấu hình. Đặt NEXT_PUBLIC_API_URL.", 0);
   let response: Response;
   const token = options.token !== undefined ? options.token : getStoredApiToken();
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
@@ -61,6 +54,7 @@ export async function apiRequest<T>(
     response = await fetch(`${apiBaseUrl}${path}`, {
       method: options.method ?? "GET",
       cache: "no-store",
+      signal: AbortSignal.timeout(20000),
       headers: {
         Accept: "application/json",
         ...(isFormData || options.body === undefined
@@ -94,12 +88,21 @@ export async function apiRequest<T>(
   } catch {
     throw new ApiError("Máy chủ trả về dữ liệu không hợp lệ.", response.status);
   }
-  if (!response.ok || payload.status !== "success")
+  if (!payload || typeof payload !== "object" || Array.isArray(payload))
+    throw new ApiError("Máy chủ trả về dữ liệu không hợp lệ.", response.status);
+  if (payload.errors && !Array.isArray(payload.errors)) payload.errors = [];
+  if (payload.errors) payload.errors = payload.errors.filter(e => e && typeof e.field === "string" && typeof e.code === "string" && typeof e.message === "string");
+  if (!response.ok || payload.status !== "success") {
+    if (token && getStoredApiToken() === token && (response.status === 401 || payload.code === "account_locked" || payload.errors?.some(e => e?.code === "account_locked"))) {
+      try { setStoredApiToken(null); } catch { /* Session still expires in memory. */ }
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("studiohub:session-expired"));
+    }
     throw new ApiError(
       payload.message ?? "Yêu cầu chưa hoàn tất.",
       response.status,
-      typeof payload.code === "string" ? payload.code : undefined,
+      typeof payload.code === "string" ? payload.code : payload.errors?.[0]?.code,
       payload.errors,
     );
+  }
   return payload.data as T;
 }

@@ -1,7 +1,2 @@
-import { redirect } from "next/navigation";
-
-export const metadata = { robots: { index: false, follow: false } };
-
-export default function Page() {
-  redirect("/my-bookings?tab=history");
-}
+import Application from "@/components/application";
+export default function Page() { return <Application />; }

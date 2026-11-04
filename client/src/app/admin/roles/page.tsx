@@ -1,5 +1,2 @@
-import { AdminRoles } from "@/features/admin/system-pages";
-
-export default function Page() {
-  return <AdminRoles />;
-}
+import Application from "@/components/application";
+export default function Page() { return <Application />; }

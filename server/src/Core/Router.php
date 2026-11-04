@@ -65,6 +65,18 @@ class Router
      */
     public function dispatch(Request $request): mixed
     {
+        // CORS must handle preflight before route matching can reject OPTIONS.
+        // Global middleware also needs to run for 404/405 responses.
+        $pipeline = new Pipeline();
+        foreach ($this->globalMiddlewares as $middleware) {
+            $pipeline->pipe($middleware);
+        }
+
+        return $pipeline->process($request, fn (Request $req) => $this->dispatchRoute($req));
+    }
+
+    private function dispatchRoute(Request $request): mixed
+    {
         $dispatcher = simpleDispatcher(function (RouteCollector $r) {
             foreach ($this->routes as $index => $route) {
                 $r->addRoute($route['method'], $route['uri'], $index);
@@ -86,11 +98,8 @@ class Router
                 $matchedRoute = $this->routes[$routeIndex];
                 $request->setAttribute('params', $vars);
 
-                // Build pipeline: global middlewares -> route middlewares -> handler
+                // Global middleware has already run; apply route middleware once.
                 $pipeline = new Pipeline();
-                foreach ($this->globalMiddlewares as $mw) {
-                    $pipeline->pipe($mw);
-                }
                 foreach ($matchedRoute['middlewares'] as $mw) {
                     $pipeline->pipe($mw);
                 }
