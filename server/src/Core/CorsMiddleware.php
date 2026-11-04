@@ -19,13 +19,11 @@ class CorsMiddleware
 
         if (in_array($origin, $allowedOrigins, true)) {
             header("Access-Control-Allow-Origin: {$origin}");
-        } elseif (!empty($allowedOrigins)) {
-            header("Access-Control-Allow-Origin: " . $allowedOrigins[0]);
         }
+        header('Vary: Origin');
 
         header("Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
-        header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-        header("Access-Control-Allow-Credentials: true");
+        header("Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key");
         header("Access-Control-Max-Age: 86400");
 
         if ($request->method() === 'OPTIONS') {

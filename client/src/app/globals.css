@@ -603,10 +603,9 @@ legend {
   font-size: 13px;
   margin: 12px 0 0;
 }
-<<<<<<< HEAD
 .section-head.compact h2 {
   font-size: 22px;
-=======
+}
 .backend-search-form {
   margin-bottom: 28px;
   padding: 20px;
@@ -703,7 +702,6 @@ legend {
   font-size: 12px;
   color: var(--muted);
   margin-top: 16px;
->>>>>>> 9dd1977 (feat: connect frontend with backend for host management and booking engine (phases 5 & 6))
 }
 .categories {
   display: grid;
@@ -2216,9 +2214,9 @@ tbody tr:hover {
   .room-copy {
     padding: 20px;
   }
-<<<<<<< HEAD
   .room-title h3 {
-=======
+    font-size: 20px;
+  }
   .detail-layout {
     grid-template-columns: minmax(0, 1fr) 330px;
     gap: 28px;
@@ -2548,7 +2546,6 @@ tbody tr:hover {
     margin-bottom: 24px;
   }
   .detail-content h2 {
->>>>>>> 9dd1977 (feat: connect frontend with backend for host management and booking engine (phases 5 & 6))
     font-size: 20px;
   }
   .room-bottom {

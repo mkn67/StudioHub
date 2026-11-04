@@ -1,0 +1,107 @@
+/* Dedicated Host/Admin shell. Public typography and header offsets stay intact. */
+.ops-shell {
+  --header-height:0px;
+  /* Scope every dashboard font path (including Tailwind and shared components). */
+  --font-sans:"Be Vietnam Pro",sans-serif;
+  --font-display:var(--font-sans);
+  --font-utility:var(--font-sans);
+  --font-mono:var(--font-sans);
+  --sh-blue-soft:#DEEAFD;
+  min-height:100svh;
+  font-family:var(--font-display); font-size:14px; font-weight:400; line-height:1.6;
+}
+.ops-shell :is(button,input,select,textarea) { font-family:var(--font-display); }
+.ops-shell :is(h1,h2,h3,h4) { font-family:var(--font-display); font-weight:600; letter-spacing:-.015em; }
+.ops-shell strong { font-weight:600; }
+.ops-shell :is(.status,.payment-badge) { font-weight:600; }
+.ops-shell .page-heading h1 { font:700 28px/1.25 var(--font-display); letter-spacing:-.025em; }
+.ops-shell h2 { font-size:22px; line-height:1.35; }
+.ops-shell h3 { font-size:17px; line-height:1.4; }
+.ops-shell :is(.page-heading p,.settings-layout p,.application-detail p) { font-size:14px; line-height:1.65; }
+.ops-shell :is(label,legend) { font-size:14px; font-weight:500; }
+.ops-shell .btn { font-family:var(--font-display); font-weight:600; font-size:14px; letter-spacing:0; }
+.ops-shell :is(.mono,.font-mono) { font:500 13px/1.6 var(--font-utility); font-variant-numeric:tabular-nums; letter-spacing:0; }
+.ops-shell :is(time,input[type="date"],input[type="time"],input[type="datetime-local"],input[type="number"],.price,.line-item,.time-axis > span) { font-variant-numeric:tabular-nums; }
+.ops-shell .time-axis > span { font-family:var(--font-utility); }
+.ops-shell .ops-nav nav a .nav-label { font:500 14px/1.4 var(--font-display); }
+.ops-shell .ops-nav nav a.active .nav-label { font-weight:600; }
+.ops-shell .ops-nav-caption { font:500 12px/1.5 var(--font-display); letter-spacing:0; }
+.ops-shell .ops-logo-copy strong { font:700 18px/1.2 var(--font-display); letter-spacing:-.03em; }
+.ops-shell .ops-logo-copy small,.ops-shell .ops-nav-bottom small { font:400 12px/1.5 var(--font-display); }
+.ops-shell .ops-nav-bottom p { font-size:14px; font-weight:600; }
+.ops-shell .dashboard-kpi-top { font-size:14px; font-weight:500; }
+.ops-shell .dashboard-kpi-value { font:700 32px/1.25 var(--font-display); font-variant-numeric:tabular-nums; letter-spacing:-.035em; }
+.ops-shell .dashboard-kpi-hint { font-size:13px; line-height:1.5; }
+.ops-shell .dashboard-eyebrow { font-size:12px; font-weight:400; letter-spacing:0; }
+.ops-shell .dashboard-panel-heading h2 { font-size:21px; font-weight:600; }
+.ops-shell .dashboard-chart-label,.ops-shell .dashboard-chart-number { font-size:12px; }
+.ops-shell .dashboard-distribution > div > div:first-child { font-size:13px; }
+.ops-shell .dashboard-status-total strong { font-weight:700; }
+.ops-shell table { font-size:14px; line-height:1.55; }
+.ops-shell th { font:500 13px/1.5 var(--font-display); letter-spacing:0; }
+.ops-shell td small { font-size:13px; }
+.ops-shell .metrics strong { font-family:var(--font-display); font-weight:700; }
+.ops-shell .host-agenda time { font:500 14px/1.5 var(--font-display); font-variant-numeric:tabular-nums; }
+.ops-shell .host-agenda strong { font-weight:600; }
+.ops-shell .host-agenda-meta { font-size:13px; }
+.ops-shell .host-time-tick > span { font:400 12px/16px var(--font-utility); }
+.ops-shell .host-pricing-summary-head h2,.ops-shell [data-package-manager] h2 { font-size:23px; font-weight:600; }
+.ops-shell .host-pricing-summary-head p,.ops-shell .host-pricing-units span,.ops-shell .host-metric-note { font-size:13px; }
+.ops-shell .host-editor-tabs button { font-size:14px; }
+.ops-shell[data-role="host"] .room-group summary h2 { font-size:24px; font-weight:650; }
+.ops-shell[data-role="host"] .inventory-room h3 { font-size:18px; font-weight:600; }
+
+/* Public header is absent from the render tree; this bar is the only top row. */
+.ops-shell .ops-nav { top:0; height:100svh; }
+.ops-shell .ops-workspace-bar { min-height:56px; gap:12px; margin-bottom:24px; }
+.ops-shell .ops-workspace-context { gap:12px; }
+.ops-menu-toggle { display:none; flex-shrink:0; }
+.ops-shell .ops-avatar { width:30px; height:30px; font-weight:600; }
+.ops-account-menu { position:relative; }
+.ops-account-menu > summary { display:flex; align-items:center; gap:7px; min-height:40px; padding:2px; cursor:pointer; list-style:none; font-size:13px; }
+.ops-account-menu > summary::-webkit-details-marker { display:none; }
+.ops-account-popover { position:absolute; top:calc(100% + 8px); right:0; width:230px; z-index:45; padding:10px; background:white; border:1px solid #CAD6DF; border-radius:10px; box-shadow:0 10px 30px #20323e20; }
+.ops-account-popover > strong { display:block; padding:8px 10px; font-size:13px; border-bottom:1px solid var(--sh-border); margin-bottom:4px; color:var(--sh-ink); }
+.ops-account-popover :is(a,button) { display:flex; align-items:center; gap:8px; width:100%; padding:10px; border:0; border-radius:6px; background:white; text-align:left; color:var(--sh-text); font-size:14px; min-height:42px; cursor:pointer; }
+.ops-account-popover :is(a,button):hover { background:#F1F5F9; }
+.ops-shell .ops-navigation-drawer.dialog { inset:0 auto 0 0; margin:0; width:min(360px,100vw); height:100dvh; max-height:100dvh; border-radius:0; border:0; border-right:1px solid #CAD6DF; }
+.ops-shell .ops-navigation-drawer .dialog-head { position:sticky; top:0; z-index:1; }
+.ops-shell .ops-navigation-drawer .dialog-head h2 { font-size:20px; font-weight:600; }
+.ops-drawer-links { display:flex; flex-direction:column; gap:5px; padding:16px; }
+.ops-drawer-links a { display:flex; align-items:center; gap:12px; min-height:46px; padding:10px 12px; border:1px solid transparent; border-radius:8px; font-size:14px; }
+.ops-drawer-links a[aria-current="page"] { border-color:var(--sh-primary); background:var(--sh-primary-soft); color:var(--sh-ink); font-weight:600; }
+.ops-drawer-account { display:flex; flex-direction:column; gap:6px; padding:16px 24px; border-top:1px solid var(--sh-border); }
+.ops-drawer-account :is(a,button) { min-height:40px; display:flex; align-items:center; font-size:14px; }
+
+/* Booking-only semantics. Payment, refund and equipment states are independent. */
+.ops-shell [data-booking-status],.ops-shell .booking-header .status {
+  background:var(--booking-bg); color:var(--booking-text); border:1px solid var(--booking-accent);
+  font:600 12px/1.5 var(--font-display); border-radius:14px; padding:4px 8px;
+}
+.ops-shell .host-calendar-event { background:var(--booking-bg); color:var(--booking-text); border-color:var(--booking-accent); }
+.ops-shell .dashboard-distribution-track > span { background:var(--booking-accent); }
+.ops-shell .kanban { gap:16px; padding-top:2px; }
+.ops-shell .kanban-column { background:var(--booking-surface); border:1px solid var(--booking-accent); transition:background .16s ease,border-color .16s ease; }
+.ops-shell .kanban-column[data-status] > h3 { min-height:60px; padding:14px; border-top:3px solid var(--booking-accent); border-bottom:1px solid var(--booking-accent); background:var(--booking-bg); color:var(--booking-text); font:600 15px/1.35 var(--font-display); gap:10px; }
+.ops-shell .kanban-column > h3 span { min-width:26px; height:26px; border:1px solid var(--booking-accent); background:white; color:var(--booking-text); font:500 12px/1 var(--font-display); }
+.ops-shell .kanban-card { padding:14px; background:white; border:1px solid #C8D5DE; transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease; }
+.ops-shell .kanban-card:hover { transform:translateY(-1px); box-shadow:0 3px 9px #20323e0d; border-color:var(--booking-accent); }
+.ops-shell .kanban-card .kanban-reference { display:block; font:500 13px/1.6 var(--font-utility); font-variant-numeric:tabular-nums; color:#64748B; overflow-wrap:anywhere; }
+.ops-shell .kanban-card h3 { font:700 16px/1.4 var(--font-display); margin:8px 0 5px; letter-spacing:0; overflow-wrap:anywhere; }
+.ops-shell .kanban-card .kanban-customer { margin:0 0 8px; font:500 14px/1.5 var(--font-display); color:#526575; overflow-wrap:anywhere; }
+.ops-shell .kanban-card .kanban-rental-time { margin:0 0 12px; font:500 14px/1.6 var(--font-display); color:var(--sh-ink); font-variant-numeric:tabular-nums; }
+.ops-shell .kanban-card .line-item { font-size:13px; padding-top:10px; margin-top:0; }
+.ops-shell .kanban-card .line-item strong { font:600 15px/1.5 var(--font-display); font-variant-numeric:tabular-nums; }
+.ops-shell .kanban-card .ops-deadline { font-family:var(--font-display); margin-top:12px; }
+.ops-shell .kanban-card .ops-deadline small { display:block; font-size:12px; line-height:1.45; }
+.ops-shell .kanban-card .ops-deadline .mono { font:500 14px/1.5 var(--font-display); font-variant-numeric:tabular-nums; margin-top:3px; }
+.ops-shell .kanban-card .warning { display:block; font:400 13px/1.5 var(--font-display); }
+.ops-shell .kanban-column > .small-text { font:400 13px/1.5 var(--font-display); }
+@media(max-width:1100px) { .ops-menu-toggle { display:grid; place-items:center; min-width:40px; min-height:40px; border:1px solid var(--sh-border); border-radius:8px; background:white; }.ops-shell .ops-breadcrumb { flex:1; }.ops-account-name { display:none; } }
+@media(max-width:767px) {
+  .ops-shell .ops-workspace-bar { min-height:56px; gap:8px; margin-bottom:20px; }.ops-shell .ops-breadcrumb { font-size:12px; gap:5px; }.ops-shell .ops-breadcrumb > a { display:none; }.ops-shell .ops-breadcrumb > svg { display:none; }
+  .ops-shell .ops-workspace-context { gap:8px; }.ops-shell .ops-workspace-context .ops-avatar { display:grid; }.ops-shell .ops-workspace-context .dashboard-tag { display:none; }.ops-shell .ops-account-menu > summary { gap:3px; }
+  .ops-shell .page-heading h1 { font-size:26px; }.ops-shell .dashboard-kpi-value { font-size:28px; }.ops-shell .dashboard-kpi-top { font-size:13px; }.ops-shell .dashboard-kpi-hint { font-size:12px; }
+  .ops-shell .dashboard-panel-heading h2 { font-size:20px; }.ops-shell[data-role="host"] .room-group summary h2 { font-size:22px; }.ops-shell .kanban { grid-template-columns:repeat(4,270px); }.ops-shell .kanban-column > h3 { font-size:15px; }
+}
+@media(prefers-reduced-motion:reduce) { .ops-shell .kanban-card:hover { transform:none; } }

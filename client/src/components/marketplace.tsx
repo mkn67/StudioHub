@@ -1,7 +1,7 @@
 "use client";
 import { Presence, SharedPhoto, useContentMotion } from "./motion/system";
 import { GalleryImage } from "./motion/gallery-image";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useState } from "react";
 import Link from "./motion/navigation-link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -295,7 +295,8 @@ export function SearchRooms() {
               b.roomId === r.id &&
               activeStatuses.includes(b.status) &&
               overlaps({ start, end }, b),
-          )
+          ) ||
+          (state.availability ?? []).some(b => b.roomId === r.id && overlaps({ start, end }, b))
         )
           return false;
       }

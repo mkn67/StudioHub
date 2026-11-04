@@ -5,19 +5,17 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
-<<<<<<< HEAD
-    "start": "next start --hostname 127.0.0.1",
-=======
     "start": "next start -H 0.0.0.0 -p 3000",
-    "lint": "eslint src tests",
->>>>>>> 76c7a39 (fix(client): configure Next.js with next.config.mjs, bind 0.0.0.0, and update dependencies)
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "tsx --test src/domain/*.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "@fontsource/be-vietnam-pro": "^5.3.0",
     "@fontsource/dm-mono": "^5.3.0",
+    "@fontsource/space-mono": "^5.3.0",
     "@gsap/react": "^2.1.2",
     "gsap": "^3.15.0",
     "lucide-react": "^0.468.0",

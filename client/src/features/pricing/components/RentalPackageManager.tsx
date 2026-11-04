@@ -7,11 +7,13 @@ import { effectiveRentalPlans } from "@/domain/rental";
 import { PricingList } from "./PricingList";
 import styles from "../styles/rental.module.css";
 
-export function RentalPackageManager({ typeId }: { typeId: string }) {
+export function RentalPackageManager({ typeId, scopeId, onScopeChange }: { typeId: string; scopeId?: string; onScopeChange?: (id: string) => void }) {
   const { state } = useStore();
   const type = state.types.find(t => t.id === typeId)!;
   const rooms = state.rooms.filter(r => r.typeId === typeId);
-  const [targetId, setTargetId] = useState(typeId);
+  const [localTargetId, setLocalTargetId] = useState(typeId);
+  const targetId = scopeId ?? localTargetId;
+  const setTargetId = onScopeChange ?? setLocalTargetId;
   if (!rooms.length) return <p>Tạo phòng thực tế trước khi cấu hình gói và ekip.</p>;
   const target = rooms.find(r => r.id === targetId);
   return <section className={styles.settings} data-package-manager={typeId}>
@@ -36,7 +38,7 @@ function PackageEditor({ typeId, roomId, previewRoomId }: { typeId: string; room
   const update = (change: Partial<RentalPlanConfig>) => setDraft(items => items.map(p => p.plan === planId ? { ...p, ...change } : p));
   const preview = structuredClone(state);
   if (roomId) preview.rooms.find(r => r.id === roomId)!.rentalPlans = draft; else { preview.types.find(t => t.id === typeId)!.rentalPlans = draft; delete preview.rooms.find(r => r.id === previewRoomId)!.rentalPlans; }
-  return <form onSubmit={e => { e.preventDefault(); if (dispatch({ type: "rental_plans", target: roomId ? "room" : "type", id: roomId ?? typeId, plans: draft })) notice("Đã lưu gói thuê. Các đơn đã tạo giữ nguyên snapshot."); }}>
+  return <form onSubmit={async e => { e.preventDefault(); if ((await dispatch({ type: "rental_plans", target: roomId ? "room" : "type", id: roomId ?? typeId, plans: draft }))) notice("Đã lưu gói thuê. Các đơn đã tạo giữ nguyên snapshot."); }}>
     <p className={styles.notice}>{roomId && !own ? "Phòng đang kế thừa bảng giá loại phòng. Lưu để tạo bảng giá riêng." : own ? "Bảng giá tùy chỉnh đang áp dụng." : "Hiện dùng giá giờ × thời lượng như dữ liệu cũ; chưa tự thêm thiết bị hoặc giảm giá."}</p>
     <div className={styles.grid}>
       <label>Gói đang chỉnh<select value={planId} onChange={e => setPlanId(e.target.value as Plan)}>{draft.map(p => <option key={p.plan} value={p.plan}>{p.title}{p.active ? "" : " · tạm ngưng"}</option>)}</select></label>
@@ -69,8 +71,8 @@ function PackageEditor({ typeId, roomId, previewRoomId }: { typeId: string; room
         <p>Giá ở trên là giá ưu đãi trong thời hạn; ngoài thời hạn áp dụng giá gốc. Không nhập giá gốc giả để tạo mức tiết kiệm.</p>
       </details>
     </>}
-    <div className="actions" style={{ marginTop: 20 }}><button className="btn secondary">Lưu gói thuê</button><button type="button" className="text-button" disabled={!own} onClick={() => {
-      const result = dispatch({ type: "rental_plans", target: roomId ? "room" : "type", id: roomId ?? typeId, plans: null });
+    <div className="actions" style={{ marginTop: 20 }}><button className="btn secondary">Lưu gói thuê</button><button type="button" className="text-button" disabled={!own} onClick={async () => {
+      const result = (await dispatch({ type: "rental_plans", target: roomId ? "room" : "type", id: roomId ?? typeId, plans: null }));
       if (result) { const inherited = effectiveRentalPlans(result, previewRoomId); setDraft(inherited); setPlanId(inherited[0]?.plan ?? "hourly"); notice("Đã bỏ bảng giá riêng và tải lại giá kế thừa."); }
     }}>Bỏ cấu hình riêng</button></div>
     <div className={styles.preview} aria-label="Xem trước bảng giá khách hàng"><PricingList state={preview} roomId={previewRoomId} /></div>
@@ -81,7 +83,7 @@ function CrewEditor({ roomId }: { roomId: string }) {
   const room = state.rooms.find(r => r.id === roomId)!;
   const [enabled, setEnabled] = useState(!!room.crewPolicy);
   const [crew, setCrew] = useState<CrewPolicy>(room.crewPolicy ?? { included: 1, maximum: room.capacity, surchargeEnabled: false, amount: 0, unit: "booking" });
-  return <form className={styles.settings} onSubmit={e => { e.preventDefault(); if (dispatch({ type: "crew_policy", roomId, policy: enabled ? crew : undefined })) notice(`Đã lưu ekip cho phòng ${room.code}.`); }}>
+  return <form className={styles.settings} onSubmit={async e => { e.preventDefault(); if ((await dispatch({ type: "crew_policy", roomId, policy: enabled ? crew : undefined }))) notice(`Đã lưu ekip cho phòng ${room.code}.`); }}>
     <h3>Ekip · phòng {room.code}</h3><p>Sức chứa vật lý: {room.capacity} người. Cấu hình riêng từng phòng bằng bộ chọn phạm vi phía trên; không tạo thêm trạng thái duyệt.</p>
     <label className="checkbox-label"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} /> Thiết lập giới hạn ekip và số người gồm trong giá</label>
     {enabled && <div className={styles.grid}>

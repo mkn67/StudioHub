@@ -38,6 +38,8 @@ services:
       - "8000:80"
     environment:
       APP_ENV: dev
+      JWT_SECRET: ${JWT_SECRET:?Set a private JWT_SECRET before starting the API}
+      PAYMENT_ADAPTER: ${PAYMENT_ADAPTER:-disabled}
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: studio_dev
@@ -60,6 +62,8 @@ services:
     restart: unless-stopped
     environment:
       APP_ENV: dev
+      JWT_SECRET: ${JWT_SECRET:?Set a private JWT_SECRET before starting the worker}
+      PAYMENT_ADAPTER: ${PAYMENT_ADAPTER:-disabled}
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: studio_dev
@@ -81,6 +85,9 @@ services:
     working_dir: /app
     volumes:
       - ./client:/app:z
+      # Native packages and Next caches must belong to Linux, not the Windows host.
+      - client_node_modules:/app/node_modules
+      - client_next:/app/.next
     ports:
       - "3000:3000"
     environment:
@@ -88,10 +95,15 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_APP_MODE=connected
+      - BUSINESS_API_URL=http://api
       - API_INTERNAL_URL=http://api
-    command: npm run dev -- --hostname 0.0.0.0
+      - APP_ORIGIN=http://localhost:3000
+    command: sh -c "npm ci --include=dev --include=optional && npm run dev -- --hostname 0.0.0.0"
     depends_on:
       - api
 
 volumes:
   mysqldata:
+  client_node_modules:
+  client_next:

@@ -3,8 +3,8 @@ export class HelpdeskApiError extends Error {
   constructor(public readonly reason: string, message: string) { super(message); }
 }
 const messages: Record<string, string> = {
-  backend_unavailable: "PHP Helpdesk chưa sẵn sàng. Hãy thử lại sau.",
-  bridge_not_configured: "Kết nối Helpdesk chưa được cấu hình.",
+  backend_unavailable: "Trợ lý hỗ trợ đang bận. Hãy thử lại sau.",
+  bridge_not_configured: "Kết nối Trợ lý chưa được cấu hình.",
   provider_unavailable: "Nhà cung cấp AI chưa sẵn sàng. Chưa có thao tác nào được xác nhận.",
   provider_not_configured: "Cổng AI chưa được cấu hình.",
   invalid_provider_response: "Cổng AI trả về phản hồi không đúng định dạng. Vui lòng thử lại hoặc kiểm tra model đã chọn.",
@@ -13,10 +13,10 @@ const messages: Record<string, string> = {
   ungrounded_response: "Chưa xác minh được nguồn cho câu trả lời của AI. Mình chưa thể trả lời chính sách này.",
   model_not_configured: "Chưa cấu hình model cho cổng AI.",
   tool_calling_disabled: "Khả năng gọi công cụ đang tắt trong cấu hình Helpdesk.",
-  tool_calling_unverified: "Cổng AI chưa được kiểm tra khả năng gọi công cụ. Helpdesk chưa thể trả lời.",
+  tool_calling_unverified: "Cổng AI chưa được kiểm tra khả năng gọi công cụ. Trợ lý chưa thể trả lời.",
   generation_timeout: "AI phản hồi quá hạn. Bạn có thể thử lại cùng tin nhắn.",
-  verified_contact_required: "Cần đăng nhập bằng tài khoản PHP thực hoặc xác minh liên hệ trước khi tạo ticket. Persona demo không phải xác thực.",
-  authentication_required: "Cần đăng nhập bằng tài khoản PHP hợp lệ.",
+  verified_contact_required: "Cần đăng nhập bằng tài khoản thực hoặc xác minh liên hệ trước khi tạo ticket.",
+  authentication_required: "Cần đăng nhập bằng tài khoản hợp lệ.",
   resource_not_found: "Cuộc trò chuyện không còn khả dụng. Hãy xóa để bắt đầu lại.",
   rate_limited: "Bạn gửi quá nhiều yêu cầu. Vui lòng đợi một phút.",
   storage_unavailable: "Kho lưu trữ Helpdesk chưa sẵn sàng.",

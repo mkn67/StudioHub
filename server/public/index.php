@@ -48,6 +48,11 @@ $router->use(new CorsMiddleware());
 // Public health check route
 $router->get('/api/health', [HealthController::class, 'check']);
 $router->get('/health', [HealthController::class, 'check']);
+$router->get('/api/catalog', [App\Controllers\WorkspaceController::class, 'catalog']);
+$router->get('/api/workspace', [App\Controllers\WorkspaceController::class, 'state'], [new AuthMiddleware()]);
+$router->post('/api/commands', [App\Controllers\WorkspaceController::class, 'command'], [new AuthMiddleware()]);
+$router->post('/api/booking-quotes', [App\Controllers\WorkspaceController::class, 'quote'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->get('/api/reports', [App\Controllers\WorkspaceController::class, 'report'], [new AuthMiddleware()]);
 
 // --- Phase 3: Auth & Account Routes ---
 $router->post('/api/auth/register', [AuthController::class, 'register']);
@@ -161,4 +166,5 @@ if (in_array($appEnv, ['dev', 'test'], true)) {
 
 // 5. Dispatch Request
 $request = Request::fromGlobals();
+if ($request->method()==='OPTIONS') (new CorsMiddleware())->handle($request, static fn()=>null);
 $router->dispatch($request);

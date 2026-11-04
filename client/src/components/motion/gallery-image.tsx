@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useRef } from "react";
 import { useReducedMotion } from "./reduced-motion";
 import { gsap, useGSAP, gsapEase } from "./gsap-runtime";

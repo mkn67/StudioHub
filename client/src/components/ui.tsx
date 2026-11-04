@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import Image from "@/components/image";
 import { useEffect, useRef, type ReactNode } from "react";
 import Link from "./motion/navigation-link";
 import { useIsPresent, useDialogMotion, SharedPhoto } from "./motion/system";
