@@ -1,3 +1,6 @@
+<!-- rest-integration-2026-11-05 -->
+> **Cập nhật 05/11/2026:** Đây là bản lịch sử. Các nhãn “Chưa có API” / “chưa hỗ trợ” bên dưới không còn đại diện source hiện tại. 80/80 method/path đã có route/handler; frontend REST đã được nối lại. Xem [ma trận tích hợp hiện tại](api/FINAL_INTEGRATION_MATRIX.md). Kiểm thử mock khác với nghiệm thu PHP/MySQL; runtime và persistence chưa được xác nhận. Nội dung cũ được giữ lại để tra cứu.
+
 # Integration verification — 2026-11-02
 
 > Cập nhật ở tác vụ Docker Compose sau báo cáo này: PHP/MySQL/Helpdesk đã được khởi chạy trong Docker và smoke test HTTP thật đã thành công. Xem [xác minh Compose](docker-compose.md). Các mô tả môi trường chưa chạy bên dưới là baseline của tác vụ tích hợp frontend trước đó, không phải trạng thái runtime mới nhất.

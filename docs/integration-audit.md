@@ -1,3 +1,6 @@
+<!-- rest-integration-2026-11-05 -->
+> **Cập nhật 05/11/2026:** Đây là bản lịch sử. Các nhãn “Chưa có API” / “chưa hỗ trợ” bên dưới không còn đại diện source hiện tại. 80/80 method/path đã có route/handler; frontend REST đã được nối lại. Xem [ma trận tích hợp hiện tại](api/FINAL_INTEGRATION_MATRIX.md). Kiểm thử mock khác với nghiệm thu PHP/MySQL; runtime và persistence chưa được xác nhận. Nội dung cũ được giữ lại để tra cứu.
+
 # StudioHub integration audit — 2026-11-02
 
 Scope: frontend and documentation only. The user explicitly prohibits backend edits. `server/`, `helpdesk-php/`, database scripts and backend tests remain unchanged.

@@ -61,9 +61,12 @@ export function ApiSessionProvider({ children }: {
         catch {
             throw new Error("Trình duyệt đang chặn lưu phiên. Cho phép sessionStorage rồi đăng nhập lại.");
         }
-        setUser(result.user);
+        // Login/register responses contain a compact user. Hydrate the full
+        // profile so DOB, address and avatar are available without a page reload.
+        const profile = await apiRequest<ApiUser>("/api/auth/profile", { token: result.token });
+        setUser(profile);
         setError("");
-        return result.user;
+        return profile;
     };
     const logout = async () => {
         try {

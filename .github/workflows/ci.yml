@@ -1,0 +1,139 @@
+name: StudioHub CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: client
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+      NEXT_PUBLIC_DEMO_MODE: 'false'
+      NEXT_PUBLIC_HELPDESK_MODE: connected
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: ESLint
+        run: npm run lint
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+
+  backend:
+    name: PHP Backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    # Existing Unit tests open PDO through StatsService and AuthService constructors.
+    # This disposable empty database is unrelated to development/production data.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: studio_ci_unit
+          MYSQL_USER: ci_user
+          MYSQL_PASSWORD: ci-only-password
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+        ports:
+          - 3306/tcp
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=24
+          --health-start-period=20s
+    env:
+      APP_ENV: test
+      TZ: Asia/Ho_Chi_Minh
+      DB_HOST: 127.0.0.1
+      DB_NAME: studio_ci_unit
+      DB_USER: ci_user
+      DB_PASS: ci-only-password
+      DB_PASSWORD: ci-only-password
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Setup PHP 8.2 and Composer 2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.2'
+          extensions: curl, dom, mbstring, pdo_mysql, xml, xmlwriter, zip
+          tools: composer:v2
+          coverage: none
+      - name: Locate Composer download cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - name: Cache Composer downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-php82-${{ hashFiles('server/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php82-
+      - name: Install dependencies including PHPUnit
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax
+        run: find . -type d -name vendor -prune -o -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+      - name: Existing Unit suite
+        env:
+          DB_PORT: ${{ job.services.mysql.ports['3306'] }}
+        run: php vendor/bin/phpunit --configuration phpunit.xml --testsuite Unit --do-not-cache-result
+
+  helpdesk:
+    name: PHP Helpdesk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: helpdesk-php
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.2'
+          extensions: curl, mbstring, pdo_sqlite, iconv
+          tools: none
+          coverage: none
+      - name: PHP syntax
+        run: find . -type d \( -name vendor -o -name .runtime -o -name var \) -prune -o -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+      # bootstrap.php autoloads this dependency-free package; no Composer install needed.
+      # tests/Support.php injects SQLite :memory:, FakeTransport and ScriptedModel.
+      - name: Helpdesk, RAG and mock LLM tests
+        run: php tests/run.php

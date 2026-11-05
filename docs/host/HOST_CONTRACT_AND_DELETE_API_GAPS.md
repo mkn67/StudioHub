@@ -1,3 +1,6 @@
+<!-- rest-integration-2026-11-05 -->
+> **Cập nhật 05/11/2026:** Đây là bản lịch sử. Các nhãn “Chưa có API” / “chưa hỗ trợ” bên dưới không còn đại diện source hiện tại. 80/80 method/path đã có route/handler; frontend REST đã được nối lại. Xem [ma trận tích hợp hiện tại](../api/FINAL_INTEGRATION_MATRIX.md). Kiểm thử mock khác với nghiệm thu PHP/MySQL; runtime và persistence chưa được xác nhận. Nội dung cũ được giữ lại để tra cứu.
+
 # Host: ngừng cung cấp, bảng giá và hồ sơ hợp đồng
 
 Ngày kiểm tra: 04/11/2026. PHP, schema và dữ liệu chỉ được đọc. Các route/DTO đề xuất trong báo cáo **chưa triển khai, chưa được xem là quyết định nghiệp vụ đã duyệt**.

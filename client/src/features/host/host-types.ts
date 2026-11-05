@@ -3,13 +3,16 @@ import type { ApiRoom, ApiBooking, EquipmentItem, Rate } from "@/services/api/co
 export type HostStudio = {
   studio_id: number; name: string; address: string; district: string; city: string;
   phone: string; status: string; description?: string | null;
-  total_rooms?: number; total_equipments?: number; cover_image_url?: string | null;
+  total_rooms?: number; total_equipments?: number; cover_url?: string | null;
 };
-export type HostRoom = ApiRoom & {
+export type HostRoom = Omit<ApiRoom, "studio"> & {
+  studio?: ApiRoom["studio"];
+  room_type_id?: number | null;
   status?: string;
   primary_space_type?: { space_type_id: number; name: string } | null;
 };
 export type HostEquipment = EquipmentItem & {
+  studio_id?: number;
   category_id?: number; category_name?: string; image_url?: string | null;
   brand?: string | null; description?: string | null;
 };

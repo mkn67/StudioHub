@@ -1,3 +1,6 @@
+<!-- rest-integration-2026-11-05 -->
+> **Cập nhật 05/11/2026:** Đây là bản lịch sử. Các nhãn “Chưa có API” / “chưa hỗ trợ” bên dưới không còn đại diện source hiện tại. 80/80 method/path đã có route/handler; frontend REST đã được nối lại. Xem [ma trận tích hợp hiện tại](FINAL_INTEGRATION_MATRIX.md). Kiểm thử mock khác với nghiệm thu PHP/MySQL; runtime và persistence chưa được xác nhận. Nội dung cũ được giữ lại để tra cứu.
+
 # Backlog API sau kiểm toán — chờ phê duyệt
 
 Không có hạng mục backend nào được triển khai trong task Workspace. Tài liệu này chỉ sắp xếp công việc tương lai theo bằng chứng từ [API_GAP_AUDIT.md](API_GAP_AUDIT.md) và mã hợp đồng trong [PROPOSED_API_CONTRACTS.md](PROPOSED_API_CONTRACTS.md).

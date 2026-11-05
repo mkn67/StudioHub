@@ -124,7 +124,8 @@ export function BackendRoomDetail({ id }: {
     <h1>{r.name}</h1><p>{r.studio.name} · {r.studio.address}, {r.studio.district}, {r.studio.city}</p>
     <div className="api-gallery">{r.images?.length ? r.images.map((img, i) => <ApiImage key={i} src={img.image_url} alt={`${r.name} – ${i + 1}`}/>) : <ApiImage src={r.thumbnail_url} alt={r.name}/>}</div>
     <div className="detail-layout"><section><h2>Thông tin phòng</h2><p>{r.description}</p><p>{r.area} m² · Tối đa {r.capacity} người</p><h2>Quy định</h2><p style={{ whiteSpace: "pre-line" }}>{r.rules || "Liên hệ Studio để biết thêm quy định."}</p>
-      <h2>Lịch đã bận (bao gồm dọn phòng)</h2><ApiMessage loading={calendar.loading} error={calendar.error}/>{calendar.data && (calendar.data.busy_slots.length ? <ul>{calendar.data.busy_slots.map((s, i) => <li key={i}>{formatApiTime(s.busy_start)} – {formatApiTime(s.busy_end)}</li>)}</ul> : <p>Chưa có khung giờ bận trong 30 ngày tới.</p>)}</section>
+      <h2>Tiện ích có sẵn</h2>{r.amenities?.length ? <ul>{r.amenities.map(item => <li key={item.amenity_id}>{item.name}</li>)}</ul> : <p>Studio chưa cung cấp danh sách tiện ích.</p>}
+      <h2>Lịch đã bận (bao gồm dọn phòng)</h2><ApiMessage loading={calendar.loading} error={calendar.error}/>{calendar.data && (calendar.data.busy_slots.length ? <ul>{calendar.data.busy_slots.map((s, i) => <li key={i}>{formatApiTime(s.busy_start)} – {formatApiTime(s.busy_end)}</li>)}</ul> : <p>Chưa có khung giờ bận được ghi nhận trong 30 ngày tới. Kiểm tra khả dụng khi đặt thuê.</p>)}</section>
       <aside className="surface api-panel"><h2>Bảng giá</h2>{r.rates?.map(rate => <p key={rate.rate_id}>{money(rate.unit_price)} / {unitLabels[rate.rate_unit] ?? rate.rate_unit}</p>)}<Link className="btn" href={`/rooms/${id}/book`}>Kiểm tra giá & đặt thuê</Link><p>Giá cuối cùng và lịch trống được máy chủ kiểm tra khi đặt.</p></aside></div></>}
   </div>;
 }

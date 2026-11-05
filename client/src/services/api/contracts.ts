@@ -3,6 +3,9 @@ export type ApiUser = {
     full_name: string;
     email: string;
     phone: string | null;
+    date_of_birth?: string | null;
+    address?: string | null;
+    avatar_url?: string | null;
     role: "customer" | "host" | "admin";
     status?: string;
 };
@@ -33,6 +36,8 @@ export type ApiRoom = {
         image_url: string;
     }[];
     rates?: Rate[];
+    amenities?: { amenity_id: number; name: string }[];
+    space_types?: { space_type_id: number; name: string }[];
     display_rate?: {
         unit_price: number;
         rate_unit: string;

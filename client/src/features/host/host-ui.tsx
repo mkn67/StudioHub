@@ -14,7 +14,7 @@ export function HostPanel({ title, description, action, children, className = ""
 export function HostKpi({ label, value, icon, tone = "cyan", detail }: { label: string; value: ReactNode; icon: ReactNode; tone?: string; detail?: string }) {
   return <div className={`host-kpi host-tone-${tone}`}><div className="host-kpi-label"><span>{label}</span>{icon}</div><strong>{value}</strong>{detail && <small>{detail}</small>}</div>;
 }
-const statuses: Record<string, string> = { active: "Hoạt động", inactive: "Đã ẩn", maintenance: "Bảo trì", available: "Sẵn sàng", pending: "Chờ xử lý", confirmed: "Đã xác nhận", checked_in: "Đang sử dụng", completed: "Hoàn thành", cancelled: "Đã hủy", rejected: "Đã từ chối", expired: "Hết hạn" };
+const statuses: Record<string, string> = { not_active: "Không hoạt động", approved: "Đã duyệt", awaiting_payment: "Chờ thanh toán", active: "Hoạt động", inactive: "Đã ẩn", maintenance: "Bảo trì", available: "Sẵn sàng", pending: "Chờ xử lý", confirmed: "Đã xác nhận", checked_in: "Đang sử dụng", completed: "Hoàn thành", cancelled: "Đã hủy", rejected: "Đã từ chối", expired: "Hết hạn" };
 export function HostStatusBadge({ status }: { status: string }) { return <span className="host-badge" data-status={status}>{statuses[status] ?? status}</span>; }
 export function HostEmptyState({ title, description, action, unavailable = false }: { title: string; description: string; action?: ReactNode; unavailable?: boolean }) {
   return <div className={`host-empty ${unavailable ? "host-unavailable" : ""}`}><span className="host-empty-icon">{unavailable ? <AlertCircle size={27}/> : <Inbox size={27}/>}</span><h3>{title}</h3><p>{description}</p>{action}</div>;
@@ -42,22 +42,22 @@ export function HostPagination({ page, total, onChange, loading = false }: { pag
   return <nav className="host-pagination" aria-label="Phân trang"><button className="btn secondary" disabled={loading || page <= 1} onClick={() => onChange(page - 1)}>Trang trước</button><span>Trang {page} / {total}</span><button className="btn secondary" disabled={loading || page >= total} onClick={() => onChange(page + 1)}>Trang sau</button></nav>;
 }
 
-export type HostField = { name: string; label: string; type?: string; min?: number; minLength?: number; required?: boolean; value?: string | number; options?: { value: string; label: string }[] };
-export function HostEditor({ title, fields, path, method = "POST", extra, mapBody, onSaved, onClose, children }: { title: string; fields: HostField[]; path: string; method?: "POST" | "PATCH"; extra?: Record<string, unknown>; mapBody?: (body: Record<string, unknown>) => Record<string, unknown>; onSaved: (data: unknown) => void; onClose: () => void; children?: ReactNode }) {
+export type HostField = { name: string; label: string; type?: string; min?: number; step?: number | "any"; minLength?: number; required?: boolean; clearable?: boolean; value?: string | number; options?: { value: string; label: string }[] };
+export function HostEditor({ title, fields, path, method = "POST", extra, mapBody, onSaved, onClose, children }: { title: string; fields: HostField[]; path: string; method?: "POST" | "PATCH"; extra?: Record<string, unknown>; mapBody?: (body: Record<string, unknown>, data: FormData) => Record<string, unknown>; onSaved: (data: unknown) => void; onClose: () => void; children?: ReactNode }) {
   const action = useApiAction(), id = useId();
   const [dirty, setDirty] = useState(false), [discard, setDiscard] = useState(false);
   function requestClose() { if (!action.busy) { if (dirty) setDiscard(true); else onClose(); } }
   return <Modal title={title} onClose={requestClose} wide className="host-dialog">
     <form id={id} className="host-editor" onChange={() => setDirty(true)} onSubmit={e => {
-      e.preventDefault(); const entries = Object.fromEntries(new FormData(e.currentTarget));
+      e.preventDefault(); const formData = new FormData(e.currentTarget), entries = Object.fromEntries(formData);
       const body: Record<string, unknown> = { ...extra };
-      for (const field of fields) { const value = entries[field.name]; if (value !== "" && value !== undefined) body[field.name] = field.type === "number" ? Number(value) : value; }
-      void action.run(async () => { const data = await apiRequest(path, { method, body: mapBody ? mapBody(body) : body }); onSaved(data); });
+      for (const field of fields) { const value = entries[field.name]; if (value === "" && field.clearable) body[field.name] = null; else if (value !== "" && value !== undefined) body[field.name] = field.type === "number" ? Number(value) : value; }
+      void action.run(async () => { const data = await apiRequest(path, { method, body: mapBody ? mapBody(body, formData) : body }); onSaved(data); });
     }}>
       <div className="host-editor-intro"><span>Thông tin cơ bản</span><p>Kiểm tra thông tin trước khi lưu thay đổi.</p></div>
       <fieldset disabled={action.busy} className="host-fields"><legend className="host-sr-only">{title}</legend>{fields.map(field => <label key={field.name} htmlFor={`${id}-${field.name}`}>{field.label}{field.options
         ? <select id={`${id}-${field.name}`} name={field.name} aria-label={field.label} required={field.required ?? true} defaultValue={field.value ?? ""} aria-invalid={!!action.fieldErrors[field.name]} aria-describedby={action.fieldErrors[field.name] ? `${id}-${field.name}-error` : undefined}><option value="">Chọn…</option>{field.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-        : <input id={`${id}-${field.name}`} name={field.name} aria-label={field.label} type={field.type ?? "text"} min={field.min} minLength={field.minLength} step={field.type === "number" ? "1" : undefined} required={field.required ?? true} defaultValue={field.value ?? ""} aria-invalid={!!action.fieldErrors[field.name]} aria-describedby={action.fieldErrors[field.name] ? `${id}-${field.name}-error` : undefined}/>}
+        : <input id={`${id}-${field.name}`} name={field.name} aria-label={field.label} type={field.type ?? "text"} min={field.min} minLength={field.minLength} step={field.step ?? (field.type === "number" ? "1" : undefined)} required={field.required ?? true} defaultValue={field.value ?? ""} aria-invalid={!!action.fieldErrors[field.name]} aria-describedby={action.fieldErrors[field.name] ? `${id}-${field.name}-error` : undefined}/>}
         {action.fieldErrors[field.name] && <span className="field-error" id={`${id}-${field.name}-error`}>{action.fieldErrors[field.name]}</span>}
       </label>)}</fieldset>
       {children}

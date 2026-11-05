@@ -2,15 +2,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApiSession } from "./api-session";
-import { ApiMessage, Unavailable, useApiAction } from "./api-ui";
+import { ApiMessage, useApiAction } from "./api-ui";
 import { CustomerProfile } from "@/features/customer/customer-profile";
+import { HostApplication } from "@/features/workspace/host-application";
 export function ApiAuth({ register = false, host = false }: {
     register?: boolean;
     host?: boolean;
 }) {
     const session = useApiSession(), action = useApiAction(), router = useRouter();
     if (host)
-        return <div className="container account-page"><Unavailable>API hiện chỉ cho phép đăng ký khách hàng. Hồ sơ đối tác cần được bổ sung ở backend.</Unavailable><Link href="/register">Đăng ký khách hàng</Link></div>;
+        return <HostApplication/>;
     return <div className="auth-page"><div className="auth-panel"><h1>{register ? "Tạo tài khoản" : "Chào mừng trở lại"}</h1>
     <form onSubmit={e => { e.preventDefault(); const data = Object.fromEntries(new FormData(e.currentTarget)); void action.run(async () => { const user = await session.authenticate(`/api/auth/${register ? "register" : "login"}`, data); const next = new URLSearchParams(window.location.search).get("returnTo"); router.push(next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : user.role === "customer" ? "/my-bookings" : `/${user.role}`); }); }}>
       {register && <label>Họ tên<input name="full_name" autoComplete="name" required minLength={2} maxLength={100}/>{action.fieldErrors.full_name && <span className="field-error">{action.fieldErrors.full_name}</span>}</label>}

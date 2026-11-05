@@ -45,6 +45,8 @@ export async function apiRequest<T>(
     method?: "GET" | "POST" | "PATCH" | "DELETE";
     body?: unknown;
     token?: string | null;
+    idempotencyKey?: string;
+    responseType?: "pdf";
   } = {},
 ): Promise<T> {
   if (!apiBaseUrl) throw new ApiError("Backend chưa được cấu hình. Đặt NEXT_PUBLIC_API_URL.", 0);
@@ -63,6 +65,7 @@ export async function apiRequest<T>(
           ? {}
           : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
       },
       body:
         options.body === undefined
@@ -78,9 +81,16 @@ export async function apiRequest<T>(
     );
   }
 
+  if (response.ok && options.responseType === "pdf") {
+    if (!response.headers.get("Content-Type")?.toLowerCase().startsWith("application/pdf"))
+      throw new ApiError("Máy chủ không trả về tài liệu PDF hợp lệ.", response.status, "contract_error");
+    return await response.blob() as T;
+  }
+  if (response.status === 204 && response.ok) return undefined as T;
   let payload: {
     status?: string;
     code?: number | string;
+    error_code?: string;
     message?: string;
     data?: T;
     errors?: { field: string; code: string; message: string }[];
@@ -95,16 +105,18 @@ export async function apiRequest<T>(
   if (payload.errors && !Array.isArray(payload.errors)) payload.errors = [];
   if (payload.errors) payload.errors = payload.errors.filter(e => e && typeof e.field === "string" && typeof e.code === "string" && typeof e.message === "string");
   if (!response.ok || payload.status !== "success") {
-    if (token && getStoredApiToken() === token && (response.status === 401 || payload.code === "account_locked" || payload.errors?.some(e => e?.code === "account_locked"))) {
+    if (token && getStoredApiToken() === token && (response.status === 401 || payload.error_code === "account_locked" || payload.code === "account_locked" || payload.errors?.some(e => e?.code === "account_locked"))) {
       try { setStoredApiToken(null); } catch { /* Session still expires in memory. */ }
       if (typeof window !== "undefined") window.dispatchEvent(new Event("studiohub:session-expired"));
     }
     throw new ApiError(
       payload.message ?? "Yêu cầu chưa hoàn tất.",
       response.status,
-      typeof payload.code === "string" ? payload.code : payload.errors?.[0]?.code,
+      typeof payload.error_code === "string" ? payload.error_code : typeof payload.code === "string" ? payload.code : payload.errors?.[0]?.code,
       payload.errors,
     );
   }
+  if (!Object.prototype.hasOwnProperty.call(payload, "data"))
+    throw new ApiError("Phản hồi API thiếu trường data.", response.status, "contract_error");
   return payload.data as T;
 }

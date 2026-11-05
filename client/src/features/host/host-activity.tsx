@@ -6,9 +6,11 @@ import { useApiSession } from "@/components/api-session";
 import { useResource } from "@/services/api/use-resource";
 import { type BookingPage, bookingLabels, formatApiTime, sqlVietnamTime, vnTimestamp } from "@/services/api/contracts";
 import { useHostContext } from "./host-context";
-import type { HostStats, HostBooking } from "./host-types";
+import type { HostBooking } from "./host-types";
 import { hostMoney, reportingPreset } from "./host-presentation";
 import { HostPageHeader, HostPanel, HostKpi, HostStatusBadge, HostEmptyState, HostResourceState, HostSkeleton, HostPagination } from "./host-ui";
+import { RestReportSeries } from "./rest-reporting";
+import { statistics } from "@/services/api/management";
 
 type HostBookingPage = Omit<BookingPage, "items"> & { items: HostBooking[] };
 function BookingPreview({ bookings }: { bookings: HostBooking[] }) {
@@ -60,7 +62,7 @@ export function HostBookings({ basePath = "/host/bookings" }: { basePath?: strin
 export function HostReports({ role = "host" }: { role?: "host" | "admin" }) {
   const today = sqlVietnamTime(new Date()).slice(0, 10);
   const [period, setPeriod] = useState(""), [preset, setPreset] = useState("default");
-  const stats = useResource<HostStats>(`/api/${role}/statistics${period ? `?${period}` : ""}`);
+  const stats = useResource(`/api/${role}/statistics${period ? `?${period}` : ""}`, statistics);
   const [draft, setDraft] = useState(() => reportingPreset("month", today));
   function choose(value: "7" | "30" | "month") { const range = reportingPreset(value, today); setDraft(range); setPeriod(new URLSearchParams(range).toString()); setPreset(value); }
   return <>
@@ -68,10 +70,11 @@ export function HostReports({ role = "host" }: { role?: "host" | "admin" }) {
     <div className="host-report-toolbar"><div className="host-segmented" role="group" aria-label="Kỳ báo cáo">{[["7", "7 ngày"], ["30", "30 ngày"], ["month", "Tháng này"]].map(([value, label]) => <button key={value} aria-pressed={preset === value || preset === "default" && value === "month"} onClick={() => choose(value as "7" | "30" | "month")}>{label}</button>)}<button aria-pressed={preset === "custom"} onClick={() => setPreset("custom")}>Tùy chỉnh</button></div>
       <form className="host-date-form" onSubmit={e => { e.preventDefault(); setPeriod(new URLSearchParams(draft).toString()); setPreset("custom"); }}><label>Từ ngày<input name="from" type="date" required value={draft.from} onChange={e => setDraft({ ...draft, from: e.target.value })}/></label><label>Đến trước ngày<input name="to" type="date" required value={draft.to} onChange={e => setDraft({ ...draft, to: e.target.value })}/></label><button className="btn" type="submit">Áp dụng</button></form></div>
     <HostResourceState resource={stats}/>
+    <RestReportSeries role={role} period={period}/>
     {stats.data && <><p className="host-period-label">Từ {stats.data.period.from.split("-").reverse().join("/")} đến trước {stats.data.period.to.split("-").reverse().join("/")} · giờ Việt Nam</p>
       <div className="host-kpi-grid"><HostKpi label="Đơn thuê trong kỳ" value={stats.data.total_bookings} icon={<ClipboardList size={23}/>} tone="blue" detail="Theo thời điểm bắt đầu thuê"/><HostKpi label="Doanh thu hoàn tất" value={hostMoney(stats.data.total_revenue)} icon={<Banknote size={23}/>} tone="mint" detail="Theo thời điểm hoàn tất đơn"/><HostKpi label="Tỷ lệ sử dụng" value={`${stats.data.occupancy_rate}%`} icon={<BarChart3 size={23}/>} tone="yellow" detail="Giá trị do hệ thống ghi nhận"/><HostKpi label="Phòng hoạt động" value={stats.data.total_rooms} icon={<DoorOpen size={23}/>} tone="cyan" detail={`${stats.data.total_studios} Studio hoạt động hiện tại`}/></div>
       {role === "admin" && stats.data.total_customers !== undefined && <HostPanel title="Khách hàng hoạt động"><p><strong>{stats.data.total_customers}</strong> tài khoản khách hàng đang hoạt động ở thời điểm hiện tại.</p></HostPanel>}
-      <div className="host-report-grid"><HostPanel title="Mức sử dụng không gian" description="Tỷ lệ sử dụng trong kỳ báo cáo."><div className="host-utilization"><strong>{stats.data.occupancy_rate}<span>%</span></strong><div className="host-utilization-track" role="img" aria-label={`Tỷ lệ sử dụng ${stats.data.occupancy_rate}%`}><span style={{ width: `${Math.max(0, Math.min(100, stats.data.occupancy_rate))}%` }}/></div><p>Số liệu tổng hợp từ các phòng đang hoạt động.</p></div></HostPanel><HostPanel title="Xu hướng theo thời gian" description="Phân tích chi tiết hoạt động của Studio."><HostEmptyState unavailable title="Chưa có dữ liệu xu hướng" description="Hiện chưa có chuỗi số liệu theo ngày để hiển thị biểu đồ."/></HostPanel></div>
+      <div className="host-report-grid"><HostPanel title="Mức sử dụng không gian" description="Tỷ lệ sử dụng trong kỳ báo cáo."><div className="host-utilization"><strong>{stats.data.occupancy_rate}<span>%</span></strong><div className="host-utilization-track" role="img" aria-label={`Tỷ lệ sử dụng ${stats.data.occupancy_rate}%`}><span style={{ width: `${Math.max(0, Math.min(100, stats.data.occupancy_rate))}%` }}/></div><p>Số liệu tổng hợp từ các phòng đang hoạt động.</p></div></HostPanel></div>
       <HostPanel title="Tổng hợp trong kỳ"><div className="host-table-scroll" tabIndex={0} aria-label="Bảng tổng hợp"><table className="host-table"><thead><tr><th>Chỉ số</th><th>Giá trị</th><th>Phạm vi</th></tr></thead><tbody><tr><td>Số đơn thuê</td><td>{stats.data.total_bookings}</td><td>Bắt đầu thuê trong kỳ, không tính đơn hết hạn</td></tr><tr><td>Doanh thu đơn hoàn tất</td><td>{hostMoney(stats.data.total_revenue)}</td><td>Theo thời điểm hoàn tất</td></tr><tr><td>Studio hoạt động</td><td>{stats.data.total_studios}</td><td>Hiện tại</td></tr><tr><td>Phòng hoạt động</td><td>{stats.data.total_rooms}</td><td>Hiện tại</td></tr></tbody></table></div></HostPanel>
     </>}
   </>;

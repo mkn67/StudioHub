@@ -1,4 +1,9 @@
+<!-- rest-integration-2026-11-05 -->
+> **Cập nhật 05/11/2026:** Đây là bản lịch sử. Các nhãn “Chưa có API” / “chưa hỗ trợ” bên dưới không còn đại diện source hiện tại. 80/80 method/path đã có route/handler; frontend REST đã được nối lại. Xem [ma trận tích hợp hiện tại](FINAL_INTEGRATION_MATRIX.md). Kiểm thử mock khác với nghiệm thu PHP/MySQL; runtime và persistence chưa được xác nhận. Nội dung cũ được giữ lại để tra cứu.
+
 # Hợp đồng API đề xuất — CHƯA TRIỂN KHAI
+
+> Cập nhật sau merge `618fa2e`: các đường dẫn riêng dưới đây vẫn chưa có, nhưng một số chức năng đã có qua `/api/workspace`, `/api/commands` và `/api/reports`. Xem [đối chiếu sau pull](API_REQUIREMENTS_RECHECK.md) trước khi triển khai để tránh viết trùng. Nội dung còn lại là bản đề xuất/audit tại thời điểm trước merge.
 
 Tài liệu này là đầu vào cho quyết định nghiệp vụ/backend sau kiểm toán. **Không endpoint nào dưới đây được thêm vào router trong task hiện tại.** Tên route, DTO, trạng thái và lỗi đều là đề xuất; không khẳng định bảng/cột tương ứng đã tồn tại. Mọi mục cần chủ sản phẩm và backend duyệt trước khi phát triển.
 

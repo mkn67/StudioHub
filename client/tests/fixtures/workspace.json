@@ -1,0 +1,276 @@
+{
+  "now": 1893459600000,
+  "sessionId": "2",
+  "users": [
+    {
+      "id": "1",
+      "name": "QA Admin",
+      "role": "admin"
+    },
+    {
+      "id": "2",
+      "name": "QA Host",
+      "role": "host"
+    },
+    {
+      "id": "3",
+      "name": "QA Customer",
+      "role": "customer"
+    },
+    {
+      "id": "4",
+      "name": "QA Other Host",
+      "role": "host"
+    }
+  ],
+  "studios": [
+    {
+      "id": "10",
+      "hostId": "2",
+      "name": "QA Owned Studio",
+      "address": "QA Address 10",
+      "district": "QA District",
+      "active": true,
+      "policy": {
+        "paymentMinutes": 30,
+        "depositPercent": 30,
+        "cancelHours": 24,
+        "changeHours": 24,
+        "overtimePerBlock": 100000,
+        "openHour": 8,
+        "closeHour": 22,
+        "refundTiers": [
+          {
+            "hours": 48,
+            "percent": 100
+          },
+          {
+            "hours": 24,
+            "percent": 50
+          }
+        ]
+      }
+    },
+    {
+      "id": "11",
+      "hostId": "2",
+      "name": "QA Second Studio",
+      "address": "QA Address 11",
+      "district": "QA District",
+      "active": false,
+      "policy": {
+        "paymentMinutes": 30,
+        "depositPercent": 40,
+        "cancelHours": 24,
+        "changeHours": 24,
+        "overtimePerBlock": 100000,
+        "openHour": 8,
+        "closeHour": 22,
+        "refundTiers": [
+          {
+            "hours": 48,
+            "percent": 100
+          },
+          {
+            "hours": 24,
+            "percent": 50
+          }
+        ]
+      }
+    },
+    {
+      "id": "20",
+      "hostId": "4",
+      "name": "QA Other Studio",
+      "address": "QA Address 20",
+      "district": "QA District",
+      "active": true,
+      "policy": {
+        "paymentMinutes": 30,
+        "depositPercent": 30,
+        "cancelHours": 24,
+        "changeHours": 24,
+        "overtimePerBlock": 100000,
+        "openHour": 8,
+        "closeHour": 22,
+        "refundTiers": [
+          {
+            "hours": 48,
+            "percent": 100
+          },
+          {
+            "hours": 24,
+            "percent": 50
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "id": "100",
+      "studioId": "10",
+      "name": "QA Owned Type",
+      "category": "Photography",
+      "hourlyRate": 200000,
+      "plans": [
+        "hourly",
+        "session"
+      ]
+    },
+    {
+      "id": "110",
+      "studioId": "11",
+      "name": "QA Second Type",
+      "category": "Recording",
+      "hourlyRate": 150000,
+      "plans": [
+        "hourly"
+      ]
+    },
+    {
+      "id": "200",
+      "studioId": "20",
+      "name": "QA Other Type",
+      "category": "Photography",
+      "hourlyRate": 100000,
+      "plans": [
+        "hourly"
+      ]
+    }
+  ],
+  "rooms": [
+    {
+      "id": "1000",
+      "typeId": "100",
+      "name": "QA Active Room",
+      "area": 40,
+      "capacity": 8,
+      "active": true,
+      "images": [],
+      "feature": "QA Description"
+    },
+    {
+      "id": "1001",
+      "typeId": "100",
+      "name": "QA Hidden Room",
+      "area": 30,
+      "capacity": 4,
+      "active": false,
+      "images": []
+    },
+    {
+      "id": "1100",
+      "typeId": "110",
+      "name": "QA Second Room",
+      "area": 20,
+      "capacity": 3,
+      "active": false,
+      "images": []
+    },
+    {
+      "id": "2000",
+      "typeId": "200",
+      "name": "QA Other Room",
+      "area": 30,
+      "capacity": 4,
+      "active": true,
+      "images": []
+    }
+  ],
+  "equipment": [
+    {
+      "id": "5000",
+      "studioId": "10",
+      "name": "QA Active Light",
+      "category": "Lighting",
+      "quantity": 3,
+      "hourlyRate": 50000,
+      "pricingUnit": "hour",
+      "active": true,
+      "image": ""
+    },
+    {
+      "id": "5001",
+      "studioId": "10",
+      "name": "QA Hidden Light",
+      "category": "Lighting",
+      "quantity": 2,
+      "hourlyRate": 60000,
+      "pricingUnit": "hour",
+      "active": false,
+      "image": ""
+    },
+    {
+      "id": "6000",
+      "studioId": "20",
+      "name": "QA Other Light",
+      "category": "Lighting",
+      "quantity": 10,
+      "hourlyRate": 50000,
+      "pricingUnit": "hour",
+      "active": true,
+      "image": ""
+    }
+  ],
+  "bookings": [
+    {
+      "id": "900",
+      "customerId": "3",
+      "roomId": "1000",
+      "start": 1893466800000,
+      "end": 1893474000000,
+      "status": "pending",
+      "total": 400000,
+      "deposit": 120000,
+      "refund": {
+        "status": "failed",
+        "amount": 50000,
+        "reason": "QA exception",
+        "escalated": true
+      }
+    }
+  ],
+  "availability": [],
+  "applications": [
+    {
+      "id": "800",
+      "userId": "3",
+      "studioName": "QA Application",
+      "address": "QA Application Address",
+      "description": "QA Application Description",
+      "status": "pending",
+      "reason": null
+    }
+  ],
+  "audit": [
+    {
+      "id": "700",
+      "at": 1893459600000,
+      "actorId": "1",
+      "action": "QA audit action",
+      "target": "900",
+      "reason": "QA audit reason"
+    }
+  ],
+  "report": {
+    "bookingCount": 2,
+    "deposits": 300000,
+    "collections": 100000,
+    "refunded": 0,
+    "refundDue": 50000,
+    "outstanding": 200000,
+    "netCollected": 400000,
+    "weeklyRooms": {
+      "2030-W01": {
+        "1000": 1
+      }
+    },
+    "monthlyRooms": {
+      "2030-01": {
+        "1000": 1
+      }
+    },
+    "timezone": "Asia/Ho_Chi_Minh"
+  }
+}

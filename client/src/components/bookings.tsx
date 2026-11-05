@@ -287,7 +287,7 @@ export function BookingDetail({ id }: { id: string }) {
     collect: "Ghi nhận khoản thu",
     refund: "Xử lý hoàn cọc mô phỏng",
     reconcile: "Đối soát thanh toán mô phỏng",
-    resolve_refund: "Xác minh hoàn tiền thủ công",
+    resolve_refund: "Mô phỏng xác nhận hoàn tiền",
     checkout: "Xác nhận đã trả phòng",
     checkin: "Xác nhận đã nhận phòng",
     approve: "Xác nhận cho thuê",
@@ -558,7 +558,7 @@ export function BookingDetail({ id }: { id: string }) {
                   className="btn secondary"
                   onClick={() => setAction("resolve_refund")}
                 >
-                  Xác minh hoàn thủ công
+                  Mô phỏng xác nhận hoàn tiền
                 </button>
               )}
               {user.role === "customer" && (
@@ -715,8 +715,8 @@ export function BookingDetail({ id }: { id: string }) {
             {["reconcile", "resolve_refund"].includes(action) && (
               <>
                 <p>
-                  Chỉ ghi nhận kết quả đã được xác minh. Không mở lại phòng đã
-                  hết hiệu lực và không tự tạo lần chuyển tiền mới.
+                  Đây là thao tác mô phỏng, không xác nhận nhà cung cấp đã chuyển
+                  hoặc hoàn tiền thật. Không mở lại phòng đã hết hiệu lực.
                 </p>
                 <label>
                   Lý do / bằng chứng mô phỏng
