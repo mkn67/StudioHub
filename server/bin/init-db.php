@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-// Compose supplies the connection settings. Bootstrap only an empty database:
-// the existing migrator also seeds data and must not run on an existing schema.
+// Compose supplies the connection settings. Bootstrap only an empty database;
+// demo seed data is limited to dev/test environments by the migrator.
 try {
     $pdo = new PDO(
         'mysql:host=' . getenv('DB_HOST')

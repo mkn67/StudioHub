@@ -127,9 +127,10 @@ try {
     }
     echo "-> Triggers applied ({$triggerCount} triggers registered).\n";
 
-    // 3. Run seed.sql
+    // 3. Load demo fixtures only in development/test environments. Production
+    // must never receive the documented sample accounts and passwords.
     $seedFile = __DIR__ . '/seed.sql';
-    if (file_exists($seedFile)) {
+    if (in_array($appEnv, ['dev', 'test'], true) && file_exists($seedFile)) {
         echo "Applying seed data from seed.sql...\n";
         $seedSql = file_get_contents($seedFile);
         $seedStatements = preg_split('/;\s*$/m', $seedSql);
@@ -143,6 +144,19 @@ try {
             $seedCount++;
         }
         echo "-> Seed applied ({$seedCount} statements executed).\n";
+    } elseif (file_exists($seedFile)) {
+        echo "Skipping development seed data for environment '{$appEnv}'.\n";
+    }
+
+    if (!in_array($appEnv, ['dev', 'test'], true)) {
+        $roleInsert = $pdo->prepare('INSERT IGNORE INTO roles (role_name, description) VALUES (?, ?)');
+        foreach ([
+            ['admin', 'Quản trị viên toàn hệ thống'],
+            ['host', 'Chủ cơ sở studio'],
+            ['customer', 'Khách hàng thuê studio và thiết bị'],
+        ] as [$roleName, $description]) {
+            $roleInsert->execute([$roleName, $description]);
+        }
     }
 
     // 4. Apply versioned, additive migrations for existing and fresh databases.

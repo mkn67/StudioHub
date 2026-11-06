@@ -31,6 +31,12 @@ class RoomServiceTest extends TestCase
                 'min_price'     => null,
                 'max_price'     => null,
                 'min_area'      => null,
+                'min_capacity'  => null,
+                'district'      => null,
+                'amenity_id'    => null,
+                'available_from'=> null,
+                'available_to'  => null,
+                'sort'          => 'recommended',
                 'page'          => 1,
                 'limit'         => 12,
             ])

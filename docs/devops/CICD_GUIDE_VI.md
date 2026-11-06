@@ -2,15 +2,15 @@
 
 ## Trạng thái bàn giao
 
-CI đã được cấu hình trong [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), gồm ba job độc lập. Các lệnh kiểm tra đã được chạy tại máy phát triển; **chưa có lần chạy GitHub Actions nào được xác minh cho workflow mới này**. Chưa commit, push, đổi thiết lập GitHub hay triển khai dịch vụ.
+Workflow [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) có bốn job kiểm tra: Frontend, PHP Backend, PHP Helpdesk và container images. Sau khi cả bốn đạt trên push `main`, workflow publish image SHA lên GHCR nếu đã đặt `STAGING_API_URL`, rồi tự deploy staging qua SSH nếu đủ cấu hình VPS/domain. Host và domain của bạn chưa được nhập vào GitHub; lần deploy thật chưa chạy.
 
-CD hiện là phương án chuẩn bị trong tài liệu này. Repo chưa có máy staging, tên miền, registry hoặc quyền triển khai được xác định. Không có workflow giả lập deploy và không tự động triển khai production.
+CI/CD không deploy production. Hướng dẫn cấu hình VPS, GitHub variables/secrets và các bước lần đầu nằm trong [STAGING_DEPLOY_VI.md](STAGING_DEPLOY_VI.md). Chưa commit hoặc push các thay đổi trong workspace.
 
 ## CI/CD nghĩa là gì?
 
 CI (Continuous Integration) chạy kiểm tra khi nhóm đưa thay đổi vào nhánh chung, giúp phát hiện lỗi trước khi merge. CD (Continuous Delivery) chuẩn bị phiên bản có thể phát hành theo quy trình kiểm soát. Trong phương án StudioHub, production luôn cần người có trách nhiệm phê duyệt.
 
-GitHub Actions phù hợp vì mã nguồn và Pull Request đã nằm trên GitHub: mỗi PR có kết quả frontend, backend, Helpdesk riêng để thành viên phụ trách xử lý.
+GitHub Actions phù hợp vì mã nguồn và Pull Request đã nằm trên GitHub: PR chạy kiểm tra/build; push `main` đã qua kiểm tra sẽ phát hành image và tự cập nhật staging sau khi cấu hình được khai báo.
 
 ```mermaid
 flowchart TD
@@ -18,18 +18,19 @@ flowchart TD
     B --> C[StudioHub CI]
     P[Push main / chạy thủ công] --> C
     C --> F[Frontend: lint, TypeScript, test, build]
-    C --> API[PHP Backend: Composer, syntax, Unit]
+    C --> API[PHP Backend: Composer, syntax, PHPStan, Unit]
     M[(MySQL tạm trên runner)] --> API
     C --> H[PHP Helpdesk: syntax, RAG, mock LLM]
     H --> S[(SQLite trong bộ nhớ)]
+    C --> IMG[Build API, Helpdesk, frontend images]
+    IMG --> R
     F --> R[Review và các check đạt]
     API --> R
     H --> R
     R --> MAIN[Merge main]
-    MAIN -. CD đề xuất, chưa triển khai .-> IMAGE[Build image theo commit SHA]
-    IMAGE -.-> STAGE[Staging riêng và smoke test]
-    STAGE -.-> APPROVE[Phê duyệt production]
-    APPROVE -.-> PROD[Production và phương án rollback]
+    MAIN --> IMAGE[Publish image SHA lên GHCR]
+    IMAGE --> STAGE[SSH deploy VPS staging, pull và health check]
+    STAGE -. Production cần gate và cấu hình riêng .-> PROD[Production]
 ```
 
 ## Kết quả khảo sát repo
@@ -37,7 +38,7 @@ flowchart TD
 | Thành phần | Hiện trạng và lựa chọn CI |
 |---|---|
 | Frontend | `client/`, Next.js, TypeScript; npm, `client/package-lock.json` |
-| Node.js | Chọn Node 24 theo Dockerfile frontend; máy kiểm tra dùng 24.21.0 |
+| Node.js | Chọn Node 24 theo Dockerfile frontend; lần kiểm tra hiện tại dùng 24.22.2 |
 | Backend | `server/`, Composer 2, có `composer.json` và `composer.lock` |
 | PHP | Cả hai Dockerfile dùng PHP 8.2; Composer yêu cầu >=8.2; CI chọn 8.2 |
 | Backend tests | PHPUnit 10 từ require-dev; `server/phpunit.xml` định nghĩa suite `Unit` và `Integration` |
@@ -46,23 +47,24 @@ flowchart TD
 | Helpdesk tests | `php tests/run.php`; `tests/Support.php` cấp SQLite `:memory:`, `FakeTransport`, `ScriptedModel` |
 | RAG fixtures | `docs/helpdesk/knowledge/knowledge.v1.json`, `helpdesk-php/config/approval-manifest.json`; cần checkout toàn repo |
 | Root npm | `package.json` ở gốc dành cho 9Router; không cần cài hay khởi chạy trong CI |
-| Workflow cũ | Chưa có `.github/workflows/` trước thay đổi này |
-| Deployment | Có Dockerfiles và `docker-compose.yml` cho môi trường local; chưa xác định đích staging/production |
-| Working tree | Đã có nhiều thay đổi frontend và tài liệu API chưa commit trước tác vụ; giữ nguyên. Tác vụ CI chỉ thêm workflow và tài liệu này |
+| Workflow | `.github/workflows/ci.yml` chạy khi PR/push vào `main` và khi chạy thủ công |
+| Deployment | `docker-compose.staging.yml`, production API image và Caddy TLS cho VPS; cần cấu hình host/domain/secrets trong GitHub trước lần deploy đầu |
+| Kiểm tra | Chạy lại frontend, PHPStan, backend Unit, Helpdesk và ba image build trên source hiện tại |
 
 ## Workflow và các kiểm tra
 
-Workflow chạy khi mở/cập nhật/mở lại PR có nhánh đích `main`, khi push vào `main`, hoặc qua `workflow_dispatch`. Không có lọc theo đường dẫn để các required check luôn xuất hiện, kể cả PR chỉ sửa tài liệu. Run cũ cùng ref được hủy khi có run mới. Ba job không phụ thuộc nhau, chạy trên `ubuntu-24.04`, có timeout riêng.
+Workflow chạy khi mở/cập nhật/mở lại PR có nhánh đích `main`, khi push vào `main`, hoặc qua `workflow_dispatch`. Không có lọc theo đường dẫn để các required check luôn xuất hiện, kể cả PR chỉ sửa tài liệu. Run cũ cùng ref được hủy khi có run mới. Bốn job không phụ thuộc nhau, chạy trên `ubuntu-24.04`, có timeout riêng.
 
 | Check trên GitHub | Thư mục chạy | Các lệnh theo thứ tự |
 |---|---|---|
 | `Frontend` | `client/` | `npm ci --no-audit --no-fund`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` |
-| `PHP Backend` | `server/` | `composer install --no-interaction --prefer-dist --no-progress`, PHP syntax, `php vendor/bin/phpunit --configuration phpunit.xml --testsuite Unit --do-not-cache-result` |
+| `PHP Backend` | `server/` | `composer install --no-interaction --prefer-dist --no-progress`, PHP syntax, PHPStan level 5, `php vendor/bin/phpunit --configuration phpunit.xml --testsuite Unit --do-not-cache-result` |
 | `PHP Helpdesk` | `helpdesk-php/` | PHP syntax, `php tests/run.php` |
+| `Container Images` | repository root | Validate staging Compose và build API, Helpdesk, frontend production images. Trên push `main`, publish tag commit SHA lên GHCR khi `STAGING_API_URL` đã cấu hình |
 
 Frontend dùng các scripts có sẵn trong `client/package.json`. Không chạy typecheck song song với build vì Next.js tạo lại `.next/types`. npm cache theo `client/package-lock.json`; vẫn chạy `npm ci` mỗi lần, không cache `node_modules`.
 
-Backend cài cả require-dev để có PHPUnit; không dùng `--no-dev`. Chỉ cache các gói tải về của Composer theo OS, PHP và lockfile, không cache toàn bộ `vendor`. PHP syntax duyệt các file `.php`, bỏ `vendor`; lỗi cú pháp làm job thất bại.
+Backend cài cả require-dev để có PHPUnit và PHPStan; không dùng `--no-dev`. Chỉ cache các gói tải về của Composer theo OS, PHP và lockfile, không cache toàn bộ `vendor`. PHP syntax duyệt các file `.php`, bỏ `vendor`; lỗi cú pháp làm job thất bại. PHPStan dùng cấu hình level 5 hiện có trong `server/phpstan.neon`.
 
 MySQL 8.0 của job backend dùng database rỗng `studio_ci_unit`, tài khoản giả chỉ dành cho CI và cổng host do runner cấp. `DB_PORT` lấy từ service context tại bước chạy test. Không mount dữ liệu, không gọi `docker compose`, không chạy migration/seed và không kết nối MySQL của nhóm. Toàn bộ Unit suite hiện tại chạy được với database rỗng này. Healthcheck chờ MySQL khởi động; kết nối PDO trong test kiểm chứng tiếp tài khoản và database.
 
@@ -72,13 +74,13 @@ Không chạy `bin/gateway-smoke.php`, `bin/evaluate.php`, 9Router thật hoặc
 
 ## Biến môi trường, quyền và Secrets
 
-CI hiện tại **không cần GitHub Secret tự tạo**. `GITHUB_TOKEN` do GitHub cấp chỉ có `contents: read`; checkout tắt lưu credential. Không dùng `pull_request_target`, SSH, production environment hay upload artifact. Vì vậy không tải `.env` lên artifact/cache.
+PR checks không cần secret. `GITHUB_TOKEN` mặc định có `contents: read`; riêng job `Container Images` được cấp `packages: write` để publish GHCR sau khi các job CI đạt. Job Deploy Staging chỉ lấy SSH/DB/bridge secrets từ GitHub Environment `staging`; không dùng `pull_request_target` hoặc lưu credential checkout. File `.env` staging được tạo tạm trong runner, gửi tới VPS qua SSH và không upload thành artifact/cache.
 
 Các action được khóa bằng commit SHA đã tra từ tag của nguồn phát hành. Checkout, setup-node và cache thuộc tổ chức `actions`; setup PHP dùng action cộng đồng `shivammathur/setup-php`, cần giữ trong danh sách action được repo cho phép. Khi nâng phiên bản, kiểm tra nguồn và cập nhật SHA qua PR.
 
 | Biến | Trong CI |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | URL loopback giả phục vụ build; không yêu cầu API đang chạy |
+| `NEXT_PUBLIC_API_URL` | Job Frontend dùng URL loopback giả; image release dùng repository variable `STAGING_API_URL` |
 | `NEXT_PUBLIC_DEMO_MODE`, `NEXT_PUBLIC_HELPDESK_MODE` | `false`, `connected`, khớp lựa chọn build ứng dụng |
 | `NEXT_TELEMETRY_DISABLED` | `1` |
 | `APP_ENV`, `TZ` | Môi trường test và múi giờ của backend |
@@ -86,9 +88,9 @@ Các action được khóa bằng commit SHA đã tra từ tag của nguồn ph�
 | `JWT_SECRET` | Unit test tự cấp chuỗi test; CI không dùng JWT secret thật |
 | Helpdesk bridge / 9Router key | Bộ test tự cấp giá trị giả; không lấy secret vận hành |
 
-Nếu tương lai triển khai staging, chủ repo vào **Settings → Environments** tạo `staging` và `production`, rồi cấu hình secrets theo environment. Với secret cấp repo: **Settings → Secrets and variables → Actions → New repository secret**. Chỉ job deploy được duyệt mới tham chiếu secrets tương ứng; không thêm chúng vào job PR.
+Tạo GitHub Environment `staging`, rồi thêm SSH key/known_hosts, GHCR pull token, MySQL passwords, JWT secret và Helpdesk bridge secret theo [runbook staging](STAGING_DEPLOY_VI.md). Thêm host, domain, user và `STAGING_API_URL` dưới repository variables. Workflow tự bỏ qua deploy nếu thiếu các biến host/domain; nếu đã bật deploy mà thiếu secret, job sẽ dừng ở bước kiểm tra cấu hình.
 
-`NEXT_PUBLIC_*` là dữ liệu công khai được nhúng lúc build; không đặt API key, DB password hay bridge secret vào nhóm biến này. Không in `env`, `.env` hoặc cấu hình Compose đã nội suy vào log. Hiện tại chưa cần tạo secret nào để chạy ba job CI.
+`NEXT_PUBLIC_*` là dữ liệu công khai được nhúng lúc build; `STAGING_API_URL` phải là URL công khai, không đặt API key, DB password hay bridge secret vào nhóm biến này. Không in `env`, `.env` hoặc cấu hình Compose đã nội suy vào log. Build PR chỉ tạo image tạm. Push `main` publish image GHCR; deploy staging chỉ chạy khi đủ host/domain variables và Environment secrets.
 
 ## Chạy kiểm tra trên máy
 
@@ -121,27 +123,24 @@ php tests/run.php
 
 Có thể kiểm tra file workflow bằng `actionlint .github/workflows/ci.yml` từ gốc repo. Đây là công cụ kiểm tra cục bộ, không phải dependency bắt buộc của ứng dụng.
 
-## Kết quả xác minh cục bộ ngày 04/11/2026
+## Kết quả xác minh cục bộ ngày 06/11/2026
 
 | Kiểm tra | Kết quả thực tế |
 |---|---|
-| Workflow YAML, context/expression | `actionlint 1.7.12` đạt |
-| npm lockfile | `npm ci --dry-run --ignore-scripts --offline --no-audit --no-fund` đạt; chưa chạy cài npm sạch hoàn toàn trong runner GitHub |
-| ESLint / TypeScript | Đạt trên working tree hiện tại |
-| Frontend unit tests | 189/189 đạt, Node 24.21.0 |
-| Next.js production build | Đạt; build cục bộ có đọc `.env.local` hiện có, còn CI dùng biến giả công khai nêu trên |
-| Composer backend | Cài dependencies theo lockfile thành công, gồm PHPUnit 10.5.66; không thay lockfile |
-| PHP syntax | Đạt trên PHP 8.2.35 trong container với source chỉ đọc, không mạng |
-| Backend Unit | 57 test, 369 assertions đạt trên PHP 8.2.35 với MySQL 8.0 tạm, không migration/seed; cũng đạt trên PHP cục bộ 8.5.12 |
-| Helpdesk | 32 test, 130 assertions đạt trên PHP 8.2.35 trong container tắt mạng và PHP cục bộ 8.5.12 |
-| Source backend / SQL | Đối chiếu SHA-256 của 254 file backend/Helpdesk/database với baseline: 0 file thay đổi hoặc bị thiếu |
+| Workflow YAML | Đã parse được bằng PyYAML; actionlint chưa chạy được trong môi trường này |
+| Frontend install/lint/typecheck/tests/build | Đạt trên Node 24.22.2, source sạch không có `.next` hay `.env`; 193 test hiện tại |
+| PHPStan | Level 5, không lỗi trên PHP 8.2.34 |
+| Backend Unit | 57 test, 369 assertions đạt trên PHP 8.2.34 với MySQL 8.0 tạm và DB rỗng; container đã được dừng/xóa |
+| Helpdesk | 32 test, 130 assertions đạt trên PHP 8.2 trong cấu hình SQLite memory, không gọi provider thật |
+| Container images | API production, Helpdesk và frontend production image đều build được trên Podman với tag `:ci` |
+| Production database bootstrap | Migrator bỏ qua dữ liệu demo ở `APP_ENV=production`, vẫn tạo các role cần dùng |
 | GitHub Actions thực tế | Chưa chạy/xác minh workflow mới trên GitHub |
 
 Một số log lỗi do test chủ động mô phỏng storage failure và kiểm tra che giấu lỗi nội bộ là bình thường. Xem exit code và tổng kết PHPUnit; không kết luận thất bại chỉ từ chữ `Error` trong log fixture.
 
-Container MySQL tạm đã được dừng và tự xóa sau kiểm thử; không mount hoặc thay đổi volume dữ liệu dự án.
+Container MySQL tạm đã được dừng và tự xóa sau kiểm thử; không mount hoặc thay đổi volume dữ liệu dự án. Các image `:ci` chỉ là tag kiểm tra cục bộ, không được push lên registry. Compose staging giữ dữ liệu trong named volumes; chưa chạy deploy vì host/domain chưa được cấu hình.
 
-Các kết quả trên thuộc working tree hiện tại, gồm cả thay đổi frontend có trước tác vụ CI. Workflow trên GitHub sẽ kiểm tra nội dung thực tế của commit/PR được đưa lên.
+Một test frontend ban đầu phát hiện alias cũ `minArea` còn sót trong URL; sau khi sửa chuẩn hóa URL, toàn bộ 193 test chạy đạt. Một test PHP Unit đang kỳ vọng thiếu các bộ lọc mới; sau khi cập nhật expectation, suite 57 test/369 assertions đạt.
 
 ## Đưa workflow lên GitHub và đọc kết quả
 
@@ -149,17 +148,17 @@ Theo yêu cầu, chưa thực hiện commit/push. Sau khi nhóm xem xét, ngư�
 
 ```sh
 git switch -c ci/github-actions
-git add .github/workflows/ci.yml docs/devops/CICD_GUIDE_VI.md
+git add .github/workflows/ci.yml .gitignore docker-compose.staging.yml Caddyfile docs/devops/CICD_GUIDE_VI.md docs/devops/STAGING_DEPLOY_VI.md server/docker/production.Dockerfile server/database/migrate.php server/bin/init-db.php client/src/services/api/room-search.ts server/tests/Unit/RoomServiceTest.php
 git diff --cached
-git commit -m "ci: add frontend backend and helpdesk checks"
+git commit -m "ci: add gated Podman staging delivery"
 git push -u origin ci/github-actions
 ```
 
 Kiểm tra staged diff để tránh đưa các thay đổi khác đang làm dở vào commit. Tạo PR từ nhánh vừa push vào `main`. Nếu repo có chính sách hạn chế action hoặc phê duyệt workflow từ fork, chủ repo cần cho phép các action được dùng hoặc duyệt lần chạy.
 
-Trong PR, mở **Checks** để xem ba check; hoặc vào tab **Actions → StudioHub CI → chọn run → chọn job → mở step lỗi**. Kiểm tra đúng commit SHA, không dùng kết quả xanh của commit cũ. Run màu vàng đang chờ/chạy, đỏ thất bại, xanh đạt; canceled không phải kết quả kiểm tra thành công.
+Trong PR, mở **Checks** để xem bốn check; hoặc vào tab **Actions → StudioHub CI/CD → chọn run → chọn job → mở step lỗi**. Kiểm tra đúng commit SHA, không dùng kết quả xanh của commit cũ. Run màu vàng đang chờ/chạy, đỏ thất bại, xanh đạt; canceled không phải kết quả kiểm tra thành công.
 
-Sau khi workflow có trên nhánh mặc định, có thể vào **Actions → StudioHub CI → Run workflow** để chạy thủ công. Khi đã sửa lỗi, push thêm vào nhánh PR sẽ tạo run mới; **Re-run failed jobs** phù hợp với lỗi runner/network tạm thời. Chỉ được khẳng định CI trên GitHub thành công sau khi xem đủ ba job đạt tại đúng SHA.
+Sau khi workflow có trên nhánh mặc định, có thể vào **Actions → StudioHub CI/CD → Run workflow** để chạy thủ công. Deploy staging tự chạy sau các check khi push `main` và đủ repository variables/secrets. Khi đã sửa lỗi, push thêm vào nhánh PR sẽ tạo run mới; **Re-run failed jobs** phù hợp với lỗi runner/network tạm thời. Chỉ được khẳng định CI trên GitHub thành công sau khi xem đủ bốn CI job đạt tại đúng SHA; deploy staging là job riêng và chưa được xác minh trên VPS thật.
 
 ## Xử lý lỗi CI
 
@@ -183,53 +182,26 @@ Khuyến nghị mỗi thành viên làm việc trên nhánh `feat/...`, `fix/...
 Chủ repo cấu hình **Settings → Rules → Rulesets** hoặc Branch protection cho `main` sau khi các check đã xuất hiện:
 
 - Yêu cầu PR trước merge, ít nhất một approval và giải quyết các cuộc thảo luận.
-- Bắt buộc ba status check: `Frontend`, `PHP Backend`, `PHP Helpdesk`; chọn đúng tên do run thực tế hiển thị.
+- Bắt buộc bốn status check: `Frontend`, `PHP Backend`, `PHP Helpdesk`, `Container Images`; chọn đúng tên do run thực tế hiển thị.
 - Yêu cầu nhánh cập nhật với main; review lại khi có thay đổi mới làm approval cũ hết hiệu lực.
 - Chặn force push và xóa main; giới hạn quyền bypass phù hợp với nhóm.
 - Chỉ merge sau khi cả kiểm tra và review đạt.
 
 Nếu sau này bật merge queue, cần thêm event `merge_group` vào workflow trước khi bắt buộc các check cho queue. Chưa bật merge queue hay thay đổi bất kỳ thiết lập repo nào trong tác vụ này.
 
-## CD đề xuất: staging trước, production có phê duyệt
+## CD staging hiện tại
 
-Chưa có hạ tầng thực để nối CD. Phương án phù hợp với cấu trúc Docker hiện tại là một máy Linux staging riêng, reverse proxy HTTPS, MySQL riêng, lưu trữ uploads và Helpdesk SQLite riêng. Chỉ proxy mở ra ngoài; MySQL và các dịch vụ nội bộ ở mạng riêng.
+Workflow publish ba image GHCR theo commit SHA sau khi CI đạt. Khi GitHub variables/secrets đã cài, nó SSH vào VPS chạy Podman Compose, Caddy cấp TLS cho frontend/API, chạy migration SQL additive rồi health-check hai public endpoint. Cấu hình lần đầu, DNS/firewall, secrets và thao tác bootstrap nằm trong [STAGING_DEPLOY_VI.md](STAGING_DEPLOY_VI.md).
 
-Trước khi thêm workflow deploy, nhóm cần thống nhất:
-
-| Hạng mục | Cần chuẩn bị |
-|---|---|
-| Đích staging | VPS/platform, người quản trị, OS/Docker, tài nguyên và quyền truy cập |
-| Network | Tên miền, DNS, TLS, firewall, origin frontend và đường dẫn API/Helpdesk |
-| Registry | Registry chứa ba image client/API/Helpdesk, quyền publish/pull, tag theo commit SHA hoặc digest bất biến |
-| Cấu hình chạy | Compose/manifest dành riêng staging; nguồn ứng dụng/dependencies được đóng gói rõ ràng, không phụ thuộc bind mount source của máy dev |
-| Dữ liệu | MySQL staging, uploads và SQLite staging độc lập; dữ liệu thử đã bỏ thông tin nhạy cảm |
-| Migration | Backend owner duyệt lệnh và thứ tự migration; backup trước thay đổi. Cơ chế Compose hiện tại chỉ bootstrap DB rỗng, không thay thế kế hoạch nâng schema |
-| Health / monitoring | Probe API `/api/health`, frontend, Helpdesk theo healthcheck của image, log/alert và người nhận sự cố |
-| AI | Tắt provider thật mặc định khi smoke test; kiểm tra live riêng theo phê duyệt và ngân sách |
-
-Secrets tương lai phụ thuộc phương thức deploy, chưa tạo và chưa được workflow nào sử dụng:
-
-| Secret / variable đề xuất | Mục đích |
-|---|---|
-| `STAGING_HOST`, `STAGING_USER`, `STAGING_SSH_PORT` | Thông tin máy staging, có thể dùng environment variables |
-| `STAGING_SSH_KEY`, `STAGING_KNOWN_HOSTS` | Credential hạn chế quyền và xác minh host nếu chọn SSH; không tắt host verification |
-| Credential registry | Chỉ tạo nếu registry cần; GHCR có thể dùng token quyền phù hợp tại job publish riêng |
-| `JWT_SECRET`, `HELPDESK_BRIDGE_SECRET` | Giá trị staging riêng, bridge secret khớp giữa frontend server và Helpdesk |
-| `DB_PASSWORD`, `DB_ROOT_PASSWORD` | Credential DB staging; DB host/name/user/port là cấu hình runtime tương ứng |
-| `NINEROUTER_API_KEY` | Chỉ nếu chủ dự án cho phép dùng provider trên môi trường đó; không cấp vào PR CI |
-| URL/origin | Public API URL ở build; internal API/Helpdesk URL, allowlist host, frontend origin và CORS ở runtime |
-
-Luồng phát hành tương lai: chọn commit main đã qua CI → build/publish image với cấu hình staging → phê duyệt/chạy deploy staging → backup và migration được duyệt → khởi động → health/smoke test → ghi nhận SHA/digest và kết quả. Public URL của Next.js được nhúng lúc build, nên cần build theo môi trường hoặc có chiến lược cấu hình runtime được thiết kế riêng.
-
-Production dùng GitHub Environment riêng với required reviewers, quyền deploy hạn chế và secret riêng. Nếu gói GitHub/chính sách repo không hỗ trợ gate cần thiết, phải có cơ chế phê duyệt thay thế trước khi cho phép deploy. Không dùng event push để tự triển khai production.
-
-Rollback phải lưu image digest/config của bản trước, backup MySQL nhất quán cùng uploads và SQLite, người chịu trách nhiệm và quy trình diễn tập restore. Rollback ứng dụng về image cũ chỉ an toàn nếu schema còn tương thích; migration phá vỡ tương thích cần kế hoạch phục hồi hoặc forward fix được backend owner duyệt. Không tự chạy down migration hoặc xóa volume để khôi phục.
+Chưa có lần deploy thật vì chưa có IP/hostname VPS, domain frontend/API, SSH key, GHCR pull token hoặc secrets runtime trong GitHub. Sau khi thêm các giá trị theo runbook, push commit lên `main` sẽ kích hoạt deploy staging. Production vẫn cần Environment/gate riêng, backup/restore đã diễn tập, migration review và rollback; workflow hiện chỉ deploy staging.
 
 ## Phạm vi đã có và phần còn thiếu
 
-CI bao phủ lint, typecheck, production build frontend; các test frontend hiện có; syntax PHP và Unit backend; Helpdesk/RAG/mock provider. Đây không phải báo cáo tỷ lệ code coverage.
+CI bao phủ lint, typecheck, production build và test frontend; PHP syntax, PHPStan level 5 và Unit backend; Helpdesk/RAG/mock provider; build thử cả ba production image. Đây không phải báo cáo tỷ lệ code coverage.
 
-Chưa đưa vào CI: PHPUnit `Integration` với database `studio_backend_test`, kiểm thử API end-to-end, browser/Playwright, build Docker image, security audit chuyên biệt và kiểm tra provider thật. Suite Integration hiện có cần schema/seed phù hợp và có ghi dữ liệu, nên chỉ thêm job riêng khi nhóm backend thống nhất bootstrap/cleanup trên DB tách biệt; không chạy vào DB đang sử dụng.
+Chưa đưa vào CI: PHPUnit `Integration` với database `studio_backend_test`, kiểm thử API end-to-end, browser/Playwright, security audit chuyên biệt và kiểm tra provider thật. Suite Integration hiện có cần schema/seed phù hợp và có ghi dữ liệu, nên chỉ thêm job riêng khi nhóm backend thống nhất bootstrap/cleanup trên DB tách biệt; không chạy vào DB đang sử dụng.
+
+CI đi kèm CD staging có điều kiện cấu hình: image được publish và VPS cập nhật tự động khi GitHub variables/secrets sẵn sàng. Chưa có lần chạy staging thật; production không nằm trong workflow.
 
 Để sẵn sàng production còn cần: một run GitHub xanh được xác minh, chủ repo bật ruleset, hạ tầng staging, registry, cấu hình triển khai riêng, smoke test, chiến lược migration/backup/rollback, monitoring và gate phê duyệt production. Các khác biệt nghiệp vụ API đã ghi trong tài liệu audit frontend/backend cần nhóm backend xử lý riêng; CI không thay đổi logic đó.
 

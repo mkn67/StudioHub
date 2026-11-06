@@ -1,4 +1,4 @@
-name: StudioHub CI
+name: StudioHub CI/CD
 
 on:
   pull_request:
@@ -52,7 +52,7 @@ jobs:
   backend:
     name: PHP Backend
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: server
@@ -103,10 +103,12 @@ jobs:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-${{ runner.os }}-php82-${{ hashFiles('server/composer.lock') }}
           restore-keys: composer-${{ runner.os }}-php82-
-      - name: Install dependencies including PHPUnit
+      - name: Install dependencies including PHPUnit and PHPStan
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: PHP syntax
         run: find . -type d -name vendor -prune -o -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+      - name: PHPStan level 5
+        run: php vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress
       - name: Existing Unit suite
         env:
           DB_PORT: ${{ job.services.mysql.ports['3306'] }}
@@ -137,3 +139,176 @@ jobs:
       # tests/Support.php injects SQLite :memory:, FakeTransport and ScriptedModel.
       - name: Helpdesk, RAG and mock LLM tests
         run: php tests/run.php
+
+  container-images:
+    name: Container Images
+    runs-on: ubuntu-24.04
+    needs: [frontend, backend, helpdesk]
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      COMPOSE_PROJECT_NAME: studiohub-ci
+      GHCR_OWNER: mkn67
+      IMAGE_TAG: ci
+      DB_NAME: studiohub_ci
+      DB_USER: studiohub_ci
+      DB_PASSWORD: ci-only-password
+      DB_ROOT_PASSWORD: ci-only-root-password
+      JWT_SECRET: ci-only-jwt-secret-replace-before-deploy
+      HELPDESK_BRIDGE_SECRET: ci-only-helpdesk-secret-replace-before-deploy
+      FRONTEND_ORIGIN: https://studio.example.invalid
+      STAGING_FRONTEND_HOST: studio.example.invalid
+      STAGING_API_HOST: api.example.invalid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Validate staging Compose configuration
+        run: docker compose -f docker-compose.staging.yml config --quiet
+      - name: Validate Caddy TLS configuration
+        env:
+          STAGING_FRONTEND_HOST: studio.example.invalid
+          STAGING_API_HOST: api.example.invalid
+        run: docker run --rm -e STAGING_FRONTEND_HOST -e STAGING_API_HOST -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile
+      - name: Build API runtime image
+        run: docker build --pull -f server/docker/production.Dockerfile -t studiohub-api:ci ./server
+      - name: Build Helpdesk image
+        run: docker build --pull -f helpdesk-php/Dockerfile -t studiohub-helpdesk:ci .
+      - name: Build frontend production image
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL || 'http://127.0.0.1:8000' }}
+          NEXT_PUBLIC_DEMO_MODE: 'false'
+          NEXT_PUBLIC_HELPDESK_MODE: connected
+        run: |
+          docker build --pull -f client/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            --build-arg NEXT_PUBLIC_DEMO_MODE="$NEXT_PUBLIC_DEMO_MODE" \
+            --build-arg NEXT_PUBLIC_HELPDESK_MODE="$NEXT_PUBLIC_HELPDESK_MODE" \
+            -t studiohub-client:ci client
+      - name: Publish commit images to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.STAGING_API_URL != ''
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          registry="ghcr.io/$owner"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          for image in studiohub-api studiohub-helpdesk studiohub-client; do
+            docker tag "$image:ci" "$registry/$image:$GITHUB_SHA"
+            docker push "$registry/$image:$GITHUB_SHA"
+          done
+
+  deploy-staging:
+    name: Deploy Staging
+    runs-on: ubuntu-24.04
+    needs: [container-images]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.STAGING_HOST != '' && vars.STAGING_API_URL != '' && vars.STAGING_FRONTEND_ORIGIN != '' && vars.STAGING_FRONTEND_HOST != '' && vars.STAGING_API_HOST != ''
+    timeout-minutes: 15
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_FRONTEND_ORIGIN }}
+    permissions:
+      contents: read
+    env:
+      STAGING_HOST: ${{ vars.STAGING_HOST }}
+      STAGING_USER: ${{ vars.STAGING_USER }}
+      STAGING_SSH_PORT: ${{ vars.STAGING_SSH_PORT || '22' }}
+      STAGING_DEPLOY_PATH: ${{ vars.STAGING_DEPLOY_PATH || '/opt/studiohub' }}
+      STAGING_FRONTEND_ORIGIN: ${{ vars.STAGING_FRONTEND_ORIGIN }}
+      STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+      STAGING_FRONTEND_HOST: ${{ vars.STAGING_FRONTEND_HOST }}
+      STAGING_API_HOST: ${{ vars.STAGING_API_HOST }}
+      STAGING_GHCR_USER: ${{ vars.STAGING_GHCR_USER }}
+      DB_NAME: ${{ vars.STAGING_DB_NAME || 'studiohub' }}
+      DB_USER: ${{ vars.STAGING_DB_USER || 'studiohub' }}
+      DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+      DB_ROOT_PASSWORD: ${{ secrets.STAGING_DB_ROOT_PASSWORD }}
+      JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
+      HELPDESK_BRIDGE_SECRET: ${{ secrets.STAGING_HELPDESK_BRIDGE_SECRET }}
+      STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+      STAGING_KNOWN_HOSTS: ${{ secrets.STAGING_KNOWN_HOSTS }}
+      STAGING_REGISTRY_TOKEN: ${{ secrets.STAGING_REGISTRY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Validate deployment configuration
+        run: |
+          test -n "$STAGING_USER"
+          test -n "$STAGING_GHCR_USER"
+          test -n "$STAGING_FRONTEND_HOST"
+          test -n "$STAGING_API_HOST"
+          test -n "$DB_PASSWORD"
+          test -n "$DB_ROOT_PASSWORD"
+          test -n "$JWT_SECRET"
+          test -n "$HELPDESK_BRIDGE_SECRET"
+          test -n "$STAGING_SSH_KEY"
+          test -n "$STAGING_KNOWN_HOSTS"
+          test -n "$STAGING_REGISTRY_TOKEN"
+          [[ "$STAGING_DEPLOY_PATH" =~ ^/[A-Za-z0-9_/-]+$ ]]
+          [[ "$STAGING_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
+          [[ "$STAGING_SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( STAGING_SSH_PORT >= 1 && STAGING_SSH_PORT <= 65535 ))
+          [[ "$STAGING_GHCR_USER" =~ ^[A-Za-z0-9-]+$ ]]
+          [[ "$STAGING_USER" =~ ^[A-Za-z0-9._-]+$ ]]
+          [[ "$STAGING_FRONTEND_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
+          [[ "$STAGING_API_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
+          [[ "$STAGING_API_URL" == "https://$STAGING_API_HOST" ]]
+          [[ "$STAGING_FRONTEND_ORIGIN" == "https://$STAGING_FRONTEND_HOST" ]]
+          [[ "$DB_NAME" =~ ^[A-Za-z0-9_]+$ ]]
+          [[ "$DB_USER" =~ ^[A-Za-z0-9_]+$ ]]
+          [[ "$DB_PASSWORD" =~ ^[A-Za-z0-9_-]{16,}$ ]]
+          [[ "$DB_ROOT_PASSWORD" =~ ^[A-Za-z0-9_-]{16,}$ ]]
+          [[ "$JWT_SECRET" =~ ^[A-Fa-f0-9]{64,}$ ]]
+          [[ "$HELPDESK_BRIDGE_SECRET" =~ ^[A-Fa-f0-9]{64,}$ ]]
+      - name: Configure SSH and runtime environment
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$STAGING_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$STAGING_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+          umask 077
+          cat > "$RUNNER_TEMP/staging.env" <<EOF
+          COMPOSE_PROJECT_NAME=studiohub-staging
+          GHCR_OWNER=${GITHUB_REPOSITORY_OWNER,,}
+          IMAGE_TAG=$GITHUB_SHA
+          APP_ENV=production
+          DB_NAME=$DB_NAME
+          DB_USER=$DB_USER
+          DB_PASSWORD=$DB_PASSWORD
+          DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
+          JWT_SECRET=$JWT_SECRET
+          HELPDESK_BRIDGE_SECRET=$HELPDESK_BRIDGE_SECRET
+          FRONTEND_ORIGIN=$STAGING_FRONTEND_ORIGIN
+          STAGING_FRONTEND_HOST=$STAGING_FRONTEND_HOST
+          STAGING_API_HOST=$STAGING_API_HOST
+          EOF
+      - name: Copy deployment files
+        run: |
+          remote="$STAGING_USER@$STAGING_HOST"
+          ssh -p "$STAGING_SSH_PORT" -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o StrictHostKeyChecking=yes "$remote" "mkdir -p '$STAGING_DEPLOY_PATH'"
+          scp -P "$STAGING_SSH_PORT" -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o StrictHostKeyChecking=yes docker-compose.staging.yml Caddyfile "$remote:$STAGING_DEPLOY_PATH/"
+          scp -P "$STAGING_SSH_PORT" -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o StrictHostKeyChecking=yes "$RUNNER_TEMP/staging.env" "$remote:$STAGING_DEPLOY_PATH/.env"
+          ssh -p "$STAGING_SSH_PORT" -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o StrictHostKeyChecking=yes "$remote" "chmod 600 '$STAGING_DEPLOY_PATH/.env'"
+      - name: Pull images and deploy with Podman Compose
+        env:
+          REGISTRY_PASSWORD: ${{ secrets.STAGING_REGISTRY_TOKEN }}
+        run: |
+          remote="$STAGING_USER@$STAGING_HOST"
+          printf '%s' "$REGISTRY_PASSWORD" | ssh -p "$STAGING_SSH_PORT" -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o StrictHostKeyChecking=yes "$remote" "podman login ghcr.io --username '$STAGING_GHCR_USER' --password-stdin"
+          ssh -p "$STAGING_SSH_PORT" -i "$HOME/.ssh/id_ed25519" -o BatchMode=yes -o StrictHostKeyChecking=yes "$remote" "cd '$STAGING_DEPLOY_PATH' && podman-compose -f docker-compose.staging.yml pull && podman-compose -f docker-compose.staging.yml up -d --remove-orphans"
+      - name: Verify deployed health endpoints
+        run: |
+          for attempt in {1..24}; do
+            if curl --fail --silent "$STAGING_API_URL/api/health" >/dev/null && curl --fail --silent "$STAGING_FRONTEND_ORIGIN/" >/dev/null; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Staging endpoints did not become healthy within four minutes.' >&2
+          exit 1

@@ -1,0 +1,172 @@
+name: ${COMPOSE_PROJECT_NAME:-studiohub-staging}
+
+x-api: &api
+  image: ghcr.io/${GHCR_OWNER:-mkn67}/studiohub-api:${IMAGE_TAG:?Set IMAGE_TAG to a published commit SHA}
+  environment: &api-environment
+    APP_ENV: production
+    TZ: Asia/Ho_Chi_Minh
+    DB_HOST: db
+    DB_PORT: "3306"
+    DB_NAME: ${DB_NAME:?Set DB_NAME}
+    DB_USER: ${DB_USER:?Set DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    DB_PASS: ${DB_PASSWORD:?Set DB_PASSWORD}
+    JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+    ALLOWED_ORIGINS: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN}
+  volumes:
+    - api_uploads:/var/www/html/public/uploads
+    - api_private:/var/www/html/storage
+
+x-helpdesk: &helpdesk
+  image: ghcr.io/${GHCR_OWNER:-mkn67}/studiohub-helpdesk:${IMAGE_TAG:?Set IMAGE_TAG to a published commit SHA}
+  environment:
+    TZ: Asia/Ho_Chi_Minh
+    HELPDESK_BRIDGE_SECRET: ${HELPDESK_BRIDGE_SECRET:?Set HELPDESK_BRIDGE_SECRET}
+    HELPDESK_FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN}
+    HELPDESK_DATABASE_URL: sqlite:var/helpdesk.sqlite
+    STUDIOHUB_API_BASE_URL: http://api/api
+    NINEROUTER_BASE_URL: ${NINEROUTER_BASE_URL:-http://host.docker.internal:20128/v1}
+  extra_hosts:
+    - host.docker.internal:host-gateway
+  volumes:
+    - helpdesk_data:/app/helpdesk-php/var
+
+services:
+  caddy:
+    image: docker.io/library/caddy:2
+    restart: unless-stopped
+    environment:
+      STAGING_FRONTEND_HOST: ${STAGING_FRONTEND_HOST:?Set STAGING_FRONTEND_HOST}
+      STAGING_API_HOST: ${STAGING_API_HOST:?Set STAGING_API_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      client:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+07:00
+      - --log-bin-trust-function-creators=1
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:?Set DB_NAME}
+      MYSQL_USER: ${DB_USER:?Set DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD}
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'mysql --protocol=TCP -h 127.0.0.1 -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null 2>&1']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+
+  db-init:
+    <<: *api
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: [php, bin/init-db.php]
+
+  db-upgrade:
+    <<: *api
+    restart: "no"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    command: [php, bin/migrate-sql.php, --apply]
+
+  api:
+    <<: *api
+    restart: unless-stopped
+    command: [apache2-foreground, -c, "ServerName localhost"]
+    depends_on:
+      db-upgrade:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, php, -r, 'exit(@file_get_contents("http://127.0.0.1/api/health") === false ? 1 : 0);']
+      interval: 10s
+      timeout: 8s
+      retries: 12
+      start_period: 15s
+
+  cron:
+    <<: *api
+    init: true
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    command:
+      - sh
+      - -ec
+      - |
+        trap 'exit 0' TERM INT
+        while :; do
+          php bin/expire-bookings.php || echo 'Booking expiry failed; retrying next cycle.' >&2
+          sleep 60 & wait $$!
+        done
+
+  helpdesk-init:
+    <<: *helpdesk
+    restart: "no"
+    user: www-data
+    command: [php, bin/migrate.php, --apply]
+    healthcheck:
+      disable: true
+
+  helpdesk-php:
+    <<: *helpdesk
+    restart: unless-stopped
+    command: [apache2-foreground, -c, "ServerName localhost"]
+    depends_on:
+      helpdesk-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, php, -r, 'exit((json_decode((string) @file_get_contents("http://127.0.0.1/health"), true)["status"] ?? "") === "success" ? 0 : 1);']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  client:
+    image: ghcr.io/${GHCR_OWNER:-mkn67}/studiohub-client:${IMAGE_TAG:?Set IMAGE_TAG to a published commit SHA}
+    init: true
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api
+      HELPDESK_API_URL: http://helpdesk-php
+      HELPDESK_HTTP_HOSTS: helpdesk-php
+      HELPDESK_BRIDGE_SECRET: ${HELPDESK_BRIDGE_SECRET:?Set HELPDESK_BRIDGE_SECRET}
+      HELPDESK_FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN}
+    depends_on:
+      api:
+        condition: service_healthy
+      helpdesk-php:
+        condition: service_healthy
+
+volumes:
+  mysqldata:
+  api_uploads:
+  api_private:
+  helpdesk_data:
+  caddy_data:
+  caddy_config:

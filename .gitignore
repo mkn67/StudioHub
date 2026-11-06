@@ -48,3 +48,8 @@ studio-rental-web
 .tmp/merge-backup-*/
 .tmp/current-merge-backup.txt
 docs
+!docs/
+docs/*
+!docs/devops/
+docs/devops/*
+!docs/devops/STAGING_DEPLOY_VI.md

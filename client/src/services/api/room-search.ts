@@ -64,7 +64,7 @@ export function roomSearchRequest(search: RoomSearch, rateUnit: string = "hour")
 export function roomSearchUrl(current: string, search: RoomSearch, rateUnit: string = "hour") {
   const query = new URLSearchParams(current);
   // Replace only the supported catalog filters; keep unrelated campaign parameters intact.
-  for (const key of ["keyword", "space_type_id", "max_price", "min_area", "min_capacity", "district", "amenity_id", "available_date", "available_time", "duration_hours", "available_from", "available_to", "sort", "page", "rate_unit"])
+  for (const key of ["keyword", "space_type_id", "max_price", "min_area", "minArea", "min_capacity", "district", "amenity_id", "available_date", "available_time", "duration_hours", "available_from", "available_to", "sort", "page", "rate_unit"])
     query.delete(key);
   const selectedUnit = SEARCH_RATE_UNITS.includes(rateUnit as SearchRateUnit) ? rateUnit : "hour";
   if (search.keyword.trim()) query.set("keyword", search.keyword.trim());
