@@ -19,12 +19,11 @@ src/
 
 ## Run locally
 
-The repository root contains the Compose stack. Copy `server/.env.example` to `server/.env`, set a private `JWT_SECRET` of at least 32 characters, then start the services from the repository root:
+The repository root contains the Compose stack. From that directory, create the local root `.env` (the setup script preserves an existing file), then start the services:
 
 ```sh
-cp server/.env.example server/.env
-docker compose up -d --build db api cron
-docker compose exec api php database/migrate.php
+node scripts/setup-docker.mjs
+docker compose up -d --build
 curl http://localhost:8000/api/health
 ```
 
@@ -34,19 +33,13 @@ MySQL is available to host tools at `localhost:3307`; the API and expiry worker 
 docker compose exec api php bin/expire-bookings.php
 ```
 
-For an existing database, apply additive migrations without rebuilding data:
+Compose initializes and seeds only a completely empty database. For an existing database, review/back up the data and explicitly apply pending additive SQL migrations:
 
 ```sh
-docker compose exec api php database/migrate-up.php
+docker compose --profile maintenance run --rm db-upgrade
 ```
 
-To rebuild a local database, `--fresh` is accepted only when `APP_ENV` is `dev` or `test` and `DB_NAME` ends in `_dev` or `_test`:
-
-```sh
-docker compose exec api php database/migrate.php --fresh
-```
-
-The frontend is served separately at `http://localhost:3000`. Set `ALLOWED_ORIGINS` to the exact frontend origins, separated by commas. Keep `.env` out of version control and replace all example credentials before deployment.
+The frontend is available at `http://localhost:3000`. Compose mounts public uploads and private documents into separate persistent volumes. Keep `.env` out of version control and replace all example credentials before deployment.
 
 ## Development accounts
 
@@ -61,14 +54,28 @@ The development seed uses `password123` for these accounts:
 
 These credentials are for local development only.
 
+## Booking prices and example catalog
+
+The development catalog contains separate photoshoot, podcast, livestream commerce, and music recording rooms. A fresh database gets these from `database/seed.sql`. To add the new examples to an existing local `*_dev` or `*_test` database without resetting bookings, run:
+
+```sh
+docker compose exec api php bin/seed-booking-examples.php
+```
+
+The script is idempotent and refuses non-development databases. For Podman, use `podman-compose` in place of `docker compose`. The photoshoot hourly example has a two-hour minimum; other minimums and maximums come from each room's rate. A `month` rate means 30 days, and a `day` rate means 24 hours.
+
+`POST /api/bookings/check-availability` is the authoritative price and availability check. Room cost is the selected rate's unit price multiplied by rental units. Studio equipment is shared across that studio's rooms: session equipment is charged once per quantity, while hourly equipment is charged per quantity for the actual rental duration rounded up to half an hour. The studio's deposit percentage is applied to the total; the deposit is part of the total, not an extra charge. Day, week, and month bookings occupy the room continuously across closed hours, but handover must begin within the studio's operating hours. Hour, session, and half-day bookings must finish before closing.
+
+Public `GET /api/rooms` also supports `min_capacity`, `min_area`, `district`, `amenity_id`, `available_from` + `available_to`, and `sort`. Availability bounds use `YYYY-MM-DD HH:mm:ss` in `Asia/Ho_Chi_Minh`, require both bounds, and span at most 24 hours. Sort values are `recommended`, `price_asc`, `price_desc`, `area_desc`, `capacity_desc`, and `newest`. `GET /api/rooms/{id}/reviews` returns published reviews and the aggregate rating. A customer can submit one review per completed booking through `POST /api/bookings/{id}/review`; review authors are anonymized in the public catalog.
+
 Login and availability-check limits default to 10 requests per 15 minutes and 60 requests per minute per client IP. Configure them with `LOGIN_RATE_LIMIT`, `LOGIN_RATE_WINDOW_SECONDS`, `AVAILABILITY_RATE_LIMIT`, and `AVAILABILITY_RATE_WINDOW_SECONDS`. Only `REMOTE_ADDR` is used as the client identity; configure trusted proxy handling before placing the API behind a proxy that does not preserve the originating address.
 
 ## API and tests
 
 - OpenAPI 3.0 contract: [`openapi.yaml`](openapi.yaml)
 - Postman collection: [`postman/Studio-Rental-API.postman_collection.json`](postman/Studio-Rental-API.postman_collection.json)
-- Unit suite: `docker compose exec api ./vendor/bin/phpunit tests/Unit`
-- Domain integration suite (isolated DB): set `DB_NAME=studio_backend_test` and `APP_ENV=test`, apply `database/migrate-up.php`, then run `vendor/bin/phpunit tests/Integration`.
+- Unit suite: install Composer development dependencies in a separate development/CI environment, then run `vendor/bin/phpunit tests/Unit`.
+- Domain integration suite: use an isolated `*_test` database and run `vendor/bin/phpunit tests/Integration` after applying its migrations. The Compose API image installs production dependencies only.
 - Integration suites: `docker compose exec api php tests/test_phaseN_integration.php` (replace `N` with a phase number)
 - Concurrency scenarios T1, T2 and T15: `python3 server/tests/concurrency_test.py http://localhost:8000`
 

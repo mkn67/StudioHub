@@ -36,14 +36,28 @@ import {
   overlaps,
 } from "@/domain/engine";
 export function Home() {
-  const catalog = useResource<{ space_type_id: number; name: string }[]>(backendEnabled ? "/api/space-types" : null);
+  const catalog = useResource<{ space_type_id: number; name: string; description?: string | null; category?: string | null }[]>(backendEnabled ? "/api/space-types" : null);
   const featured = useResource<{ items: ApiRoom[] }>(backendEnabled ? "/api/rooms?limit=3" : null);
   const { state } = useStore(),
     router = useRouter();
   const [location, setLocation] = useState(""),
     [category, setCategory] = useState(""),
     [date, setDate] = useState("");
-  const categories = backendEnabled ? (catalog.data ?? []).map(t => ({ id: String(t.space_type_id), category: t.name })) : state.types;
+  const categoryCopy: Record<string, string> = {
+    "Cyclorama Studio": "Chụp ảnh sản phẩm, chân dung và quảng cáo trên phông vô cực liền mạch, dễ đổi màu bằng ánh sáng.",
+    "Lookbook & Fashion": "Chụp lookbook, thời trang và thương mại với không gian thay đồ, makeup và ánh sáng linh hoạt.",
+    "Podcast & Livestream Hub": "Ghi podcast, talkshow và livestream nhiều người với micro, bàn talkshow và cách âm.",
+    "Concept & Set Design": "Chụp ảnh hoặc quay video trong bối cảnh dựng sẵn như Hàn Quốc, vintage hay industrial.",
+    "Green Screen & VFX": "Quay quảng cáo, phim và nội dung cần tách nền để xử lý kỹ xảo hậu kỳ.",
+    "Acoustic Soundstage": "Ghi hình, thu lời thoại và cảnh trong nhà trong phim trường được xử lý cách âm.",
+    "Workshop & Event Studio": "Tổ chức workshop, lớp học, giới thiệu sản phẩm và sự kiện nhỏ với bố trí linh hoạt.",
+    "Livestream & E-commerce": "Livestream bán hàng với mạng LAN riêng, ánh sáng liên tục và khu trưng bày sản phẩm.",
+    "Music Recording Studio": "Thu giọng hát, nhạc cụ, lồng tiếng và sản xuất nhạc với booth, micro và loa kiểm âm.",
+  };
+  const categories = backendEnabled
+    ? (catalog.data ?? []).map(t => ({ id: String(t.space_type_id), category: t.name, group: t.category || "Không gian khác", description: t.description || categoryCopy[t.name] }))
+    : state.types.map(t => ({ ...t, group: "Không gian sáng tạo", description: categoryCopy[t.category] || "Không gian chuyên dụng cho hoạt động sáng tạo và sản xuất nội dung." }));
+  const categoryGroups = categories.reduce((groups, type) => groups.set(type.group, [...(groups.get(type.group) ?? []), type]), new Map<string, typeof categories>());
   return (
     <>
       <section className="hero">
@@ -59,11 +73,11 @@ export function Home() {
         <div className="hero-inner">
           <div className="hero-editorial">
           <h1 className="riso-headline">
-            StudioHub-UIT
-            <br />Xin chào<span className="hero-emphasis"> bạn!</span>
+            Tìm không gian
+            <br />cho ý tưởng<span className="hero-emphasis"> tiếp theo.</span>
           </h1>
           <p>
-            Nền tảng tìm kiếm Studio lớn nhì UIT.
+            Khám phá phòng chụp, phim trường, phòng thu và không gian sự kiện.
           </p>
           </div>
           <form
@@ -118,7 +132,7 @@ export function Home() {
           </form>
         </div>
         <div className="hero-caption">
-          <span>UIT Studio Rooms · Thảo Điền</span>
+          <span>Studio sáng tạo · TP. Hồ Chí Minh</span>
           <span>
             Ảnh không gian minh họa <ArrowUpRight size={14} />
           </span>
@@ -137,27 +151,20 @@ export function Home() {
             Chọn không gian theo cách bạn sáng tạo.
           </p>
         </div>
-        <div className="categories">
-          {categories.map((t, i) => (
-            <Link
-              key={t.id}
-              href={backendEnabled ? `/rooms?space_type_id=${t.id}` : `/rooms?category=${encodeURIComponent(t.category)}`}
-            >
-              <StudioCategoryIllustration category={t.category} />
-              <span>{t.category}</span>
-              <ArrowUpRight size={22} />
-              <small>
-                {
-                  [
-                    "Ánh sáng, bố cục và những khung hình",
-                    "Tự do kể câu chuyện của bạn",
-                    "Gặp gỡ và chia sẻ ý tưởng",
-                    "Tập trung vào từng thanh âm",
-                  ][i]
-                }
-              </small>
-            </Link>
-          ))}
+        <div className="space-category-groups">
+          {["Visual & Photo Studio", "Video & Film Production", "Livestream & Broadcast", "Audio & Event"].filter(group => categoryGroups.has(group)).map(group => {
+            const types = categoryGroups.get(group) ?? [];
+            return <section className="space-category-group" key={group}>
+            <h3>{group}</h3>
+            <div className="categories">
+              {types.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${type.id}` : `/rooms?category=${encodeURIComponent(type.category)}`}>
+                <StudioCategoryIllustration category={type.category}/>
+                <span>{type.category}</span><ArrowUpRight size={22}/>
+                <small>{type.description}</small>
+              </Link>)}
+            </div>
+          </section>;
+          })}
         </div>
       </section>
       <section className="section container">
@@ -173,7 +180,7 @@ export function Home() {
           </Link>
         </div>
         <div className="featured-grid">
-          {backendEnabled ? <><ApiMessage loading={featured.loading} error={featured.error || catalog.error} />{featured.data?.items.map(r => <Link className="room-card" key={r.room_id} href={`/rooms/${r.room_id}`}><div className="room-image"><ApiImage src={r.thumbnail_url} alt={r.name} /></div><div className="room-copy"><p>{r.studio.name}</p><h3>{r.name}</h3><p>{r.area} m² · {r.capacity} người</p><strong>{r.display_rate ? `${money(r.display_rate.unit_price)} / ${unitLabels[r.display_rate.rate_unit]}` : "Xem bảng giá"}</strong></div></Link>)}{featured.data && !featured.data.items.length && <p>Chưa có phòng đang mở cho thuê.</p>}</> : state.rooms
+          {backendEnabled ? <><ApiMessage loading={featured.loading} error={featured.error || catalog.error} />{featured.data?.items.map(r => <Link className="room-card" key={r.room_id} href={`/rooms/${r.room_id}`}><div className="room-image"><ApiImage src={r.thumbnail_url} alt={r.name} /></div><div className="room-copy"><p>{r.studio.name}{r.primary_space_type?.name ? ` · ${r.primary_space_type.name}` : ""}</p><h3>{r.name}</h3><p>{r.area} m² · {r.capacity} người</p>{!!r.amenities?.length && <ul className="explore-room-amenities" aria-label="Tiện ích nổi bật">{r.amenities.slice(0, 2).map(item => <li key={item.amenity_id}>{item.name}</li>)}</ul>}<strong>{r.display_rate ? `${money(r.display_rate.unit_price)} / ${unitLabels[r.display_rate.rate_unit]}` : "Xem bảng giá"}</strong></div></Link>)}{featured.data && !featured.data.items.length && <p>Chưa có phòng đang mở cho thuê.</p>}</> : state.rooms
             .filter((_, i) => [0, 2, 4].includes(i))
             .map((room) => (
               <RoomCard key={room.id} room={room} editorial />

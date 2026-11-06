@@ -30,6 +30,7 @@
 .host-workspace .btn:disabled, .host-dialog .btn:disabled { box-shadow: none; transform: none; opacity: .5; }
 .host-workspace label, .host-dialog label { display: grid; gap: 7px; margin: 0; font-size: 14px; font-weight: 600; }
 .host-workspace input:not([type=checkbox]), .host-workspace select, .host-dialog input:not([type=checkbox]), .host-dialog select { min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #8196A6; border-radius: var(--host-radius-sm); font-size: 14px; font-weight: 400; color: var(--host-text); background: white; }
+.host-workspace select:not([multiple]), .host-dialog select:not([multiple]) { padding-right: 42px; }
 .host-workspace .host-sr-only, .host-dialog .host-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .host-sidebar { display: flex; flex-direction: column; height: 100dvh; overflow-y: auto; position: sticky; top: 0; border-right: 2px solid var(--host-ink); background: white; padding: 24px 14px 16px; }
 .host-brand { display: flex; gap: 10px; align-items: center; padding: 0 8px 24px; font-size: 23px; font-weight: 700; letter-spacing: -.05em; }

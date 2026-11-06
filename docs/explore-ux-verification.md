@@ -53,3 +53,9 @@ Screenshots are captured at 360, 390, 768, 1024, 1280, 1440 and 1728px in `.tmp/
 - Existing customer typography is retained; no Be Vietnam Pro installation was present and no new font dependency was added.
 
 No commit, push or deployment was performed.
+
+## Follow-up catalog capabilities
+
+The REST catalog now carries active area, capacity, district, amenity, availability-window and sort filters through the URL and into `GET /api/rooms`. Availability search excludes overlapping confirmed, checked-in and unexpired pending bookings, including the configured room cleanup buffer. Query bounds are validated server-side and capped at 24 hours. The earlier note above about area filters being stripped describes the previous implementation and is superseded by this follow-up.
+
+Room detail now shows published verified-booking reviews. Customers may submit one rating after their own booking reaches `completed`; the database uniqueness constraint prevents duplicate reviews for the same booking. When a booking quote conflicts, the booking screen offers nearby candidate starts from the public busy calendar and rechecks each selection with the authoritative quote endpoint. No runtime verification was performed for this follow-up.

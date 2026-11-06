@@ -58,14 +58,14 @@ echo "\n1. GET /api/space-types:\n";
 $res = makeRequest('GET', '/api/space-types');
 assertCondition($res['status'] === 200, "Status is 200 (Got: {$res['status']})");
 assertCondition(isset($res['json']['data']) && is_array($res['json']['data']), "Data is an array");
-assertCondition(count($res['json']['data'] ?? []) === 7, "Returned exactly 7 space types (Got: " . count($res['json']['data'] ?? []) . ")");
+assertCondition(count($res['json']['data'] ?? []) === 9, "Returned exactly 9 space types (Got: " . count($res['json']['data'] ?? []) . ")");
 
 // 2. GET /api/amenities
 echo "\n2. GET /api/amenities:\n";
 $res = makeRequest('GET', '/api/amenities');
 assertCondition($res['status'] === 200, "Status is 200 (Got: {$res['status']})");
 assertCondition(isset($res['json']['data']) && is_array($res['json']['data']), "Data is an array");
-assertCondition(count($res['json']['data'] ?? []) === 8, "Returned exactly 8 amenities (Got: " . count($res['json']['data'] ?? []) . ")");
+assertCondition(count($res['json']['data'] ?? []) === 10, "Returned exactly 10 amenities (Got: " . count($res['json']['data'] ?? []) . ")");
 
 // 3. GET /api/rooms (Default listing)
 echo "\n3. GET /api/rooms (Default listing):\n";
@@ -73,13 +73,13 @@ $res = makeRequest('GET', '/api/rooms');
 assertCondition($res['status'] === 200, "Status is 200 (Got: {$res['status']})");
 $items = $res['json']['data']['items'] ?? [];
 $pagination = $res['json']['data']['pagination'] ?? [];
-assertCondition(count($items) === 4, "Returned exactly 4 active rooms (Got: " . count($items) . ")");
-assertCondition(($pagination['total_items'] ?? 0) === 4, "total_items is 4");
+assertCondition(count($items) === 6, "Returned exactly 6 active rooms (Got: " . count($items) . ")");
+assertCondition(($pagination['total_items'] ?? 0) === 6, "total_items is 6");
 assertCondition(($pagination['page'] ?? 0) === 1, "page is 1");
 assertCondition(($pagination['limit'] ?? 0) === 12, "limit is 12");
 $roomIds = array_column($items, 'room_id');
 assertCondition(!in_array(3, $roomIds), "Room 3 (maintenance) is NOT in active rooms list");
-assertCondition(in_array(1, $roomIds) && in_array(2, $roomIds) && in_array(4, $roomIds) && in_array(5, $roomIds), "Contains active rooms 1, 2, 4, 5");
+assertCondition($roomIds === [1, 2, 4, 5, 6, 7], "Contains active rooms 1, 2, 4, 5, 6, 7");
 
 // Check room 1 fields
 $room1 = null;
@@ -110,7 +110,7 @@ echo "\n5. GET /api/rooms?keyword=Zenith:\n";
 $res = makeRequest('GET', '/api/rooms?keyword=Zenith');
 assertCondition($res['status'] === 200, "Status is 200");
 $items = $res['json']['data']['items'] ?? [];
-assertCondition(count($items) === 2, "Rooms 4 and 5 returned for keyword Zenith");
+assertCondition(count($items) === 4, "Rooms 4, 5, 6 and 7 returned for keyword Zenith");
 
 // 6. GET /api/rooms?space_type_id=1
 echo "\n6. GET /api/rooms?space_type_id=1 (Cyclorama):\n";
@@ -139,7 +139,8 @@ foreach ($items as $r) {
 }
 assertCondition(isset($roomMap[1]['display_rate']) && $roomMap[1]['display_rate']['unit_price'] === 950000, "Room 1 session display_rate = 950k");
 assertCondition(isset($roomMap[4]['display_rate']) && $roomMap[4]['display_rate']['unit_price'] === 750000, "Room 4 session display_rate = 750k");
-assertCondition(isset($roomMap[2]) && $roomMap[2]['display_rate'] === null, "Room 2 has null display_rate for session");
+assertCondition(isset($roomMap[2]) && $roomMap[2]['display_rate']['rate_unit'] === 'hour', "Room 2 falls back to its hourly rate when no session rate exists");
+assertCondition(isset($roomMap[6]) && $roomMap[6]['display_rate']['unit_price'] === 850000, "Livestream room displays its three-hour session rate");
 
 // 9. GET /api/rooms?rate_unit=session&max_price=800000 (Exclude rooms without active session rate and rooms > 800k)
 echo "\n9. GET /api/rooms?rate_unit=session&max_price=800000:\n";
@@ -156,7 +157,7 @@ assertCondition($resPage1['status'] === 200 && $resPage2['status'] === 200, "Pag
 $p1Items = $resPage1['json']['data']['items'] ?? [];
 $p2Items = $resPage2['json']['data']['items'] ?? [];
 assertCondition(count($p1Items) === 2 && count($p2Items) === 2, "Page 1 has 2 items, Page 2 has 2 items");
-assertCondition($resPage1['json']['data']['pagination']['total_pages'] === 2, "total_pages is 2");
+assertCondition($resPage1['json']['data']['pagination']['total_pages'] === 3, "total_pages is 3");
 assertCondition($p1Items[0]['room_id'] !== $p2Items[0]['room_id'], "Page 1 and Page 2 have distinct items");
 
 // 11. GET /api/rooms/1 (Room detail)
@@ -250,7 +251,7 @@ echo "\n24. GET /api/equipments?studio_id=2:\n";
 $res = makeRequest('GET', '/api/equipments?studio_id=2');
 assertCondition($res['status'] === 200, "Status is 200");
 $eqList = $res['json']['data'] ?? [];
-assertCondition(count($eqList) === 3, "Studio 2 has 3 active equipments (Got: " . count($eqList) . ")");
+assertCondition(count($eqList) === 7, "Studio 2 has 7 active equipments (Got: " . count($eqList) . ")");
 
 echo "\n=====================================================\n";
 if ($allPassed) {

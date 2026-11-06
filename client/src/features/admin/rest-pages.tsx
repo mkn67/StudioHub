@@ -26,7 +26,8 @@ export function RestAdminApplications() {
 }
 function ApplicationDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const resource = useResource(`/api/admin/host-applications/${id}`, record);
-  return <Modal title="Chi tiết hồ sơ Host" onClose={onClose} className="host-dialog"><div className="host-panel-body"><HostResourceState resource={resource}/>{resource.data && <>{["studio_name", "applicant_name", "applicant_email", "applicant_phone", "address", "description", "status", "reason", "created_at", "reviewed_at", "reviewer_name"].map(key => <p key={key}><strong>{key}:</strong> {text(resource.data?.[key])}</p>)}</>}</div></Modal>;
+  const labels: Record<string, string> = { studio_name: "Tên Studio", applicant_name: "Người đăng ký", applicant_email: "Email tài khoản", applicant_phone: "Điện thoại tài khoản", contact_phone: "Số liên hệ Studio", website: "Website", studio_type: "Loại hình", expected_room_count: "Số phòng dự kiến", legal_name: "Chủ thể pháp lý", tax_id: "Mã số thuế", address: "Địa chỉ Studio", description: "Giới thiệu", status: "Trạng thái", reason: "Lý do xét duyệt", created_at: "Ngày gửi", reviewed_at: "Ngày xử lý", reviewer_name: "Người duyệt" };
+  return <Modal title="Chi tiết hồ sơ Host" onClose={onClose} className="host-dialog"><div className="host-panel-body"><HostResourceState resource={resource}/>{resource.data && <>{Object.entries(labels).map(([key, label]) => <p key={key}><strong>{label}:</strong> {text(resource.data?.[key])}</p>)}</>}</div></Modal>;
 }
 const resourceFields: Record<string, HostField[]> = {
   studios: [{ name: "name", label: "Tên Studio" }, { name: "description", label: "Mô tả", required: false }, { name: "address", label: "Địa chỉ" }, { name: "district", label: "Quận / huyện" }, { name: "city", label: "Tỉnh / thành phố" }, { name: "phone", label: "Điện thoại" }],

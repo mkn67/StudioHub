@@ -47,3 +47,4 @@ studio-rental-web
 # Local merge recovery copies can contain private environment configuration.
 .tmp/merge-backup-*/
 .tmp/current-merge-backup.txt
+docs

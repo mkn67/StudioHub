@@ -105,6 +105,45 @@ class RoomService
             }
         }
 
+        $minCapacity = null;
+        if (isset($queryParams['min_capacity']) && $queryParams['min_capacity'] !== '') {
+            if (filter_var($queryParams['min_capacity'], FILTER_VALIDATE_INT) === false || (int) $queryParams['min_capacity'] < 1) {
+                $errors[] = ['field' => 'min_capacity', 'code' => 'invalid', 'message' => 'Sức chứa tối thiểu phải là số nguyên dương'];
+            } else {
+                $minCapacity = (int) $queryParams['min_capacity'];
+            }
+        }
+
+        $district = trim((string) ($queryParams['district'] ?? ''));
+        $districtLength = preg_match_all('/./us', $district);
+        if ($districtLength === false || $districtLength > 100) $errors[] = ['field' => 'district', 'code' => 'invalid', 'message' => 'Khu vực không được vượt quá 100 ký tự'];
+
+        $amenityId = null;
+        if (isset($queryParams['amenity_id']) && $queryParams['amenity_id'] !== '') {
+            if (filter_var($queryParams['amenity_id'], FILTER_VALIDATE_INT) === false || (int) $queryParams['amenity_id'] < 1) $errors[] = ['field' => 'amenity_id', 'code' => 'invalid', 'message' => 'Tiện ích không hợp lệ'];
+            else $amenityId = (int) $queryParams['amenity_id'];
+        }
+
+        $availableFrom = trim((string) ($queryParams['available_from'] ?? ''));
+        $availableTo = trim((string) ($queryParams['available_to'] ?? ''));
+        if (($availableFrom === '') !== ($availableTo === '')) {
+            $errors[] = ['field' => 'available_from', 'code' => 'invalid', 'message' => 'Cần chọn cả giờ bắt đầu và kết thúc để lọc lịch trống'];
+        } elseif ($availableFrom !== '') {
+            $fromDate = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $availableFrom);
+            $toDate = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $availableTo);
+            if (!$fromDate || $fromDate->format('Y-m-d H:i:s') !== $availableFrom || !$toDate || $toDate->format('Y-m-d H:i:s') !== $availableTo || $toDate <= $fromDate || $fromDate <= new DateTimeImmutable()) {
+                $errors[] = ['field' => 'available_from', 'code' => 'invalid', 'message' => 'Khung giờ tìm kiếm phải hợp lệ và nằm trong tương lai'];
+            } elseif ($toDate->getTimestamp() - $fromDate->getTimestamp() > 86400) {
+                $errors[] = ['field' => 'available_to', 'code' => 'invalid', 'message' => 'Mỗi lượt tìm kiếm tối đa 24 giờ'];
+            }
+        }
+
+        $sort = (string) ($queryParams['sort'] ?? 'recommended');
+        if (!in_array($sort, ['recommended', 'price_asc', 'price_desc', 'area_desc', 'capacity_desc', 'newest'], true)) {
+            $errors[] = ['field' => 'sort', 'code' => 'invalid', 'message' => 'Cách sắp xếp không hợp lệ'];
+            $sort = 'recommended';
+        }
+
         // Space type
         $spaceTypeId = null;
         if (isset($queryParams['space_type_id']) && $queryParams['space_type_id'] !== '') {
@@ -132,6 +171,12 @@ class RoomService
             'min_price'     => $minPrice,
             'max_price'     => $maxPrice,
             'min_area'      => $minArea,
+            'min_capacity'  => $minCapacity,
+            'district'      => $district !== '' ? $district : null,
+            'amenity_id'    => $amenityId,
+            'available_from'=> $availableFrom !== '' ? $availableFrom : null,
+            'available_to'  => $availableTo !== '' ? $availableTo : null,
+            'sort'          => $sort,
             'page'          => $page,
             'limit'         => $limit,
         ];

@@ -61,7 +61,7 @@ export function MotionSurface({ children, operational = false }: { children: Rea
       }
       if (!operational) {
         // Create triggers in DOM order. Group only true sibling card collections.
-        root.querySelectorAll<HTMLElement>(".section-head, .categories, .how-grid > h2, .host-cta").forEach((trigger, index) => {
+        root.querySelectorAll<HTMLElement>(".section-head, .categories, .how-grid > h2, .host-cta, .room-related-section > div:first-child, .room-information > h2").forEach((trigger, index) => {
           const group = trigger.matches(".categories");
           const photographic = trigger.matches(".host-cta");
           // Photograph-heavy listings stay still; their section heading carries the reveal.
@@ -76,10 +76,10 @@ export function MotionSurface({ children, operational = false }: { children: Rea
             : [nodes];
           batches.forEach((batch,row)=>{
           // The hero carries spatial choreography; ordinary sections use lighter fades.
-          const tween = gsap.fromTo(batch, { opacity:photographic || mediaContext.conditions?.compact ? .82 : .72 }, {
-            opacity:1,duration:group?duration.card:duration.section,ease:gsapEase,
+          const tween = gsap.fromTo(batch, { opacity:photographic || mediaContext.conditions?.compact ? .82 : .72, y: photographic ? 8 : mediaContext.conditions?.compact ? 10 : 16, scale: group ? 0.985 : 1 }, {
+            opacity:1,y:0,scale:1,duration:group?duration.card:duration.section,ease:gsapEase,
             stagger:batch.length>1?Math.min(duration.stagger,.21/(batch.length-1)):0,
-            immediateRender:false,clearProps:"opacity",
+            immediateRender:false,clearProps:"opacity,transform",
             onStart:()=>{ mark(batch,tween); batch.forEach(node=>{node.dataset.motionRevealed="true";}); },
             onComplete:()=>release(batch),
             scrollTrigger:{ id:"studiohub:"+path+":"+index+":"+row,trigger:group && mediaContext.conditions?.compact?batch[0]:trigger,start:"top 92%",once:true,toggleActions:"play none none none" },
@@ -119,7 +119,7 @@ export function useContentMotion<T extends HTMLElement = HTMLDivElement>(changeK
     previous.current = changeKey;
     const node = scope.current;
     if (!changed || !node || reduced !== false) return;
-    gsap.fromTo(node,{ opacity:.76 },{ opacity:1,duration:duration.select,ease:gsapEase,overwrite:"auto",clearProps:"opacity" });
+        gsap.fromTo(node,{ opacity:.78,y:6,scale:.995 },{ opacity:1,y:0,scale:1,duration:duration.card,ease:gsapEase,overwrite:"auto",clearProps:"opacity,transform" });
   }, { scope, dependencies:[changeKey,reduced], revertOnUpdate:true });
   return scope;
 }

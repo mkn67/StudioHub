@@ -165,28 +165,6 @@ class AvailabilityService
         foreach (['payment_minutes', 'cancel_hours', 'change_hours', 'overtime_per_30m', 'open_hour', 'close_hour'] as $field) $policy[$field] = (int) $policy[$field];
         $policy['deposit_percent'] = (float) $policy['deposit_percent'];
 
-        // A reservation must fit entirely inside the Studio's daily operating window.
-        // Check every calendar day touched so a multi-day booking cannot cross a closed period.
-        $openAt = $policy['open_hour'] * 60;
-        $closeAt = $policy['close_hour'] * 60;
-        $day = $startDt->setTime(0, 0);
-        $lastDay = $endDt->format('H:i:s') === '00:00:00'
-            ? $endDt->modify('-1 second')->setTime(0, 0)
-            : $endDt->setTime(0, 0);
-        while ($day <= $lastDay) {
-            $dayStart = $day->getTimestamp();
-            $bookingStart = max($startDt->getTimestamp(), $dayStart);
-            $bookingEnd = min($endDt->getTimestamp(), $day->modify('+1 day')->getTimestamp());
-            $opensAt = $day->setTime(intdiv($openAt, 60), $openAt % 60)->getTimestamp();
-            $closesAt = $day->setTime(intdiv($closeAt, 60), $closeAt % 60)->getTimestamp();
-            if ($bookingStart < $opensAt || $bookingEnd > $closesAt) {
-                throw new ApiException(400, 'outside_operating_hours', 'Thời gian thuê phải nằm trong giờ hoạt động của Studio', [
-                    ['field' => 'start_time', 'code' => 'outside_operating_hours', 'message' => sprintf('Studio hoạt động từ %02d:00 đến %02d:00', $policy['open_hour'], $policy['close_hour'])],
-                ]);
-            }
-            $day = $day->modify('+1 day');
-        }
-
         // 4. Load & Validate Rate
         $rateStmt = $db->prepare("SELECT * FROM room_rates WHERE rate_id = ?");
         $rateStmt->execute([$rateId]);
@@ -195,6 +173,18 @@ class AvailabilityService
         if (!$rate || (int) $rate['room_id'] !== $roomId || $rate['status'] !== 'active') {
             throw new ApiException(400, 'invalid_rate', 'Bảng giá không hợp lệ hoặc không thuộc phòng này', [
                 ['field' => 'rate_id', 'code' => 'invalid_rate', 'message' => 'Rate does not belong to room or is not active']
+            ]);
+        }
+
+        // Day-or-longer rentals hold the room continuously, including closed hours.
+        // For them only the handover time must fall inside the operating window.
+        // Short rentals must start and finish within one daily opening window.
+        $opensAt = $startDt->setTime($policy['open_hour'], 0);
+        $closesAt = $startDt->setTime($policy['close_hour'], 0);
+        $isLongTerm = in_array($rate['rate_unit'], ['day', 'week', 'month'], true);
+        if ($startDt < $opensAt || $startDt >= $closesAt || (!$isLongTerm && $endDt > $closesAt)) {
+            throw new ApiException(400, 'outside_operating_hours', 'Thời gian thuê phải nằm trong giờ hoạt động của Studio', [
+                ['field' => 'start_time', 'code' => 'outside_operating_hours', 'message' => sprintf('Studio hoạt động từ %02d:00 đến %02d:00', $policy['open_hour'], $policy['close_hour'])],
             ]);
         }
 

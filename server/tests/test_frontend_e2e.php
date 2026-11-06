@@ -129,18 +129,18 @@ echo "\n--- [PHASE 4] Public Catalog ---\n";
 // 1. Space Types
 $stRes = curlReq("{$apiBaseUrl}/api/space-types");
 testAssert($stRes['status'] === 200, "GET /api/space-types returned 200");
-testAssert(count($stRes['json']['data'] ?? []) === 7, "Returned 7 space types for filter pills");
+testAssert(count($stRes['json']['data'] ?? []) === 9, "Returned 9 space types for filter pills");
 
 // 2. Amenities
 $amRes = curlReq("{$apiBaseUrl}/api/amenities");
 testAssert($amRes['status'] === 200, "GET /api/amenities returned 200");
-testAssert(count($amRes['json']['data'] ?? []) === 8, "Returned 8 amenities");
+testAssert(count($amRes['json']['data'] ?? []) === 10, "Returned 10 amenities");
 
 // 3. Rooms Listing with filters
 $roomsRes = curlReq("{$apiBaseUrl}/api/rooms");
 testAssert($roomsRes['status'] === 200, "GET /api/rooms returned 200");
 $items = $roomsRes['json']['data']['items'] ?? [];
-testAssert(count($items) === 4, "Returned 4 active rooms (Maintenance room excluded)");
+testAssert(count($items) === 6, "Returned 6 active rooms (Maintenance room excluded)");
 testAssert(isset($items[0]['display_rate']['unit_price']), "Room item includes display_rate");
 testAssert(isset($items[0]['primary_space_type']['name']), "Room item includes primary_space_type");
 

@@ -27,6 +27,12 @@ class RoomRepository
      *     min_price?: ?float,
      *     max_price?: ?float,
      *     min_area?: ?float,
+ *     min_capacity?: ?int,
+ *     district?: ?string,
+ *     amenity_id?: ?int,
+ *     available_from?: ?string,
+ *     available_to?: ?string,
+ *     sort?: string,
      *     page?: int,
      *     limit?: int
      * } $filters
@@ -60,6 +66,25 @@ class RoomRepository
         if (isset($filters['min_area']) && is_numeric($filters['min_area'])) {
             $where[] = 'r.area >= :min_area';
             $params['min_area'] = (float) $filters['min_area'];
+        }
+
+        if (isset($filters['min_capacity'])) {
+            $where[] = 'r.capacity >= :min_capacity';
+            $params['min_capacity'] = (int) $filters['min_capacity'];
+        }
+        if (!empty($filters['district'])) {
+            $where[] = 's.district LIKE :district';
+            $params['district'] = '%' . trim((string) $filters['district']) . '%';
+        }
+        if (isset($filters['amenity_id'])) {
+            $where[] = 'EXISTS (SELECT 1 FROM room_amenities ra_filter WHERE ra_filter.room_id = r.room_id AND ra_filter.amenity_id = :amenity_id)';
+            $params['amenity_id'] = (int) $filters['amenity_id'];
+        }
+        if (!empty($filters['available_from']) && !empty($filters['available_to'])) {
+            $busyTo = (new \DateTimeImmutable((string) $filters['available_to']))->modify('+' . max(0, (int) ($_ENV['BUFFER_MINUTES'] ?? 30)) . ' minutes')->format('Y-m-d H:i:s');
+            $where[] = "NOT EXISTS (SELECT 1 FROM bookings b_filter WHERE b_filter.room_id = r.room_id AND (b_filter.status IN ('confirmed','checked_in') OR (b_filter.status = 'pending' AND b_filter.expires_at > NOW())) AND b_filter.busy_start < :available_to AND b_filter.busy_end > :available_from)";
+            $params['available_to'] = $busyTo;
+            $params['available_from'] = (string) $filters['available_from'];
         }
 
         // Filter: Price (based on min active rate of the specified rate_unit)
@@ -116,6 +141,18 @@ class RoomRepository
         }
 
         // 2. Fetch page of room rows
+        $rateSort = "(SELECT MIN(rs.unit_price) FROM room_rates rs WHERE rs.room_id = r.room_id AND rs.rate_unit = :sort_rate_unit AND rs.status = 'active' AND rs.effective_from <= CURDATE() AND (rs.effective_to IS NULL OR rs.effective_to >= CURDATE()))";
+        $orderBy = match ($filters['sort'] ?? 'recommended') {
+            'price_asc' => "COALESCE($rateSort, 999999999999) ASC, r.room_id ASC",
+            'price_desc' => "$rateSort DESC, r.room_id ASC",
+            'area_desc' => 'r.area DESC, r.room_id ASC',
+            'capacity_desc' => 'r.capacity DESC, r.room_id ASC',
+            'newest' => 'r.created_at DESC, r.room_id DESC',
+            default => 'r.room_id ASC',
+        };
+        if (str_contains($orderBy, ':sort_rate_unit')) {
+            $params['sort_rate_unit'] = $rateUnit;
+        }
         $selectSql = "
             SELECT r.room_id,
                    r.studio_id,
@@ -133,7 +170,7 @@ class RoomRepository
             FROM rooms r
             JOIN studios s ON r.studio_id = s.studio_id
             WHERE {$whereClause}
-            ORDER BY r.room_id ASC
+            ORDER BY {$orderBy}
             LIMIT :limit OFFSET :offset
         ";
         $stmt = $this->pdo->prepare($selectSql);
@@ -157,7 +194,7 @@ class RoomRepository
 
         // 3. Batch fetch primary space type
         $primaryTypesStmt = $this->pdo->prepare("
-            SELECT rst.room_id, st.space_type_id, st.name
+            SELECT rst.room_id, st.space_type_id, st.name, st.category, st.description
             FROM room_space_types rst
             JOIN space_types st ON rst.space_type_id = st.space_type_id
             WHERE rst.room_id IN ({$inPlaceholders}) AND rst.is_primary = 1
@@ -168,6 +205,8 @@ class RoomRepository
             $primaryTypeMap[(int) $row['room_id']] = [
                 'space_type_id' => (int) $row['space_type_id'],
                 'name'          => $row['name'],
+                'category'      => $row['category'],
+                'description'   => $row['description'],
             ];
         }
 
@@ -206,23 +245,39 @@ class RoomRepository
             ];
         }
 
-        // 6. Batch fetch display rate for requested rate_unit
+        $reviewsStmt = $this->pdo->prepare("SELECT room_id, COUNT(*) AS review_count, AVG(rating) AS average_rating FROM room_reviews WHERE status = 'published' AND room_id IN ({$inPlaceholders}) GROUP BY room_id");
+        $reviewsStmt->execute($roomIds);
+        $reviewSummaryMap = [];
+        while ($row = $reviewsStmt->fetch(PDO::FETCH_ASSOC)) {
+            $reviewSummaryMap[(int) $row['room_id']] = [
+                'review_count' => (int) $row['review_count'],
+                'average_rating' => round((float) $row['average_rating'], 1),
+            ];
+        }
+
+        // 6. Prefer the requested unit, then show a real active package for rooms
+        // that only offer another unit (for example fixed livestream sessions).
         $rateStmt = $this->pdo->prepare("
-            SELECT room_id, rate_unit, MIN(unit_price) as unit_price
+            SELECT room_id, rate_unit, unit_price, unit_minutes
             FROM room_rates
             WHERE room_id IN ({$inPlaceholders})
               AND status = 'active'
-              AND rate_unit = ?
               AND effective_from <= CURDATE()
               AND (effective_to IS NULL OR effective_to >= CURDATE())
-            GROUP BY room_id, rate_unit
+            ORDER BY room_id, CASE WHEN rate_unit = ? THEN 0 ELSE 1 END,
+                     unit_price ASC, unit_minutes ASC
         ");
         $rateStmt->execute([...$roomIds, $rateUnit]);
         $displayRateMap = [];
         while ($row = $rateStmt->fetch(PDO::FETCH_ASSOC)) {
-            $displayRateMap[(int) $row['room_id']] = [
+            $displayRoomId = (int) $row['room_id'];
+            if (isset($displayRateMap[$displayRoomId])) {
+                continue;
+            }
+            $displayRateMap[$displayRoomId] = [
                 'rate_unit'  => $row['rate_unit'],
                 'unit_price' => (int) round((float) $row['unit_price']),
+                'unit_minutes' => (int) $row['unit_minutes'],
             ];
         }
 
@@ -251,6 +306,7 @@ class RoomRepository
                 'primary_space_type' => $primaryTypeMap[$roomId] ?? null,
                 'display_rate'       => $displayRateMap[$roomId] ?? null,
                 'amenities'          => $amenitiesMap[$roomId] ?? [],
+                'review_summary'     => $reviewSummaryMap[$roomId] ?? ['review_count' => 0, 'average_rating' => 0.0],
             ];
         }
 
@@ -277,9 +333,13 @@ class RoomRepository
                    s.district as studio_district,
                    s.city as studio_city,
                    s.phone as studio_phone,
+                   u.full_name as host_name,
+                   u.email as host_email,
+                   u.phone as host_phone,
                    s.status as studio_status
             FROM rooms r
             JOIN studios s ON r.studio_id = s.studio_id
+            JOIN users u ON s.host_id = u.user_id
             WHERE r.room_id = :room_id
               AND r.status = 'active'
               AND s.status = 'active'
@@ -293,7 +353,7 @@ class RoomRepository
 
         // Space types
         $stStmt = $this->pdo->prepare("
-            SELECT st.space_type_id, st.name, rst.is_primary
+            SELECT st.space_type_id, st.name, st.category, st.description, rst.is_primary
             FROM room_space_types rst
             JOIN space_types st ON rst.space_type_id = st.space_type_id
             WHERE rst.room_id = :room_id
@@ -303,6 +363,8 @@ class RoomRepository
         $spaceTypes = array_map(fn($st) => [
             'space_type_id' => (int) $st['space_type_id'],
             'name'          => $st['name'],
+            'category'      => $st['category'],
+            'description'   => $st['description'],
             'is_primary'    => (bool) $st['is_primary'],
         ], $stStmt->fetchAll(PDO::FETCH_ASSOC));
 
@@ -361,6 +423,9 @@ class RoomRepository
                 'district'    => $room['studio_district'],
                 'city'        => $room['studio_city'],
                 'phone'       => $room['studio_phone'],
+                'host_name'   => $room['host_name'],
+                'host_email'  => $room['host_email'],
+                'host_phone'  => $room['host_phone'] ?: $room['studio_phone'],
             ],
             'space_types'      => $spaceTypes,
             'amenities'        => $amenities,
@@ -398,7 +463,7 @@ class RoomRepository
         }
 
         $stStmt = $this->pdo->prepare("
-            SELECT st.space_type_id, st.name, rst.is_primary
+            SELECT st.space_type_id, st.name, st.category, rst.is_primary
             FROM room_space_types rst
             JOIN space_types st ON rst.space_type_id = st.space_type_id
             WHERE rst.room_id = :room_id
@@ -408,6 +473,7 @@ class RoomRepository
         $spaceTypes = array_map(fn($st) => [
             'space_type_id' => (int) $st['space_type_id'],
             'name'          => $st['name'],
+            'category'      => $st['category'],
             'is_primary'    => (bool) $st['is_primary'],
         ], $stStmt->fetchAll(PDO::FETCH_ASSOC));
 

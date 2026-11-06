@@ -30,6 +30,7 @@ use App\Modules\Shared\RoleMiddleware;
 use App\Core\HealthController;
 use App\Modules\Auth\AuthController;
 use App\Modules\Rooms\RoomController;
+use App\Modules\Rooms\ReviewController;
 use App\Modules\Equipment\EquipmentController;
 use App\Modules\Catalog\LookupController;
 use App\Modules\Studios\StudioController;
@@ -80,6 +81,7 @@ $router->get('/api/rooms', [RoomController::class, 'index']);
 $router->get('/api/rooms/{id:\d+}', [RoomController::class, 'show']);
 $router->get('/api/rooms/{id:\d+}/calendar', [RoomController::class, 'calendar']);
 $router->get('/api/rooms/{id:\d+}/rates', [RoomController::class, 'rates']);
+$router->get('/api/rooms/{id:\d+}/reviews', [ReviewController::class, 'listForRoom']);
 $router->get('/api/equipments', [EquipmentController::class, 'index']);
 $router->get('/api/space-types', [LookupController::class, 'spaceTypes']);
 $router->get('/api/amenities', [LookupController::class, 'amenities']);
@@ -163,6 +165,8 @@ $router->post('/api/bookings', [BookingController::class, 'create'], [new AuthMi
 // --- Phase 7: Booking Lifecycle & Payments Routes ---
 $router->get('/api/bookings', [BookingController::class, 'index'], [new AuthMiddleware()]);
 $router->get('/api/bookings/{id:\d+}', [BookingController::class, 'show'], [new AuthMiddleware()]);
+$router->get('/api/bookings/{id:\d+}/review', [ReviewController::class, 'showForBooking'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
+$router->post('/api/bookings/{id:\d+}/review', [ReviewController::class, 'createForBooking'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
 $router->patch('/api/bookings/{id:\d+}/status', [BookingController::class, 'updateStatus'], $hostMiddlewares);
 $router->post('/api/bookings/{id:\d+}/cancel', [BookingController::class, 'cancel'], [new AuthMiddleware(), new RoleMiddleware('customer')]);
 $router->post('/api/bookings/{id:\d+}/payments', [BookingController::class, 'pay'], [new AuthMiddleware(), new RoleMiddleware('customer')]);

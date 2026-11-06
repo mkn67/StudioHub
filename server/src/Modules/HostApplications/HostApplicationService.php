@@ -22,8 +22,14 @@ class HostApplicationService
         $studioName = trim((string) ($data['studio_name'] ?? ''));
         $address = trim((string) ($data['address'] ?? ''));
         $description = trim((string) ($data['description'] ?? ''));
-        if ($studioName === '' || $this->textLength($studioName) > 150 || $address === '' || $this->textLength($address) > 255 || $description === '') {
-            throw new ApiException(400, 'validation_failed', 'Tên Studio, địa chỉ và mô tả là bắt buộc; tên/địa chỉ vượt giới hạn nếu có');
+        $contactPhone = trim((string) ($data['contact_phone'] ?? ''));
+        $website = trim((string) ($data['website'] ?? ''));
+        $studioType = trim((string) ($data['studio_type'] ?? ''));
+        $roomCount = filter_var($data['expected_room_count'] ?? null, FILTER_VALIDATE_INT);
+        $legalName = trim((string) ($data['legal_name'] ?? ''));
+        $taxId = trim((string) ($data['tax_id'] ?? ''));
+        if ($studioName === '' || $this->textLength($studioName) > 150 || $address === '' || $this->textLength($address) > 255 || $description === '' || $this->textLength($description) > 10000 || $contactPhone === '' || !preg_match('/^[0-9+() .-]{8,20}$/', $contactPhone) || ($website !== '' && (filter_var($website, FILTER_VALIDATE_URL) === false || $this->textLength($website) > 255)) || $studioType === '' || $this->textLength($studioType) > 100 || $roomCount === false || $roomCount < 1 || $roomCount > 500 || $this->textLength($legalName) > 180 || $this->textLength($taxId) > 30) {
+            throw new ApiException(400, 'validation_failed', 'Vui lòng kiểm tra tên, địa chỉ, mô tả, số điện thoại liên hệ, loại Studio và số phòng dự kiến');
         }
 
         $this->pdo->beginTransaction();
@@ -39,12 +45,12 @@ class HostApplicationService
             if ($existing->fetchColumn()) {
                 throw new ApiException(409, 'application_already_exists', 'Bạn đã có hồ sơ đang chờ hoặc đã được duyệt');
             }
-            $insert = $this->pdo->prepare("INSERT INTO host_applications (user_id, studio_name, address, description, status) VALUES (?, ?, ?, ?, 'pending')");
-            $insert->execute([$userId, $studioName, $address, $description]);
+            $insert = $this->pdo->prepare("INSERT INTO host_applications (user_id, studio_name, address, description, contact_phone, website, studio_type, expected_room_count, legal_name, tax_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
+            $insert->execute([$userId, $studioName, $address, $description, $contactPhone, $website !== '' ? $website : null, $studioType, $roomCount, $legalName !== '' ? $legalName : null, $taxId !== '' ? $taxId : null]);
             $id = (int) $this->pdo->lastInsertId();
             $this->audit($userId, 'host_application_submitted', $id, ['studio_name' => $studioName]);
             $this->pdo->commit();
-            return ['application_id' => $id, 'user_id' => $userId, 'studio_name' => $studioName, 'address' => $address, 'description' => $description, 'status' => 'pending'];
+            return ['application_id' => $id, 'user_id' => $userId, 'studio_name' => $studioName, 'address' => $address, 'description' => $description, 'contact_phone' => $contactPhone, 'website' => $website !== '' ? $website : null, 'studio_type' => $studioType, 'expected_room_count' => $roomCount, 'legal_name' => $legalName !== '' ? $legalName : null, 'tax_id' => $taxId !== '' ? $taxId : null, 'status' => 'pending'];
         } catch (\Throwable $error) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
@@ -89,7 +95,7 @@ class HostApplicationService
 
     public function currentForUser(int $userId): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT application_id, studio_name, address, description, status, reason, created_at, reviewed_at FROM host_applications WHERE user_id = ? ORDER BY application_id DESC LIMIT 1');
+        $stmt = $this->pdo->prepare('SELECT application_id, studio_name, address, description, contact_phone, website, studio_type, expected_room_count, legal_name, tax_id, status, reason, created_at, reviewed_at FROM host_applications WHERE user_id = ? ORDER BY application_id DESC LIMIT 1');
         $stmt->execute([$userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }

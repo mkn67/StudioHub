@@ -1,6 +1,6 @@
 # Chạy StudioHub bằng Docker Compose
 
-Yêu cầu Docker Desktop đang chạy Linux containers, Docker Compose hiện đại (hỗ trợ `env_file.required`, Compose ≥2.24) và Node.js để tạo cấu hình lần đầu. Chạy tại thư mục gốc repo:
+Yêu cầu Docker Desktop với Docker Compose hiện đại (hỗ trợ `env_file.required`, Compose ≥2.24), hoặc Podman cùng `podman-compose`, và Node.js để tạo cấu hình lần đầu. Chạy tại thư mục gốc repo:
 
 ```powershell
 node scripts/setup-docker.mjs
@@ -8,6 +8,8 @@ docker compose config --quiet
 docker compose up -d --build
 docker compose ps -a
 ```
+
+Nếu dùng Podman, thay `docker compose` bằng `podman-compose` trong các lệnh khởi động và kiểm tra. Ví dụ: `podman-compose up -d --build` rồi `podman-compose ps`.
 
 Script tạo `.env` gốc với JWT secret và bridge secret ngẫu nhiên, không ghi đè file đã tồn tại và không in secret. Không dùng `docker compose config` không có `--quiet` khi chia sẻ log vì output có thể chứa secret đã nội suy.
 
@@ -22,18 +24,21 @@ Các cổng chỉ bind vào loopback cho môi trường local. Đổi cổng tro
 
 ## Thứ tự khởi động và dữ liệu
 
-- `api-deps` cài dependency bằng Composer từ lockfile vào volume Linux `api_vendor`. Source `server/` được mount chỉ đọc; uploads dùng volume riêng.
+- `api-deps` cài dependency bằng Composer từ lockfile vào volume Linux `api_vendor`. Source `server/` được mount chỉ đọc; uploads công khai và tài liệu riêng tư dùng hai volume riêng (`api_uploads`, `api_private`).
 - `db` phải thực hiện được `SELECT 1` bằng tài khoản ứng dụng trước khi tiếp tục.
 - `db-init` chạy `server/bin/init-db.php`, chỉ gọi migrator/seed hiện có nếu database **chưa có bảng nào**. Nếu đã có bảng, giữ nguyên dữ liệu và bỏ qua tự migrate/seed, kể cả khi schema chưa đầy đủ. Không có `--fresh`, drop hoặc truncate trong Compose.
+- Với database đã có dữ liệu, sau khi kiểm tra migration và sao lưu, chạy `docker compose --profile maintenance run --rm db-upgrade` để áp dụng các SQL migration còn thiếu. Service này không tạo lại schema gốc hoặc chạy seed, và được khóa để tránh hai tiến trình migration cùng chạy. MySQL DDL có thể tự commit từng câu lệnh; nếu migration thất bại giữa chừng, kiểm tra trạng thái schema trước khi chạy lại.
 - `api` đợi khởi tạo xong; healthcheck xác minh PHP HTTP và MySQL qua `/api/health`. `cron` đợi API khỏe rồi xử lý đơn hết hạn mỗi 60 giây.
 - `helpdesk-init` tạo bảng SQLite bằng migrator hiện có dưới user `www-data`, dùng volume `helpdesk_data`; sau đó `helpdesk-php` mới chạy HTTP.
-- `client` dùng production Dockerfile, không bind mount `node_modules`/`.next` Windows; đợi API và Helpdesk healthy.
-- Healthcheck của `helpdesk-php` được kế thừa từ `helpdesk-php/Dockerfile` và kiểm tra `/health`; không cần khai báo lặp lại trong Compose.
+- `client` dùng production Dockerfile, không bind mount `node_modules`/`.next` Windows. Nó khởi động độc lập để Podman Compose không cố chạy lại các job khởi tạo đã hoàn tất; API được gọi sau khi trang tải.
+- `helpdesk-php` có healthcheck khai báo trực tiếp trong Compose để cả Docker Compose và Podman Compose đều thấy trạng thái healthy trước khi khởi động client. Image vẫn có healthcheck riêng khi chạy độc lập.
 - Các service khởi tạo kết thúc ở trạng thái `Exited (0)` là bình thường; chúng không phải web server.
 
 Tên project mặc định `studiohub` giữ lại volume MySQL hiện có `studiohub_mysqldata`. Credential MySQL mặc định giữ tương thích cấu hình cũ, chỉ dành cho local. Volume đã có dữ liệu vẫn dùng mật khẩu cũ; đổi mật khẩu trong `.env` không tự đổi mật khẩu bên trong MySQL.
 
 Uploads có sẵn trong `server/public/uploads` không được tự sao chép sang volume mới. Nếu cần chúng trong container, sao chép có chọn lọc sau khi kiểm tra dữ liệu; Compose không di chuyển/xóa file gốc. Những sửa đổi source PHP trên host vẫn được container nhìn thấy qua mount chỉ đọc.
+
+Tệp dự án, giấy tờ xác minh và PDF hợp đồng nằm ở `/var/www/html/storage` trong volume `api_private`, ngoài Apache DocumentRoot. Khi sao lưu/khôi phục, giữ volume này cùng với MySQL vì database chỉ lưu khóa tệp. PHP nhận multipart tối đa 8 MiB mỗi file (ảnh nghiệp vụ vẫn giới hạn 5 MiB); file dự án lớn hơn có thể gửi qua `PUT`.
 
 ## Helpdesk và gateway AI
 
@@ -63,6 +68,10 @@ Nếu Composer thay đổi dependency trong lockfile, chạy lại `docker compo
 Không dùng `docker compose down -v` để xử lý lỗi khởi động vì lệnh đó xóa volume dữ liệu. Kiểm tra kết quả thực tế của lần triển khai trong phần ghi nhận bên dưới.
 
 ## Ghi nhận xác minh
+
+Ngày 06/11/2026, `podman-compose up -d client` đã chạy xong sau khi khai báo healthcheck Helpdesk trực tiếp trong Compose. Trước đó client kẹt ở `Created`: image Helpdesk trên máy không có healthcheck, nên Podman Compose chờ `service_healthy` mãi. Lần kiểm tra đầu còn phát hiện `$body` trong lệnh PHP bị Compose nội suy thành chuỗi rỗng; lệnh hiện tại không dùng biến shell/PHP để tránh lỗi này. Kết quả sau sửa: `client` đang chạy, Helpdesk/API/MySQL `healthy`; HTTP trang chủ, `/api/health` và Helpdesk `/health` đều trả 200. User `www-data` trong API ghi được vào volume uploads và private storage. Chưa xác minh toàn bộ luồng booking/thanh toán hoặc chạy `db-upgrade` trên database hiện có.
+
+Phần dưới là kết quả của lần chạy Compose trước các thay đổi container ngày 06/11/2026.
 
 Compose đã qua `docker compose config --quiet`. Kiểm thử frontend/bridge: 136 test đạt, typecheck và lint đạt. Các image API, Helpdesk và client đã build thành công. Client dùng Node 24 Debian để khớp gói SWC Linux trong lockfile; không sửa dependency để chạy Alpine.
 

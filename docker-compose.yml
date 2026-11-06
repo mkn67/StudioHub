@@ -21,6 +21,7 @@ x-api: &api
     - ./server:/var/www/html:ro
     - api_vendor:/var/www/html/vendor
     - api_uploads:/var/www/html/public/uploads
+    - api_private:/var/www/html/storage
 
 x-helpdesk: &helpdesk
   image: studiohub-helpdesk:local
@@ -76,7 +77,8 @@ services:
       - -ec
       - |
         composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-        chown -R www-data:www-data public/uploads
+        mkdir -p public/uploads storage
+        chown -R www-data:www-data public/uploads storage
 
   # Bootstrap only an empty database; never reset or reseed existing tables.
   db-init:
@@ -88,6 +90,18 @@ services:
       api-deps:
         condition: service_completed_successfully
     command: [php, bin/init-db.php]
+
+  # Apply additive SQL migrations to an existing database only when requested.
+  db-upgrade:
+    <<: *api
+    profiles: [maintenance]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      api-deps:
+        condition: service_completed_successfully
+    command: [php, bin/migrate-sql.php, --apply]
 
   api:
     <<: *api
@@ -141,6 +155,12 @@ services:
         condition: service_completed_successfully
       api:
         condition: service_healthy
+    healthcheck:
+      test: [CMD, php, -r, 'exit((json_decode((string) @file_get_contents("http://127.0.0.1/health"), true)["status"] ?? "") === "success" ? 0 : 1);']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   client:
     image: studiohub-client:local
@@ -162,15 +182,13 @@ services:
       HELPDESK_HTTP_HOSTS: helpdesk-php
       HELPDESK_BRIDGE_SECRET: ${HELPDESK_BRIDGE_SECRET:?Run node scripts/setup-docker.mjs first}
       HELPDESK_FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:${CLIENT_PORT:-3000}}
-    depends_on:
-      api:
-        condition: service_healthy
-      helpdesk-php:
-        condition: service_healthy
+    # The browser-facing app can start independently; API requests occur after
+    # page load. Avoid Podman Compose restarting completed init jobs transitively.
 
 volumes:
   # Preserve the original studiohub_mysqldata volume.
   mysqldata:
   api_vendor:
   api_uploads:
+  api_private:
   helpdesk_data:

@@ -23,11 +23,20 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 
 # Configure Apache to allow .htaccess overrides in DocumentRoot
 RUN echo '<Directory /var/www/html/public>\n\
-    Options Indexes FollowSymLinks\n\
+    Options -Indexes +FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/override.conf \
     && a2enconf override
+
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+    && printf '%s\n' \
+        'date.timezone=Asia/Ho_Chi_Minh' \
+        'display_errors=Off' \
+        'log_errors=On' \
+        'upload_max_filesize=8M' \
+        'post_max_size=10M' \
+        > "$PHP_INI_DIR/conf.d/studiohub.ini"
 
 WORKDIR /var/www/html
 

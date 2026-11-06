@@ -75,7 +75,10 @@ class StudioRepository
             $data['phone'],
             $data['status'] ?? 'active',
         ]);
-        return (int) $this->pdo->lastInsertId();
+        $studioId = (int) $this->pdo->lastInsertId();
+        $types = $this->pdo->prepare("INSERT INTO host_room_types (studio_id, name, description, status) SELECT ?, name, description, 'active' FROM space_types WHERE category <> 'Other' ORDER BY space_type_id");
+        $types->execute([$studioId]);
+        return $studioId;
     }
 
     /**

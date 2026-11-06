@@ -100,4 +100,4 @@ No verified Studio-specific deposit ratio, cancellation tier, reschedule deadlin
 
 There is no approved public help contact, ticket endpoint or general support URL in the sources. Existing /support is a demo account-restoration page, not a general ticket service. Do not promise a sent escalation. Booking/payment/refund/restriction queries require future scoped live APIs, not static FAQ.
 
-The demo discovery wording mentions capacity/budget guidance; the PHP room search currently accepts keyword, space_type_id, min_area, price/unit and pagination, with no capacity or date availability filter. Preserve conceptual product guidance while documenting this adapter gap; no frontend edits are required here.
+The demo discovery wording mentions capacity/budget guidance. The PHP room search now supports capacity, district, amenity and date/time room-availability filters in addition to keyword, space type, area, price and pagination. A match means no conflicting active room booking; it is not a final quote or equipment-stock guarantee. Preserve that distinction in helpdesk responses.

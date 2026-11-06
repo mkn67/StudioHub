@@ -17,7 +17,10 @@ export function RestRoomCreate({ studioId, onClose, onSaved }: { studioId: strin
   return <><HostResourceState resource={types}/><HostResourceState resource={spaces}/><HostResourceState resource={amenities}/>{types.data && spaces.data && amenities.data && <HostEditor title="Thêm phòng vật lý" path="/api/rooms" extra={{ studio_id: Number(studioId) }} fields={[
     { name: "name", label: "Tên phòng" }, { name: "room_type_id", label: "Loại phòng của Studio", options: types.data.filter(t => t.status === "active").map(t => ({ value: text(t.room_type_id), label: text(t.name) })) },
     { name: "space_type_id", label: "Loại không gian công khai", options: spaces.data.map(t => ({ value: text(t.space_type_id), label: text(t.name) })) },
-    { name: "area", label: "Diện tích", type: "number", step: "any", min: 1 }, { name: "capacity", label: "Sức chứa", type: "number", min: 1 }, { name: "description", label: "Mô tả", required: false },
+    { name: "area", label: "Diện tích (m²)", type: "number", step: "any", min: 1 }, { name: "capacity", label: "Sức chứa (người)", type: "number", min: 1 },
+    { name: "ceiling_height", label: "Chiều cao trần (m)", type: "number", step: "any", min: 0, required: false, clearable: true },
+    { name: "soundproof_level", label: "Cách âm / xử lý âm học (mặc định: Chuẩn Studio)", required: false, clearable: true }, { name: "power_specs", label: "Thông số nguồn điện", required: false, clearable: true },
+    { name: "description", label: "Mô tả phòng", required: false, clearable: true },
   ]} mapBody={(body, data) => { const { space_type_id, ...rest } = body; return { ...rest, room_type_id: Number(rest.room_type_id), space_type_ids: [Number(space_type_id)], amenity_ids: data.getAll("amenity_ids").map(Number) }; }} onClose={onClose} onSaved={onSaved}><fieldset><legend>Tiện ích có sẵn</legend>{amenities.data.map(item => <label className="host-checkbox" key={text(item.amenity_id)}><input type="checkbox" name="amenity_ids" value={text(item.amenity_id)}/>{text(item.name)}</label>)}</fieldset></HostEditor>}</>;
 }
 export function RestHostPolicies() {

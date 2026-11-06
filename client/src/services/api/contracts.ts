@@ -21,8 +21,10 @@ export type ApiRoom = {
     room_id: number;
     studio_id: number;
     name: string;
+    status?: string;
     description: string | null;
     area: number;
+    ceiling_height?: number | null;
     capacity: number;
     rules?: string | null;
     thumbnail_url: string | null;
@@ -31,17 +33,26 @@ export type ApiRoom = {
         address: string;
         district: string;
         city: string;
+        phone?: string | null;
+        host_name?: string | null;
+        host_email?: string | null;
+        host_phone?: string | null;
     };
     images?: {
         image_url: string;
     }[];
     rates?: Rate[];
     amenities?: { amenity_id: number; name: string }[];
-    space_types?: { space_type_id: number; name: string }[];
+    soundproof_level?: string | null;
+    power_specs?: string | null;
+    space_types?: { space_type_id: number; name: string; category?: string | null; description?: string | null }[];
+    primary_space_type?: { space_type_id: number; name: string; category?: string | null; description?: string | null } | null;
     display_rate?: {
         unit_price: number;
         rate_unit: string;
+        unit_minutes?: number;
     } | null;
+    review_summary?: { average_rating: number; review_count: number };
 };
 export type EquipmentItem = {
     equipment_id: number;
@@ -83,10 +94,22 @@ export type Quote = {
     end_time: string;
     busy_end: string;
     pricing: {
+        rate_unit?: string;
+        rental_units?: number;
+        room_unit_price?: number;
         total_amount: number;
         deposit_amount: number;
         room_amount: number;
         equipment_amount: number;
+        equipments?: {
+            equipment_id: number;
+            name: string;
+            quantity: number;
+            pricing_unit: string;
+            unit_price: number;
+            equipment_hours?: number | null;
+            subtotal: number;
+        }[];
     };
 };
 export type CalendarData = {
@@ -96,7 +119,7 @@ export type CalendarData = {
     }[];
 };
 export const unitLabels: Record<string, string> = { hour: "giờ", half_day: "nửa ngày", day: "ngày", week: "tuần", month: "tháng", session: "buổi" };
-export const bookingLabels: Record<string, string> = { pending: "Chờ xác nhận / thanh toán", confirmed: "Đã xác nhận", checked_in: "Đã nhận phòng", completed: "Hoàn thành", cancelled: "Đã hủy", rejected: "Đã từ chối", expired: "Hết hạn" };
+export const bookingLabels: Record<string, string> = { pending: "Đang xử lý", confirmed: "Đã xác nhận", checked_in: "Đã nhận phòng", completed: "Hoàn thành", cancelled: "Đã hủy", rejected: "Đã từ chối", expired: "Hết hạn" };
 export function vnTimestamp(value: string) {
     const normalized = value.replace(" ", "T");
     return new Date(/(?:Z|[+-]\d\d:\d\d)$/.test(normalized) ? normalized : normalized + "+07:00");

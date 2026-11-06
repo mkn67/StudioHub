@@ -9,7 +9,11 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   const { path } = await context.params;
   const endpoint = path.join("/");
   if (!allowed.has(`${request.method} ${endpoint}`)) return fail(404, "Không tìm thấy API.");
-  if (request.method !== "GET" && request.headers.get("origin") !== (process.env.APP_ORIGIN || request.nextUrl.origin)) return fail(403, "Nguồn yêu cầu không hợp lệ.");
+  if (request.method !== "GET") {
+    const configuredOrigin = process.env.APP_ORIGIN?.trim().replace(/\/+$/, "");
+    const expectedOrigin = configuredOrigin || (process.env.NODE_ENV === "production" ? "" : request.nextUrl.origin);
+    if (!expectedOrigin || request.headers.get("origin") !== expectedOrigin) return fail(403, "Nguồn yêu cầu không hợp lệ.");
+  }
   const configured = process.env.BUSINESS_API_URL || "http://127.0.0.1:8000";
   let upstream: URL;
   try {
@@ -35,20 +39,35 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     }
     body = Buffer.concat(chunks).toString("utf8");
   }
+  let result: Response;
   try {
-    const result = await fetch(upstream, { method: request.method, headers, body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(20000) });
-    const payload = await result.json();
-    let issued: string | undefined;
-    if (["auth/login", "auth/register"].includes(endpoint) && result.ok) {
-      issued = payload.data?.token;
-      if (typeof issued !== "string" || issued.length > 4096) return fail(502, "Phản hồi xác thực không hợp lệ.");
-      delete payload.data.token;
-    }
-    const response = NextResponse.json(payload, { status: result.status, headers: { "Cache-Control": "no-store" } });
-    if (issued) response.cookies.set("studiohub_auth", issued, { httpOnly: true, secure: request.nextUrl.protocol === "https:", sameSite: "lax", path: "/api", maxAge: 7200 });
-    if (result.status === 401 || (endpoint === "auth/logout" && result.ok)) response.cookies.set("studiohub_auth", "", { httpOnly: true, sameSite: "lax", path: "/api", maxAge: 0 });
-    return response;
-  } catch { return fail(503, "Không kết nối được máy chủ. Vui lòng thử lại."); }
+    result = await fetch(upstream, { method: request.method, headers, body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(20000) });
+  } catch {
+    return fail(503, "Không kết nối được máy chủ. Vui lòng thử lại.");
+  }
+
+  let payload: unknown;
+  try {
+    payload = await result.json();
+  } catch {
+    return fail(502, "Máy chủ API trả về phản hồi không hợp lệ.");
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return fail(502, "Máy chủ API trả về phản hồi không hợp lệ.");
+
+  const responsePayload = payload as Record<string, unknown>;
+  const data = responsePayload.data && typeof responsePayload.data === "object" && !Array.isArray(responsePayload.data)
+    ? responsePayload.data as Record<string, unknown>
+    : undefined;
+  let issued: string | undefined;
+  if (["auth/login", "auth/register"].includes(endpoint) && result.ok) {
+    issued = typeof data?.token === "string" ? data.token : undefined;
+    if (!issued || issued.length > 4096) return fail(502, "Phản hồi xác thực không hợp lệ.");
+    delete data?.token;
+  }
+  const response = NextResponse.json(responsePayload, { status: result.status, headers: { "Cache-Control": "no-store" } });
+  if (issued) response.cookies.set("studiohub_auth", issued, { httpOnly: true, secure: process.env.NODE_ENV === "production" || request.nextUrl.protocol === "https:", sameSite: "lax", path: "/api", maxAge: 7200 });
+  if (result.status === 401 || (endpoint === "auth/logout" && result.ok)) response.cookies.set("studiohub_auth", "", { httpOnly: true, secure: process.env.NODE_ENV === "production" || request.nextUrl.protocol === "https:", sameSite: "lax", path: "/api", maxAge: 0 });
+  return response;
 }
 export const GET = handle;
 export const POST = handle;

@@ -553,6 +553,12 @@ paths:
         - {in: query, name: min_price, schema: {type: integer, minimum: 0}}
         - {in: query, name: max_price, schema: {type: integer, minimum: 0}}
         - {in: query, name: min_area, schema: {type: number, minimum: 0}}
+        - {in: query, name: min_capacity, schema: {type: integer, minimum: 1}}
+        - {in: query, name: district, schema: {type: string, maxLength: 100}}
+        - {in: query, name: amenity_id, schema: {type: integer, minimum: 1}}
+        - {in: query, name: available_from, schema: {type: string, pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$', description: Local Asia/Ho_Chi_Minh time}}
+        - {in: query, name: available_to, schema: {type: string, pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$', description: Local Asia/Ho_Chi_Minh time, maximum 24 hours after available_from}}
+        - {in: query, name: sort, schema: {type: string, enum: [recommended, price_asc, price_desc, area_desc, capacity_desc, newest], default: recommended}}
         - {in: query, name: page, schema: {type: integer, minimum: 1, default: 1}}
         - {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 50, default: 12}}
       responses:
@@ -613,6 +619,12 @@ paths:
         '201': {$ref: '#/components/responses/Success'}
         '400': {$ref: '#/components/responses/Error'}
         '403': {$ref: '#/components/responses/Error'}
+  /api/rooms/{id}/reviews:
+    get:
+      tags: [Catalog]
+      summary: List published reviews and aggregate rating for a room
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '404': {$ref: '#/components/responses/Error'}}
   /api/rooms/{id}/rates/{rate_id}:
     patch:
       tags: [Host]
@@ -756,6 +768,29 @@ paths:
       summary: Get booking detail visible to current customer or host
       parameters: [{$ref: '#/components/parameters/Id'}]
       responses: {'200': {$ref: '#/components/responses/Success'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/bookings/{id}/review:
+    get:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: Get the current customer's review for a booking
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
+    post:
+      tags: [Booking]
+      security: [{bearerAuth: []}]
+      summary: Review a completed booking once
+      parameters: [{$ref: '#/components/parameters/Id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: {type: integer, minimum: 1, maximum: 5}
+                review_text: {type: string, maxLength: 1200}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '400': {$ref: '#/components/responses/Error'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
   /api/bookings/{id}/status:
     patch:
       tags: [Booking]

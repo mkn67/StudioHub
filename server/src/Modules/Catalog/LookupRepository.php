@@ -19,12 +19,12 @@ class LookupRepository
     /**
      * Get all space types.
      *
-     * @return array<int, array{space_type_id: int, name: string, description: ?string}>
+     * @return array<int, array{space_type_id: int, name: string, description: ?string, category: ?string}>
      */
     public function getSpaceTypes(): array
     {
         $stmt = $this->pdo->query('
-            SELECT space_type_id, name, description
+            SELECT space_type_id, name, description, category
             FROM space_types
             ORDER BY space_type_id ASC
         ');

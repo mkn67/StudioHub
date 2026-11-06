@@ -222,7 +222,28 @@ CREATE TABLE IF NOT EXISTS bookings (
     INDEX idx_bookings_customer (customer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 14. Bảng booking_details: Chi tiết thiết bị thuê kèm trong đơn
+-- 14. Room reviews: one public rating per completed customer booking
+CREATE TABLE IF NOT EXISTS room_reviews (
+    review_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    booking_id INT NOT NULL,
+    room_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    rating TINYINT UNSIGNED NOT NULL,
+    review_text VARCHAR(1200) NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'published',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (review_id),
+    UNIQUE KEY uq_room_reviews_booking (booking_id),
+    KEY idx_room_reviews_public (room_id, status, created_at),
+    CONSTRAINT chk_room_reviews_rating CHECK (rating BETWEEN 1 AND 5),
+    CONSTRAINT chk_room_reviews_status CHECK (status IN ('published', 'hidden')),
+    CONSTRAINT fk_room_reviews_booking FOREIGN KEY (booking_id) REFERENCES bookings (booking_id) ON DELETE CASCADE,
+    CONSTRAINT fk_room_reviews_room FOREIGN KEY (room_id) REFERENCES rooms (room_id) ON DELETE CASCADE,
+    CONSTRAINT fk_room_reviews_customer FOREIGN KEY (customer_id) REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 15. Bảng booking_details: Chi tiết thiết bị thuê kèm trong đơn
 CREATE TABLE IF NOT EXISTS booking_details (
     detail_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
@@ -241,7 +262,7 @@ CREATE TABLE IF NOT EXISTS booking_details (
     INDEX idx_booking_details_eq_bk (equipment_id, booking_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 15. Bảng payments: Giao dịch thanh toán cọc/hoàn tất đơn
+-- 16. Bảng payments: Giao dịch thanh toán cọc/hoàn tất đơn
 CREATE TABLE IF NOT EXISTS payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
@@ -260,7 +281,7 @@ CREATE TABLE IF NOT EXISTS payments (
     INDEX idx_payments_lookup (booking_id, payment_type, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 16. Bảng audit_logs: Nhật ký hoạt động và kiểm toán hệ thống
+-- 17. Bảng audit_logs: Nhật ký hoạt động và kiểm toán hệ thống
 CREATE TABLE IF NOT EXISTS audit_logs (
     log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NULL,

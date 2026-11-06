@@ -98,7 +98,8 @@ export default function Application() {
     else if (["login", "register"].includes(segments[0])) content = <ApiAuth key={path} register={segments[0] === "register"} host={segments[1] === "host"} />;
     else if (segments[0] === "profile") content = <ApiProfile key={user?.id ?? "guest"} />;
     else if (ops) content = <BackendOperations key={user?.id ?? "guest"} role={segments[0] as "host" | "admin"} segments={segments.slice(1)} />;
-    else if (["my-bookings", "payment"].includes(segments[0])) content = <div className="container account-page">{!apiSession.ready ? <ApiMessage loading /> : apiSession.user?.role !== "customer" ? <Empty title="Đơn thuê của khách hàng" text="Đăng nhập bằng tài khoản khách hàng để tiếp tục." href="/login" label="Đăng nhập" /> : segments[1] && segments[1] !== "history" ? <BackendBookingDetail key={`${user?.id}:${segments[1]}`} id={segments[1]} payment={segments[0] === "payment"} /> : <BackendBookings key={user?.id} />}</div>;
+    else if (["my-bookings", "payment"].includes(segments[0])) content = <div className="container account-page">{!apiSession.ready ? <ApiMessage loading /> : apiSession.user?.role !== "customer" ? <Empty title="Đơn thuê của khách hàng" text="Đăng nhập bằng tài khoản khách hàng để tiếp tục." href="/login" label="Đăng nhập" /> : segments[1] && segments[1] !== "history" ? <BackendBookingDetail key={`${user?.id}:${segments[1]}`} id={segments[1]} payment={segments[0] === "payment"} /> : <BackendBookings key={`${user?.id}:${segments[1] === "history" ? "history" : "current"}`} history={segments[1] === "history"} />}</div>;
+    else if (segments[0] === "checkout") content = <div className="container account-page checkout-guide"><p className="booking-eyebrow">Đặt thuê studio</p><h1>Chọn phòng và lịch trước khi thanh toán</h1><p>StudioHub kiểm tra lịch và báo giá trong trang đặt thuê của từng phòng. Sau khi tạo đơn, bạn sẽ đến trang thanh toán sandbox.</p><div className="actions"><Link className="btn" href="/rooms">Khám phá phòng</Link>{apiSession.user?.role === "customer" && <Link className="btn secondary" href="/my-bookings">Xem đơn của tôi</Link>}</div></div>;
     else content = <div className="container account-page"><Unavailable>Trang này chưa có luồng tương ứng trong API hiện tại. Vui lòng quay lại danh sách phòng hoặc đơn thuê.</Unavailable></div>;
   }
   return (
@@ -218,6 +219,7 @@ export default function Application() {
               <br />
               chưa từng được tạo ra.
             </p>
+            <address className="footer-agency-address">StudioHub · 123 Đường Lê Văn Việt<br/>Quận 9, TP. Hồ Chí Minh · Địa chỉ minh họa</address>
             <div>
               <Link href="/rooms">
                 Khám phá Studio
