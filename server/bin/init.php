@@ -79,3 +79,4 @@ if (in_array('--seed', $argv, true)) {
 }
 
 require __DIR__ . '/migrate.php';
+require __DIR__ . '/migrate-sql.php';

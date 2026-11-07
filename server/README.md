@@ -39,7 +39,7 @@ Compose initializes and seeds only a completely empty database. For an existing 
 docker compose --profile maintenance run --rm db-upgrade
 ```
 
-Render uses the same safe startup rule: `bin/init.php --apply` installs `database/schema.sql` only when the selected database has no tables, then applies pending PHP migrations. The SQL migration runner applies pending SQL migrations on every container start. Existing Aiven tables and rows are preserved during redeploys. `schema.sql` is a fresh-install script and contains `DROP TABLE` statements; do not run it manually against a populated database.
+Render uses the same safe startup rule: `bin/init.php --apply` installs `database/schema.sql` only when the selected database has no tables, then applies pending PHP and SQL migrations. Existing Aiven tables and rows are preserved during redeploys. `schema.sql` is a fresh-install script and contains `DROP TABLE` statements; do not run it manually against a populated database.
 
 The checked-in `database/seed.sql` contains development accounts and bookings. It is restricted to an empty `*_dev` or `*_test` database. Render checks the catalog after migrations on each start and runs `bin/seed-booking-examples.php --deploy` only when there are no rooms. Existing Aiven catalog data is left untouched. The deploy seed creates nine space types, two studios, example rooms, rates, amenities, and equipment under an already registered active host; it does not create users or bookings. Set `DEMO_CATALOG_HOST_EMAIL` in Render to choose the host explicitly. If unset, the first active host account is used.
 

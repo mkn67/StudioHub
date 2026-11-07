@@ -27,7 +27,7 @@ class EquipmentCategoryRepository
         $stmt = $this->pdo->prepare('
             SELECT c.*, COUNT(e.equipment_id) as total_equipments
             FROM equipment_categories c
-            LEFT JOIN equipments e ON c.category_id = e.category_id AND e.status <> "inactive"
+            LEFT JOIN equipments e ON c.category_id = e.category_id AND e.status <> \'inactive\'
             WHERE c.studio_id = ?
             GROUP BY c.category_id
             ORDER BY c.category_id ASC
