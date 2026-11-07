@@ -23,10 +23,12 @@ if ($name === '' || $user === '' || $password === '') {
 }
 
 try {
-    $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
+    $pdo = new PDO(
+        "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",
+        $user,
+        $password,
+        App\Config\PdoOptions::mysql(),
+    );
     $pdo->exec("SET time_zone = '+07:00'");
     $pdo->exec(<<<'SQL'
         CREATE TABLE IF NOT EXISTS schema_migrations (

@@ -17,6 +17,9 @@ dist/
 .env.test.local
 .env.production.local
 
+# Private deployment certificate files; configure them through the hosting provider.
+server/ca.pem
+
 # Logs
 *.log
 npm-debug.log*

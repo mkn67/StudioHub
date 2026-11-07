@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/vendor/autoload.php';
+
 // Compose supplies the connection settings. Bootstrap only an empty database;
 // demo seed data is limited to dev/test environments by the migrator.
 try {
@@ -11,7 +13,7 @@ try {
         . ';dbname=' . getenv('DB_NAME'),
         getenv('DB_USER'),
         getenv('DB_PASS'),
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+        App\Config\PdoOptions::mysql(),
     );
     $tableCount = (int) $pdo->query(
         'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()'
