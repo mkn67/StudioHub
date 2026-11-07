@@ -14,16 +14,29 @@ const failure = (status: number, code: string) => Response.json({
 export async function proxyHelpdesk(request: Request, segments: string[], session: string, fetcher: typeof fetch = fetch): Promise<Response> {
   const path = segments.join("/");
   if (!routes.some(rule => rule.test(path)) || segments.some(s => s.includes("..") || s.includes("%"))) return failure(404, "resource_not_found");
-  const expected = process.env.HELPDESK_FRONTEND_ORIGIN || "http://localhost:3000";
+  const configuredOrigins = (process.env.HELPDESK_FRONTEND_ORIGIN || "http://localhost:3000")
+    .split(",").map(origin => origin.trim()).filter(Boolean);
+  let allowedOrigins: URL[];
+  try {
+    allowedOrigins = configuredOrigins.map(origin => {
+      const url = new URL(origin);
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password ||
+        url.pathname !== "/" || url.search || url.hash) throw new Error("Invalid frontend origin");
+      return url;
+    });
+  } catch { return failure(503, "invalid_frontend_origin_configuration"); }
+  if (allowedOrigins.length === 0) return failure(503, "invalid_frontend_origin_configuration");
   const requestUrl = new URL(request.url);
-  const frontendUrl = new URL(expected);
   // Next.js may reconstruct the URL with 0.0.0.0 inside a container.
   // Require the public Host and protocol when the reconstructed origin differs.
-  const matchesFrontend = requestUrl.origin === expected ||
+  const requestOrigin = request.headers.get("origin");
+  const samePublicOrigin = (frontendUrl: URL) => requestUrl.origin === frontendUrl.origin ||
     (request.headers.get("host")?.toLowerCase() === frontendUrl.host.toLowerCase() && requestUrl.protocol === frontendUrl.protocol);
+  const matchedOrigin = allowedOrigins.find(frontendUrl => requestOrigin === frontendUrl.origin ||
+    (!requestOrigin && request.method === "GET" && request.headers.get("sec-fetch-site") === "same-origin" && samePublicOrigin(frontendUrl)));
   const sameOriginGet = request.method === "GET" && !request.headers.get("origin") &&
-    request.headers.get("sec-fetch-site") === "same-origin" && matchesFrontend;
-  if (request.headers.get("origin") !== expected && !sameOriginGet) return failure(403, "origin_denied");
+    request.headers.get("sec-fetch-site") === "same-origin" && Boolean(matchedOrigin);
+  if (!matchedOrigin || (requestOrigin !== matchedOrigin.origin && !sameOriginGet)) return failure(403, "origin_denied");
   const secret = process.env.HELPDESK_BRIDGE_SECRET || "";
   if (secret.length < 32) return failure(503, "bridge_not_configured");
   const base = process.env.HELPDESK_API_URL || "http://127.0.0.1:8010";
@@ -42,7 +55,7 @@ export async function proxyHelpdesk(request: Request, segments: string[], sessio
   upstream.search = query;
   const headers: Record<string, string> = {
     "Content-Type": "application/json", "X-Helpdesk-Bridge": secret,
-    "X-Helpdesk-Session": session, Origin: expected,
+    "X-Helpdesk-Session": session, Origin: matchedOrigin.origin,
   };
   const bearer = request.headers.get("authorization");
   if (bearer) {

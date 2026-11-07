@@ -62,9 +62,12 @@ final class Application
         $transport = new CurlTransport();
         $actor     = (new Identity($this->config, $transport))->resolve($headers);
 
-        // Chỉ chấp nhận request đến từ đúng origin của frontend đã cấu hình
-        $allowedOrigin = $this->config->get('HELPDESK_FRONTEND_ORIGIN', 'http://localhost:3000');
-        if (($headers['origin'] ?? '') !== $allowedOrigin) {
+        // Chấp nhận một hoặc nhiều origin, phân cách bằng dấu phẩy.
+        $allowedOrigins = array_values(array_filter(array_map(
+            'trim',
+            explode(',', $this->config->get('HELPDESK_FRONTEND_ORIGIN', 'http://localhost:3000'))
+        ), static fn (string $origin): bool => $origin !== ''));
+        if (!in_array($headers['origin'] ?? '', $allowedOrigins, true)) {
             throw new Failure('origin_denied', 403);
         }
 

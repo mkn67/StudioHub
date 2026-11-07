@@ -22,13 +22,13 @@ The .env already has a generated server-to-server bridge secret. Keep it private
 npm.cmd run dev
 ~~~
 
-Open http://localhost:3000 and the existing Chat Widget. Default mode is connected; NEXT_PUBLIC_HELPDESK_MODE=demo explicitly restores offline FAQ. API/model not configured gives a clear error; it never silently returns demo answers. If using another frontend origin/port, set HELPDESK_FRONTEND_ORIGIN identically in PHP and Next.js and restart both.
+Open http://localhost:3000 and the existing Chat Widget. Default mode is connected; NEXT_PUBLIC_HELPDESK_MODE=demo explicitly restores offline FAQ. API/model not configured gives a clear error; it never silently returns demo answers. `HELPDESK_FRONTEND_ORIGIN` accepts one or more comma-separated origins (no trailing slash). Set the same list in the PHP Helpdesk service and the Next.js/Vercel environment, then redeploy/restart both.
 
 The Windows php.cmd helper invokes its PowerShell helper with a process-only execution-policy override; it does not change machine/user policy. It selects PHP on PATH or the local portable runtime. Direct php.ps1 execution may be blocked by the machine's existing script policy.
 
 On a new checkout use PHP >=8.2 with curl, mbstring, iconv, JSON, PDO and pdo_sqlite (or pdo_mysql). Composer is optional: the module includes its own PSR-4 bootstrap and dependency-free test runner. composer.json declares requirements for platform tooling; no shared Composer package is changed. Never point this module at business tables.
 
-SQLite is the runnable local storage choice because MySQL/Docker are unavailable here. Default file: var/helpdesk.sqlite, outside public/, ignored by Git. For MySQL use a separately provisioned Helpdesk database such as studiohub_helpdesk_dev; set HELPDESK_DATABASE_URL=mysql:host=...;dbname=studiohub_helpdesk_dev;charset=utf8mb4, HELPDESK_DB_USER and HELPDESK_DB_PASSWORD. Explicit migrate.php refuses unrelated MySQL database names. MySQL execution is unverified; no business database migration ran.
+SQLite is the local default (`var/helpdesk.sqlite`, outside public/). For Render/Aiven, MySQL is supported so Helpdesk conversation data survives container replacement. Set `HELPDESK_DATABASE_URL=mysql:host=...;port=...;dbname=defaultdb;charset=utf8mb4`, `HELPDESK_DB_USER`, `HELPDESK_DB_PASSWORD`, and `HELPDESK_DB_SSL_CA=/etc/secrets/aiven-ca.pem`. Upload the Aiven CA certificate as a Render secret file named `aiven-ca.pem`; the Docker image adds `www-data` to Render's secret-file access group. Set `HELPDESK_ALLOW_PRODUCTION_MIGRATIONS=true` only for the intended Aiven `defaultdb` (or a dedicated Helpdesk `*_prod` database); migrations create only the three namespaced Helpdesk tables and never alter StudioHub business tables. MySQL migration runs at container startup. Local MySQL migrations remain restricted to database names containing `helpdesk` and ending in `_dev` or `_test`.
 
 ## Knowledge approval
 

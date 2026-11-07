@@ -36,6 +36,7 @@ COPY client/docs/references/StudioHub_Business_Policy_VI_v1.1.md /app/client/doc
 
 COPY helpdesk-php/docker/apache.conf /etc/apache2/sites-available/000-default.conf
 RUN mkdir -p var \
+    && usermod -a -G 1000 www-data \
     && chown www-data:www-data var \
     && chmod 0770 var
 
@@ -45,4 +46,4 @@ VOLUME ["/app/helpdesk-php/var"]
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD php -r '$body = @file_get_contents("http://127.0.0.1/health"); exit($body !== false && (json_decode($body, true)["status"] ?? "") === "success" ? 0 : 1);'
-CMD ["apache2-foreground"]
+CMD ["sh", "-ec", "php bin/migrate.php --apply && exec apache2-foreground"]

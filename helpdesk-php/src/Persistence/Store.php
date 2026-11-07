@@ -42,14 +42,25 @@ final class Store
         $dsn = $this->resolveDsn();
 
         try {
+            $options = [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,  // Lỗi SQL ném ra exception
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,        // Mặc định trả về mảng kết hợp
+            ];
+            if (str_starts_with($dsn, 'mysql:')) {
+                $sslCa = $config->get('HELPDESK_DB_SSL_CA');
+                if ($sslCa !== '') {
+                    if (!is_file($sslCa)) {
+                        throw new Failure('invalid_storage_configuration', 503);
+                    }
+                    $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+                }
+            }
             $this->db = new PDO(
                 $dsn,
                 $config->get('HELPDESK_DB_USER'),
                 $config->get('HELPDESK_DB_PASSWORD'),
-                [
-                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,  // Lỗi SQL ném ra exception
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,        // Mặc định trả về mảng kết hợp
-                ]
+                $options
             );
 
             if ($this->driver() === 'sqlite') {
