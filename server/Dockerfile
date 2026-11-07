@@ -43,4 +43,4 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["sh", "-ec", "php bin/init.php --apply; exec apache2-foreground"]
