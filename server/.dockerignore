@@ -1,5 +1,6 @@
 .env
 .env.*
+ca.pem
 !.env.example
 vendor/
 storage/
