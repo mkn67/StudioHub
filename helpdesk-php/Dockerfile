@@ -36,7 +36,8 @@ COPY client/docs/references/StudioHub_Business_Policy_VI_v1.1.md /app/client/doc
 
 COPY helpdesk-php/docker/apache.conf /etc/apache2/sites-available/000-default.conf
 RUN mkdir -p var \
-    && usermod -a -G 1000 www-data \
+    && (getent group 1000 >/dev/null || groupadd --gid 1000 render-secrets) \
+    && usermod -a -G "$(getent group 1000 | cut -d: -f1)" www-data \
     && chown www-data:www-data var \
     && chmod 0770 var
 
