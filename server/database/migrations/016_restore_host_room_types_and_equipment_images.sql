@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS host_room_types (
     INDEX idx_host_room_types_studio (studio_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Also handle a previous interrupted run: MySQL DDL commits before the
+-- migration history is recorded, leaving an empty table on retry.
+SET @host_room_types_repair = @host_room_types_missing OR (
+    SELECT COUNT(*) = 0 FROM host_room_types
+);
+
 CREATE TABLE IF NOT EXISTS equipment_images (
     image_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     equipment_id INT NOT NULL,
@@ -51,6 +57,10 @@ PREPARE restore_room_type_column FROM @room_type_column_sql;
 EXECUTE restore_room_type_column;
 DEALLOCATE PREPARE restore_room_type_column;
 
+-- Old type IDs cannot be trusted after the referenced table was lost.
+UPDATE rooms SET room_type_id = NULL
+WHERE @host_room_types_repair = 1 AND room_type_id IS NOT NULL;
+
 SET @room_type_fk_missing = (
     SELECT COUNT(*) = 0 FROM information_schema.key_column_usage
     WHERE table_schema = DATABASE() AND table_name = 'rooms'
@@ -67,13 +77,13 @@ PREPARE restore_room_type_fk FROM @room_type_fk_sql;
 EXECUTE restore_room_type_fk;
 DEALLOCATE PREPARE restore_room_type_fk;
 
--- Only reconstruct catalog rows when the table itself had to be restored.
--- Existing host edits in a healthy database are left untouched.
+-- Reconstruct catalog rows only for a restored or interrupted empty table.
+-- Existing host edits in a populated table are left untouched.
 INSERT INTO host_room_types (studio_id, name, description, status)
 SELECT s.studio_id, t.name, t.description, 'active'
 FROM studios s
 CROSS JOIN space_types t
-WHERE @host_room_types_missing = 1 AND t.category <> 'Other'
+WHERE @host_room_types_repair = 1 AND t.category <> 'Other'
 ON DUPLICATE KEY UPDATE room_type_id = room_type_id;
 
 UPDATE rooms r
@@ -85,4 +95,4 @@ JOIN (
 ) primary_type ON primary_type.room_id = r.room_id
 JOIN host_room_types hrt ON hrt.studio_id = r.studio_id AND hrt.name = primary_type.space_type_name
 SET r.room_type_id = hrt.room_type_id
-WHERE @host_room_types_missing = 1 AND r.room_type_id IS NULL;
+WHERE @host_room_types_repair = 1 AND r.room_type_id IS NULL;
