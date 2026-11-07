@@ -101,6 +101,18 @@ try {
             [$name, $description, $category]
         );
     }
+    $hostRoomTypeIds = [];
+    foreach ($studioIds as $studioId) {
+        foreach ($types as $spaceTypeId) {
+            $hostRoomTypeIds[$studioId][$spaceTypeId] = ensureRow(
+                $pdo,
+                'SELECT room_type_id FROM host_room_types WHERE studio_id = ? AND name = (SELECT name FROM space_types WHERE space_type_id = ?)',
+                [$studioId, $spaceTypeId],
+                "INSERT INTO host_room_types (studio_id, name, description, status) SELECT ?, name, description, 'active' FROM space_types WHERE space_type_id = ?",
+                [$studioId, $spaceTypeId]
+            );
+        }
+    }
     $amenities = [];
     foreach ([
         ['Wifi 1Gbps Dedicated', 'wifi'],
@@ -293,9 +305,11 @@ try {
             $pdo,
             'SELECT room_id FROM rooms WHERE studio_id = ? AND name = ?',
             [$studioId, $room['name']],
-            'INSERT INTO rooms (studio_id, name, description, area, ceiling_height, capacity, soundproof_level, power_specs, rules, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [$studioId, $room['name'], $room['description'], $room['area'], $room['height'], $room['capacity'], $room['soundproof'], $room['power'], $room['rules'], 'active']
+            'INSERT INTO rooms (studio_id, room_type_id, name, description, area, ceiling_height, capacity, soundproof_level, power_specs, rules, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$studioId, $hostRoomTypeIds[$studioId][$room['type']], $room['name'], $room['description'], $room['area'], $room['height'], $room['capacity'], $room['soundproof'], $room['power'], $room['rules'], 'active']
         );
+        $attachType = $pdo->prepare('UPDATE rooms SET room_type_id = ? WHERE room_id = ? AND room_type_id IS NULL');
+        $attachType->execute([$hostRoomTypeIds[$studioId][$room['type']], $roomId]);
         $link = $pdo->prepare('INSERT IGNORE INTO room_space_types (room_id, space_type_id, is_primary) VALUES (?, ?, 1)');
         $link->execute([$roomId, $room['type']]);
         $link = $pdo->prepare('INSERT IGNORE INTO room_amenities (room_id, amenity_id) VALUES (?, ?)');

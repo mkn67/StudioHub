@@ -150,6 +150,11 @@
 .host-room-row h3 { margin: 0 0 6px; }
 .host-room-row p { color: var(--host-muted); font-size: 13px; margin-bottom: 8px; }
 .host-room-row p span { padding: 0 6px; }
+.host-room-type-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.host-room-type-list .host-room-type-row { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px; border: 1px solid var(--host-border); border-radius: 10px; }
+.host-room-type-list .host-room-type-row > div { width: 100%; }
+.host-room-type-row .host-room-type-metrics { color: var(--host-text); font-weight: 600; }
+.host-room-type-row .btn { margin-top: auto; min-width: 110px; }
 .host-room-group .host-panel-header { background: var(--host-blue-soft); }
 .host-room-context { display: flex; flex-wrap: wrap; gap: 20px; align-items: end; margin-bottom: 24px; }
 .host-room-context > label { width: min(420px, 100%); }
@@ -260,6 +265,7 @@
   .host-report-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 767px) {
+  .host-room-type-list { grid-template-columns: minmax(0, 1fr); }
   .host-content { padding: 22px 16px 48px; }
   .host-topbar { padding: 10px 16px; }
   .host-topbar > div { gap: 10px; }

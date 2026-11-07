@@ -4,13 +4,36 @@ import { useResource } from "@/services/api/use-resource";
 import { apiRequest } from "@/services/api/client";
 import { records, record, text } from "@/services/api/management";
 import { useApiAction } from "@/components/api-ui";
-import { HostEditor, HostPanel, HostResourceState, HostEmptyState, HostAddButton, HostPageHeader, hostStatusOptions } from "./host-ui";
+import { HostEditor, HostPanel, HostResourceState, HostEmptyState, HostAddButton, HostPageHeader, HostStatusBadge, hostStatusOptions } from "./host-ui";
 import { useHostContext } from "./host-context";
+import type { HostRoom } from "./host-types";
 
-export function RestRoomTypes({ studioId }: { studioId: string }) {
+const roomMetric = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
+
+function roomRange(rooms: HostRoom[], key: "area" | "capacity", unit: string): string {
+  const values = rooms.map(room => room[key]);
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  return `${roomMetric.format(minimum)}${maximum === minimum ? "" : `–${roomMetric.format(maximum)}`} ${unit}`;
+}
+
+function roomTypeSummary(item: Record<string, unknown>, rooms: HostRoom[] | null, roomsUnavailable: boolean): string {
+  if (rooms === null) return roomsUnavailable ? "Chưa thể tổng hợp thông số phòng vật lý" : "Đang lấy thông số phòng vật lý…";
+  const assigned = rooms.filter(room => String(room.room_type_id ?? "") === String(item.room_type_id));
+  if (assigned.length) {
+    return `${assigned.length} phòng vật lý · ${roomRange(assigned, "area", "m²")} · ${roomRange(assigned, "capacity", "người")}`;
+  }
+  const reference = [
+    item.area == null ? null : `${roomMetric.format(Number(item.area))} m²`,
+    item.capacity == null ? null : `${roomMetric.format(Number(item.capacity))} người`,
+  ].filter(Boolean).join(" · ");
+  return reference ? `Chưa có phòng vật lý · Quy mô tham khảo: ${reference}` : "Chưa có phòng vật lý · Chưa có thông số thực tế";
+}
+
+export function RestRoomTypes({ studioId, rooms, roomsUnavailable }: { studioId: string; rooms: HostRoom[] | null; roomsUnavailable: boolean }) {
   const list = useResource(`/api/host/room-types?studio_id=${studioId}`, records);
   const [editor, setEditor] = useState<{ id?: string; name?: string; description?: string; area?: string; capacity?: string; status?: string } | null>(null);
-  return <HostPanel title="Loại phòng của Studio" action={<HostAddButton onClick={() => setEditor({})}>Thêm loại phòng</HostAddButton>}><HostResourceState resource={list}/>{list.data?.length === 0 && <HostEmptyState title="Chưa có loại phòng" description="Tạo loại phòng riêng cho Studio đang chọn."/>}<div className="host-resource-rows">{list.data?.map(item => <article className="host-room-row" key={text(item.room_type_id)}><div><h3>{text(item.name)}</h3><p>{text(item.area)} m² · {text(item.capacity)} người · {text(item.status)}</p><p>{text(item.description, "")}</p></div><button className="btn secondary" onClick={() => setEditor({ id: text(item.room_type_id), name: text(item.name, ""), description: text(item.description, ""), area: text(item.area, ""), capacity: text(item.capacity, ""), status: text(item.status) })}>Sửa loại phòng {text(item.name)}</button></article>)}</div>{editor && <HostEditor title={editor.id ? "Sửa loại phòng" : "Thêm loại phòng"} path={`/api/host/room-types${editor.id ? `/${editor.id}` : ""}`} method={editor.id ? "PATCH" : "POST"} extra={editor.id ? {} : { studio_id: Number(studioId) }} fields={[{ name: "name", label: "Tên loại phòng", value: editor.name }, { name: "description", label: "Mô tả", required: false, value: editor.description }, { name: "area", label: "Diện tích", type: "number", step: "any", min: 1, required: false, value: editor.area }, { name: "capacity", label: "Sức chứa", type: "number", min: 1, required: false, value: editor.capacity }, { name: "status", label: "Trạng thái", options: hostStatusOptions, value: editor.status ?? "active" }]} onClose={() => setEditor(null)} onSaved={() => { list.reload(); setEditor(null); }}/>}</HostPanel>;
+  return <HostPanel title="Loại phòng của Studio" description="Quy mô thực tế được tổng hợp từ các phòng vật lý đã gắn loại." action={<HostAddButton onClick={() => setEditor({})}>Thêm loại phòng</HostAddButton>}><HostResourceState resource={list}/>{list.data?.length === 0 && <HostEmptyState title="Chưa có loại phòng" description="Tạo loại phòng riêng cho Studio đang chọn."/>}<div className="host-resource-rows host-room-type-list">{list.data?.map(item => <article className="host-room-row host-room-type-row" key={text(item.room_type_id)}><div><div className="host-title-line"><h3>{text(item.name)}</h3><HostStatusBadge status={text(item.status, "active")}/></div><p className="host-room-type-metrics">{roomTypeSummary(item, rooms, roomsUnavailable)}</p>{!!item.description && <p>{text(item.description, "")}</p>}</div><button className="btn secondary" aria-label={`Sửa loại phòng ${text(item.name)}`} onClick={() => setEditor({ id: text(item.room_type_id), name: text(item.name, ""), description: text(item.description, ""), area: text(item.area, ""), capacity: text(item.capacity, ""), status: text(item.status) })}>Chỉnh sửa</button></article>)}</div>{editor && <HostEditor title={editor.id ? "Sửa loại phòng" : "Thêm loại phòng"} path={`/api/host/room-types${editor.id ? `/${editor.id}` : ""}`} method={editor.id ? "PATCH" : "POST"} extra={editor.id ? {} : { studio_id: Number(studioId) }} fields={[{ name: "name", label: "Tên loại phòng", value: editor.name }, { name: "description", label: "Mô tả", required: false, value: editor.description }, { name: "area", label: "Diện tích tham khảo (m²)", type: "number", step: "any", min: 1, required: false, value: editor.area }, { name: "capacity", label: "Sức chứa tham khảo (người)", type: "number", min: 1, required: false, value: editor.capacity }, { name: "status", label: "Trạng thái", options: hostStatusOptions, value: editor.status ?? "active" }]} onClose={() => setEditor(null)} onSaved={() => { list.reload(); setEditor(null); }}/>}</HostPanel>;
 }
 export function RestRoomCreate({ studioId, onClose, onSaved }: { studioId: string; onClose: () => void; onSaved: () => void }) {
   const types = useResource(`/api/host/room-types?studio_id=${studioId}`, records), spaces = useResource("/api/space-types", records), amenities = useResource("/api/amenities", records);
