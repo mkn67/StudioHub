@@ -43,6 +43,8 @@ Render uses the same safe startup rule: `bin/init.php --apply` installs `databas
 
 The checked-in `database/seed.sql` contains development accounts and bookings. It is restricted to an empty `*_dev` or `*_test` database. Render checks the catalog after migrations on each start and runs `bin/seed-booking-examples.php --deploy` only when there are no rooms. Existing Aiven catalog data is left untouched. The deploy seed creates nine space types, two studios, example rooms, rates, amenities, and equipment under an already registered active host; it does not create users or bookings. Set `DEMO_CATALOG_HOST_EMAIL` in Render to choose the host explicitly. If unset, the first active host account is used.
 
+On Render, set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` (at least 12 characters) in Environment for the first Admin account. Startup always ensures the `admin`, `host`, and `customer` roles exist; it creates the Admin only when that email is absent and never resets an existing password. Customers register through `/api/auth/register`. A Customer becomes a Host by submitting `/api/host-applications` and receiving Admin approval through `/api/admin/host-applications/{id}/decision`. The production catalog seed runs after this account bootstrap.
+
 The frontend is available at `http://localhost:3000`. Compose mounts public uploads and private documents into separate persistent volumes. Keep `.env` out of version control and replace all example credentials before deployment.
 
 ## Development accounts

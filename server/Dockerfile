@@ -43,4 +43,4 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
 
 EXPOSE 80
 
-CMD ["sh", "-ec", "php bin/init.php --apply && php bin/migrate-sql.php --apply && php bin/seed-booking-examples.php --deploy && exec apache2-foreground"]
+CMD ["sh", "-ec", "php bin/init.php --apply && php bin/migrate-sql.php --apply && php bin/bootstrap-admin.php && php bin/seed-booking-examples.php --deploy && exec apache2-foreground"]
