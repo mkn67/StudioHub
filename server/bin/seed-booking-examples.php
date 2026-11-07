@@ -13,8 +13,13 @@ if (class_exists(\Dotenv\Dotenv::class)) {
 $pdo = Db::getConnection();
 $database = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
 $environment = (string) ($_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: '');
-if (!in_array($environment, ['dev', 'test'], true) || !preg_match('/_(dev|test)$/', $database)) {
-    throw new RuntimeException('Example catalog can only be installed in a dev/test database.');
+$deploySeed = in_array('--deploy', $argv, true);
+if (!$deploySeed && (!in_array($environment, ['dev', 'test'], true) || !preg_match('/_(dev|test)$/', $database))) {
+    throw new RuntimeException('Example catalog requires dev/test, or explicit --deploy mode.');
+}
+if ($deploySeed && (int) $pdo->query('SELECT COUNT(*) FROM rooms')->fetchColumn() > 0) {
+    echo "Existing room catalog detected; preserving Aiven data.\n";
+    exit(0);
 }
 
 function ensureRow(PDO $pdo, string $select, array $selectParams, string $insert, array $insertParams): int
@@ -32,33 +37,61 @@ function ensureRow(PDO $pdo, string $select, array $selectParams, string $insert
 
 $pdo->beginTransaction();
 try {
-    $studio = $pdo->prepare("SELECT studio_id FROM studios WHERE studio_id = ? AND status = 'active'");
-    $studio->execute([2]);
-    if (!$studio->fetchColumn()) {
-        throw new RuntimeException('Development studio 2 is missing.');
+    // Seed only catalog records, and attach them to a real registered host.
+    $roles = $pdo->query('SELECT role_id, role_name FROM roles')->fetchAll(PDO::FETCH_KEY_PAIR);
+    $users = $pdo->query("SELECT user_id, email, role_id FROM users WHERE status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
+    $requestedHostEmail = strtolower(trim((string) ($_ENV['DEMO_CATALOG_HOST_EMAIL'] ?? getenv('DEMO_CATALOG_HOST_EMAIL') ?: '')));
+    $hostId = null;
+    foreach ($users as $user) {
+        $roleName = strtolower((string) ($roles[$user['role_id']] ?? ''));
+        $emailMatches = $requestedHostEmail === '' || strtolower((string) $user['email']) === $requestedHostEmail;
+        if ($roleName === 'host' && $emailMatches) {
+            $hostId = (int) $user['user_id'];
+            break;
+        }
+    }
+    if ($hostId === null) {
+        if ($deploySeed) {
+            echo "No active registered host found; catalog seed skipped. Set DEMO_CATALOG_HOST_EMAIL to select one.\n";
+            $pdo->rollBack();
+            exit(0);
+        }
+        throw new RuntimeException('An active host account is required for the example catalog.');
+    }
+
+    $studioIds = [];
+    foreach ([
+        'Artemis' => ['Artemis Creative Hub', 'Tổ hợp studio sáng tạo với không gian chụp ảnh, concept và workshop.', '142 Nguyễn Thị Minh Khai, Phường 6', 'Quận 3', '0901234567', 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04'],
+        'Zenith' => ['Zenith Studio Space', 'Studio chuyên biệt cho podcast, livestream, quay phim và ghi âm.', '45 Điện Biên Phủ, Phường 15', 'Bình Thạnh', '0909876543', 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc'],
+    ] as $key => [$name, $description, $address, $district, $phone, $cover]) {
+        $studioIds[$key] = ensureRow(
+            $pdo,
+            'SELECT studio_id FROM studios WHERE host_id = ? AND name = ?',
+            [$hostId, $name],
+            'INSERT INTO studios (host_id, name, description, address, district, city, phone, cover_url, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$hostId, $name, $description, $address, $district, 'TP. Hồ Chí Minh', $phone, $cover, 'active']
+        );
     }
 
     $types = [];
     foreach ([
-        ['Cyclorama Studio', 'Phông vô cực cong liền mạch cho chụp sản phẩm, chân dung, thời trang và quảng cáo; ánh sáng dễ kiểm soát, không lộ góc nền.'],
-        ['Lookbook & Fashion', 'Dành cho lookbook, thời trang, catalog và nội dung thương mại; thường có ánh sáng linh hoạt, khu thay đồ và makeup.'],
-        ['Podcast & Livestream Hub', 'Phù hợp podcast, talkshow, phỏng vấn và livestream nhiều người; thường bố trí bàn trò chuyện, micro và xử lý âm học.'],
-        ['Concept & Set Design', 'Bối cảnh dựng sẵn như Hàn Quốc, vintage hoặc industrial cho chụp ảnh, quay quảng cáo và video kể chuyện.'],
-        ['Green Screen & VFX', 'Phông xanh đồng màu cho quay phim, TVC và video cần tách nền, compositing hoặc kỹ xảo hậu kỳ.'],
-        ['Acoustic Soundstage', 'Phim trường ghi hình được xử lý cách âm để quay cảnh trong nhà, thu lời thoại và ghi hình cần kiểm soát tiếng ồn.'],
-        ['Workshop & Event Studio', 'Không gian mở, bố trí linh hoạt cho workshop, lớp học, ra mắt sản phẩm, triển lãm nhỏ và sự kiện cộng đồng.'],
-        ['Livestream & E-commerce', 'Dành cho livestream bán hàng và giới thiệu sản phẩm; thường có mạng LAN riêng, ánh sáng liên tục và khu trưng bày.'],
-        ['Music Recording Studio', 'Dùng để thu giọng hát, nhạc cụ, lồng tiếng và sản xuất nhạc; thường có booth, micro và loa kiểm âm.'],
-    ] as [$name, $description]) {
+        ['Cyclorama Studio', 'Phông vô cực cong liền mạch cho chụp sản phẩm, chân dung, thời trang và quảng cáo; ánh sáng dễ kiểm soát, không lộ góc nền.', 'Visual & Photo Studio'],
+        ['Lookbook & Fashion', 'Dành cho lookbook, thời trang, catalog và nội dung thương mại; thường có ánh sáng linh hoạt, khu thay đồ và makeup.', 'Visual & Photo Studio'],
+        ['Podcast & Livestream Hub', 'Phù hợp podcast, talkshow, phỏng vấn và livestream nhiều người; thường bố trí bàn trò chuyện, micro và xử lý âm học.', 'Livestream & Broadcast'],
+        ['Concept & Set Design', 'Bối cảnh dựng sẵn như Hàn Quốc, vintage hoặc industrial cho chụp ảnh, quay quảng cáo và video kể chuyện.', 'Visual & Photo Studio'],
+        ['Green Screen & VFX', 'Phông xanh đồng màu cho quay phim, TVC và video cần tách nền, compositing hoặc kỹ xảo hậu kỳ.', 'Video & Film Production'],
+        ['Acoustic Soundstage', 'Phim trường ghi hình được xử lý cách âm để quay cảnh trong nhà, thu lời thoại và ghi hình cần kiểm soát tiếng ồn.', 'Video & Film Production'],
+        ['Workshop & Event Studio', 'Không gian mở, bố trí linh hoạt cho workshop, lớp học, ra mắt sản phẩm, triển lãm nhỏ và sự kiện cộng đồng.', 'Audio & Event'],
+        ['Livestream & E-commerce', 'Dành cho livestream bán hàng và giới thiệu sản phẩm; thường có mạng LAN riêng, ánh sáng liên tục và khu trưng bày.', 'Livestream & Broadcast'],
+        ['Music Recording Studio', 'Dùng để thu giọng hát, nhạc cụ, lồng tiếng và sản xuất nhạc; thường có booth, micro và loa kiểm âm.', 'Audio & Event'],
+    ] as [$name, $description, $category]) {
         $types[$name] = ensureRow(
             $pdo,
             'SELECT space_type_id FROM space_types WHERE name = ?',
             [$name],
-            'INSERT INTO space_types (name, description) VALUES (?, ?)',
-            [$name, $description]
+            'INSERT INTO space_types (name, description, category) VALUES (?, ?, ?)',
+            [$name, $description, $category]
         );
-        $descriptionUpdate = $pdo->prepare('UPDATE space_types SET description = ? WHERE space_type_id = ?');
-        $descriptionUpdate->execute([$description, $types[$name]]);
     }
     $amenities = [];
     foreach ([
@@ -81,6 +114,46 @@ try {
     }
 
     $rooms = [
+        [
+            'studio' => 'Artemis', 'name' => 'Artemis Phòng Cyclorama Trắng',
+            'description' => 'Phòng vô cực trắng 3 mặt góc cong liền mạch, sàn sơn Epoxy bóng chống trầy',
+            'area' => 75, 'height' => 4.5, 'capacity' => 15,
+            'soundproof' => 'Chuẩn B (Tiêu âm tiêu chuẩn)', 'power' => '3 pha 32A',
+            'rules' => 'Bắt buộc dán băng dính đế giày trước khi vào sàn vô cực',
+            'type' => $types['Cyclorama Studio'], 'amenity' => $amenities['Phòng thay đồ & Makeup riêng'],
+            'image' => 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04',
+            'rates' => [['hour', 60, 350000, 2, 12], ['half_day', 240, 1200000, 1, 4], ['day', 1440, 2500000, 1, 30], ['month', 43200, 45000000, 1, 6], ['session', 180, 950000, 1, 2]],
+        ],
+        [
+            'studio' => 'Artemis', 'name' => 'Artemis Warm Vintage Concept',
+            'description' => 'Phòng concept cổ điển ấm áp với nội thất da cao cấp và ánh sáng tự nhiên',
+            'area' => 50, 'height' => 3.8, 'capacity' => 10,
+            'soundproof' => 'Chuẩn Studio', 'power' => '1 pha 16A',
+            'rules' => 'Không tự ý di chuyển các đồ vật trang trí nặng',
+            'type' => $types['Concept & Set Design'], 'amenity' => $amenities['Đạo cụ và bối cảnh chụp ảnh'],
+            'image' => 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7',
+            'rates' => [['hour', 60, 300000, 1, 12], ['day', 1440, 2000000, 1, 30]],
+        ],
+        [
+            'studio' => 'Zenith', 'name' => 'Zenith Podcast & Livestream Pro',
+            'description' => 'Không gian podcast 4 vị trí micro, cách âm STC 55, phù hợp talkshow và ghi hình trực tiếp',
+            'area' => 45, 'height' => 3.5, 'capacity' => 6,
+            'soundproof' => 'Chuẩn A (Cách âm hoàn toàn)', 'power' => '1 pha 16A',
+            'rules' => 'Vui lòng đeo tai nghe khi kiểm tra âm thanh',
+            'type' => $types['Podcast & Livestream Hub'], 'amenity' => $amenities['Cách âm chuẩn STC 55'],
+            'image' => 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc',
+            'rates' => [['hour', 60, 420000, 1, 8], ['session', 180, 1150000, 1, 3]],
+        ],
+        [
+            'studio' => 'Zenith', 'name' => 'Zenith Black Box Theatre',
+            'description' => 'Phòng màu đen toàn phần cho quay TVC, workshop kịch và chụp ánh sáng tương phản',
+            'area' => 90, 'height' => 5, 'capacity' => 25,
+            'soundproof' => 'Chuẩn B (Tiêu âm tiêu chuẩn)', 'power' => '3 pha 32A',
+            'rules' => 'Tắt thiết bị sau khi sử dụng',
+            'type' => $types['Workshop & Event Studio'], 'amenity' => $amenities['Bàn ghế xếp cho workshop'],
+            'image' => 'https://images.unsplash.com/photo-1514306191717-452ec28c7814',
+            'rates' => [['hour', 60, 550000, 2, 12], ['half_day', 240, 1800000, 1, 4]],
+        ],
         [
             'name' => 'Zenith Live Commerce',
             'description' => 'Phòng livestream bán hàng với LAN riêng, đèn liên tục và kệ trưng bày sản phẩm',
@@ -126,7 +199,7 @@ try {
             'rates' => [['hour', 60, 650000, 2, 10], ['day', 1440, 4500000, 1, 20]],
         ],
         [
-            'studio' => 1, 'name' => 'Artemis Daylight Lookbook Loft',
+            'studio' => 'Artemis', 'name' => 'Artemis Daylight Lookbook Loft',
             'description' => 'Phòng chụp lookbook thời trang với cửa sổ lớn, phông di động và khu thay đồ riêng',
             'area' => 58, 'height' => 3.8, 'capacity' => 10,
             'soundproof' => 'Tiêu âm cơ bản', 'power' => '1 pha 16A',
@@ -136,7 +209,7 @@ try {
             'rates' => [['hour', 60, 320000, 2, 10], ['day', 1440, 2200000, 1, 20]],
         ],
         [
-            'studio' => 1, 'name' => 'Artemis Seoul Concept Suite',
+            'studio' => 'Artemis', 'name' => 'Artemis Seoul Concept Suite',
             'description' => 'Bối cảnh phong cách Hàn Quốc với góc cafe, cửa sổ giả và ánh sáng mềm cho ảnh thương mại',
             'area' => 46, 'height' => 3.4, 'capacity' => 8,
             'soundproof' => 'Tiêu âm cơ bản', 'power' => '1 pha 16A',
@@ -146,7 +219,7 @@ try {
             'rates' => [['hour', 60, 380000, 2, 10], ['half_day', 240, 1350000, 1, 5]],
         ],
         [
-            'studio' => 1, 'name' => 'Artemis Product Cyclorama',
+            'studio' => 'Artemis', 'name' => 'Artemis Product Cyclorama',
             'description' => 'Cyclorama trắng riêng cho chụp sản phẩm, mỹ phẩm và catalog thương mại',
             'area' => 42, 'height' => 4, 'capacity' => 6,
             'soundproof' => 'Tiêu âm cơ bản', 'power' => '1 pha 16A',
@@ -156,7 +229,7 @@ try {
             'rates' => [['hour', 60, 300000, 2, 12], ['day', 1440, 2100000, 1, 30]],
         ],
         [
-            'studio' => 1, 'name' => 'Artemis Open Workshop Hall',
+            'studio' => 'Artemis', 'name' => 'Artemis Open Workshop Hall',
             'description' => 'Không gian mở có bàn ghế xếp linh hoạt cho lớp học, workshop và ra mắt sản phẩm',
             'area' => 110, 'height' => 4.2, 'capacity' => 40,
             'soundproof' => 'Tiêu âm cơ bản', 'power' => '3 pha 32A',
@@ -166,7 +239,7 @@ try {
             'rates' => [['hour', 60, 550000, 2, 12], ['half_day', 240, 1800000, 1, 4]],
         ],
         [
-            'studio' => 2, 'name' => 'Zenith Talkshow Podcast Room',
+            'studio' => 'Zenith', 'name' => 'Zenith Talkshow Podcast Room',
             'description' => 'Phòng talkshow bốn vị trí với bàn tròn, micro thu âm và hệ thống tai nghe kiểm âm',
             'area' => 38, 'height' => 3.2, 'capacity' => 6,
             'soundproof' => 'Cách âm chuẩn STC 55', 'power' => '1 pha 16A',
@@ -176,7 +249,7 @@ try {
             'rates' => [['hour', 60, 420000, 1, 8], ['session', 180, 1150000, 1, 3]],
         ],
         [
-            'studio' => 2, 'name' => 'Zenith Creator Commerce Set',
+            'studio' => 'Zenith', 'name' => 'Zenith Creator Commerce Set',
             'description' => 'Set livestream thương mại có bàn trưng bày, mạng LAN riêng và đèn liên tục',
             'area' => 36, 'height' => 3.3, 'capacity' => 8,
             'soundproof' => 'Tiêu âm cơ bản', 'power' => '1 pha 16A',
@@ -186,7 +259,7 @@ try {
             'rates' => [['session', 180, 900000, 1, 3], ['day', 1440, 3200000, 1, 10]],
         ],
         [
-            'studio' => 2, 'name' => 'Zenith Vocal Recording Booth',
+            'studio' => 'Zenith', 'name' => 'Zenith Vocal Recording Booth',
             'description' => 'Booth thu vocal và lồng tiếng với micro condenser, pop filter và loa kiểm âm',
             'area' => 24, 'height' => 3, 'capacity' => 4,
             'soundproof' => 'Booth cách âm 2 lớp', 'power' => '1 pha 16A',
@@ -196,7 +269,7 @@ try {
             'rates' => [['hour', 60, 350000, 1, 8], ['session', 180, 950000, 1, 2]],
         ],
         [
-            'studio' => 2, 'name' => 'Zenith Compact Green Screen',
+            'studio' => 'Zenith', 'name' => 'Zenith Compact Green Screen',
             'description' => 'Phòng phông xanh gọn cho video quảng cáo, nội dung mạng xã hội và kỹ xảo tách nền',
             'area' => 40, 'height' => 3.6, 'capacity' => 7,
             'soundproof' => 'Tiêu âm cơ bản', 'power' => '1 pha 16A',
@@ -207,7 +280,7 @@ try {
         ],
     ];
     foreach ($rooms as $room) {
-        $studioId = (int) ($room['studio'] ?? 2);
+        $studioId = (int) $studioIds[$room['studio'] ?? 'Zenith'];
         $roomId = ensureRow(
             $pdo,
             'SELECT room_id FROM rooms WHERE studio_id = ? AND name = ?',
@@ -217,8 +290,6 @@ try {
         );
         $link = $pdo->prepare('INSERT IGNORE INTO room_space_types (room_id, space_type_id, is_primary) VALUES (?, ?, 1)');
         $link->execute([$roomId, $room['type']]);
-        $roomType = $pdo->prepare('UPDATE rooms SET room_type_id = (SELECT room_type_id FROM host_room_types WHERE studio_id = ? AND name = (SELECT name FROM space_types WHERE space_type_id = ?) LIMIT 1) WHERE room_id = ?');
-        $roomType->execute([$studioId, $room['type'], $roomId]);
         $link = $pdo->prepare('INSERT IGNORE INTO room_amenities (room_id, amenity_id) VALUES (?, ?)');
         $link->execute([$roomId, $room['amenity']]);
         $image = $pdo->prepare('SELECT image_id FROM room_images WHERE room_id = ? AND image_url = ?');
@@ -238,14 +309,15 @@ try {
         }
     }
 
+    $zenithStudioId = (int) $studioIds['Zenith'];
     $categories = [];
     foreach (['Thiết bị livestream', 'Thiết bị thu âm nhạc'] as $name) {
         $categories[$name] = ensureRow(
             $pdo,
             'SELECT category_id FROM equipment_categories WHERE studio_id = ? AND name = ?',
-            [2, $name],
+            [$zenithStudioId, $name],
             'INSERT INTO equipment_categories (studio_id, name) VALUES (?, ?)',
-            [2, $name]
+            [$zenithStudioId, $name]
         );
     }
     foreach ([
@@ -257,15 +329,13 @@ try {
         ensureRow(
             $pdo,
             'SELECT equipment_id FROM equipments WHERE studio_id = ? AND name = ?',
-            [2, $name],
+            [$zenithStudioId, $name],
             'INSERT INTO equipments (studio_id, category_id, name, brand, unit_price, pricing_unit, total_quantity, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [2, $categoryId, $name, $brand, $price, $unit, $quantity, 'active']
+            [$zenithStudioId, $categoryId, $name, $brand, $price, $unit, $quantity, 'active']
         );
     }
-    $minimum = $pdo->prepare("UPDATE room_rates r JOIN rooms rm ON rm.room_id = r.room_id SET r.minimum_units = 2 WHERE rm.name = 'Artemis Phòng Cyclorama Trắng' AND r.rate_unit = 'hour' AND r.minimum_units < 2");
-    $minimum->execute();
     $pdo->commit();
-    echo "Example booking catalog ready.\n";
+    echo "Example room catalog ready for host {$hostId}.\n";
 } catch (Throwable $error) {
     $pdo->rollBack();
     throw $error;
