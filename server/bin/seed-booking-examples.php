@@ -42,12 +42,15 @@ try {
     $users = $pdo->query("SELECT user_id, email, role_id FROM users WHERE status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
     $requestedHostEmail = strtolower(trim((string) ($_ENV['DEMO_CATALOG_HOST_EMAIL'] ?? getenv('DEMO_CATALOG_HOST_EMAIL') ?: '')));
     $hostId = null;
+    $hostIdsByEmail = [];
     foreach ($users as $user) {
         $roleName = strtolower((string) ($roles[$user['role_id']] ?? ''));
-        $emailMatches = $requestedHostEmail === '' || strtolower((string) $user['email']) === $requestedHostEmail;
-        if ($roleName === 'host' && $emailMatches) {
-            $hostId = (int) $user['user_id'];
-            break;
+        if ($roleName === 'host') {
+            $email = strtolower((string) $user['email']);
+            $hostIdsByEmail[$email] = (int) $user['user_id'];
+            if ($hostId === null && ($requestedHostEmail === '' || $email === $requestedHostEmail)) {
+                $hostId = (int) $user['user_id'];
+            }
         }
     }
     if ($hostId === null) {
@@ -59,17 +62,22 @@ try {
         throw new RuntimeException('An active host account is required for the example catalog.');
     }
 
+    $studioHostIds = [
+        'Artemis' => $hostIdsByEmail['host1@studio.local'] ?? $hostId,
+        'Zenith' => $hostIdsByEmail['host2@studio.local'] ?? $hostId,
+    ];
     $studioIds = [];
     foreach ([
         'Artemis' => ['Artemis Creative Hub', 'Tổ hợp studio sáng tạo với không gian chụp ảnh, concept và workshop.', '142 Nguyễn Thị Minh Khai, Phường 6', 'Quận 3', '0901234567', 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04'],
         'Zenith' => ['Zenith Studio Space', 'Studio chuyên biệt cho podcast, livestream, quay phim và ghi âm.', '45 Điện Biên Phủ, Phường 15', 'Bình Thạnh', '0909876543', 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc'],
     ] as $key => [$name, $description, $address, $district, $phone, $cover]) {
+        $studioHostId = $studioHostIds[$key];
         $studioIds[$key] = ensureRow(
             $pdo,
             'SELECT studio_id FROM studios WHERE host_id = ? AND name = ?',
-            [$hostId, $name],
+            [$studioHostId, $name],
             'INSERT INTO studios (host_id, name, description, address, district, city, phone, cover_url, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [$hostId, $name, $description, $address, $district, 'TP. Hồ Chí Minh', $phone, $cover, 'active']
+            [$studioHostId, $name, $description, $address, $district, 'TP. Hồ Chí Minh', $phone, $cover, 'active']
         );
     }
 
