@@ -16,6 +16,16 @@ import styles from "../styles/helpdesk.module.css";
 gsap.registerPlugin(useGSAP);
 
 export function HelpdeskWidget({ transport = helpdeskClient }: { transport?: HelpdeskTransport }) {
+  const path = usePathname();
+
+  if (["/host", "/admin"].some(route => path === route || path.startsWith(`${route}/`))) {
+    return null;
+  }
+
+  return <HelpdeskWidgetContent path={path} transport={transport} />;
+}
+
+function HelpdeskWidgetContent({ path, transport }: { path: string; transport: HelpdeskTransport }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const root = useRef<HTMLDivElement>(null);
@@ -23,8 +33,7 @@ export function HelpdeskWidget({ transport = helpdeskClient }: { transport?: Hel
   const launcher = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const followLatest = useRef(true);
-  const path = usePathname();
-  const surface: HelpdeskContext["surface"] = path.startsWith("/host") ? "host" : path.startsWith("/admin") ? "admin" : /^\/(my-bookings|payment|profile)(\/|$)/.test(path) ? "customer" : "public";
+  const surface: HelpdeskContext["surface"] = /^\/(my-bookings|payment|profile)(\/|$)/.test(path) ? "customer" : "public";
   const chat = useHelpdeskChat(transport, { surface });
   function send(text: string) {
     const accepted = chat.send(text);
