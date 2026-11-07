@@ -1,4 +1,4 @@
-CREATE TABLE host_applications (
+CREATE TABLE IF NOT EXISTS host_applications (
     application_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     studio_name VARCHAR(150) NOT NULL,
