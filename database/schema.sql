@@ -4,6 +4,60 @@
 -- Specifications: Báo cáo đồ án mục 3.2 và Implementation Plan (áp dụng D1-D15)
 -- ==============================================================================
 
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Xóa các bảng cũ trước khi tạo mới (tránh lỗi xung đột khóa ngoại và dữ liệu cũ)
+DROP TABLE IF EXISTS booking_refunds;
+DROP TABLE IF EXISTS service_order_refunds;
+DROP TABLE IF EXISTS refund_exception_actions;
+DROP TABLE IF EXISTS inventory_reservations;
+DROP TABLE IF EXISTS inventory_movements;
+DROP TABLE IF EXISTS consumable_items;
+DROP TABLE IF EXISTS project_bookings;
+DROP TABLE IF EXISTS project_revisions;
+DROP TABLE IF EXISTS project_files;
+DROP TABLE IF EXISTS project_tracks;
+DROP TABLE IF EXISTS project_members;
+DROP TABLE IF EXISTS production_projects;
+DROP TABLE IF EXISTS service_order_entitlements;
+DROP TABLE IF EXISTS service_order_payments;
+DROP TABLE IF EXISTS service_order_items;
+DROP TABLE IF EXISTS service_orders;
+DROP TABLE IF EXISTS service_package_items;
+DROP TABLE IF EXISTS service_packages;
+DROP TABLE IF EXISTS booking_services;
+DROP TABLE IF EXISTS contract_document_access_grants;
+DROP TABLE IF EXISTS host_contracts;
+DROP TABLE IF EXISTS host_legal_profiles;
+DROP TABLE IF EXISTS host_applications;
+DROP TABLE IF EXISTS identity_verifications;
+DROP TABLE IF EXISTS account_notification_preferences;
+DROP TABLE IF EXISTS email_change_requests;
+DROP TABLE IF EXISTS studio_policies;
+DROP TABLE IF EXISTS api_rate_limits;
+DROP TABLE IF EXISTS revoked_jwt_tokens;
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS booking_details;
+DROP TABLE IF EXISTS room_reviews;
+DROP TABLE IF EXISTS bookings;
+DROP TABLE IF EXISTS equipment_images;
+DROP TABLE IF EXISTS equipments;
+DROP TABLE IF EXISTS equipment_categories;
+DROP TABLE IF EXISTS room_rates;
+DROP TABLE IF EXISTS room_images;
+DROP TABLE IF EXISTS room_amenities;
+DROP TABLE IF EXISTS room_space_types;
+DROP TABLE IF EXISTS host_room_types;
+DROP TABLE IF EXISTS rooms;
+DROP TABLE IF EXISTS amenities;
+DROP TABLE IF EXISTS space_types;
+DROP TABLE IF EXISTS studios;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
 -- 1. Bảng roles: Vai trò người dùng trong hệ thống
 CREATE TABLE IF NOT EXISTS roles (
     role_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -20,6 +74,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     phone VARCHAR(20) NULL,
+    date_of_birth DATE NULL,
+    address VARCHAR(255) NULL,
     avatar_url VARCHAR(255) NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -38,6 +94,7 @@ CREATE TABLE IF NOT EXISTS studios (
     district VARCHAR(100) NULL,
     city VARCHAR(100) NOT NULL DEFAULT 'TP. Hồ Chí Minh',
     phone VARCHAR(20) NULL,
+    cover_url VARCHAR(255) NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -51,6 +108,7 @@ CREATE TABLE IF NOT EXISTS space_types (
     space_type_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description VARCHAR(255) NULL,
+    category VARCHAR(100) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -201,6 +259,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     expires_at DATETIME NULL,
     completed_at DATETIME NULL,
+    policy_snapshot JSON NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_bookings_type CHECK (booking_type IN ('short_term', 'long_term')),
@@ -222,7 +281,28 @@ CREATE TABLE IF NOT EXISTS bookings (
     INDEX idx_bookings_customer (customer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 14. Bảng booking_details: Chi tiết thiết bị thuê kèm trong đơn
+-- 14. Room reviews: one public rating per completed customer booking
+CREATE TABLE IF NOT EXISTS room_reviews (
+    review_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    booking_id INT NOT NULL,
+    room_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    rating TINYINT UNSIGNED NOT NULL,
+    review_text VARCHAR(1200) NOT NULL DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'published',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (review_id),
+    UNIQUE KEY uq_room_reviews_booking (booking_id),
+    KEY idx_room_reviews_public (room_id, status, created_at),
+    CONSTRAINT chk_room_reviews_rating CHECK (rating BETWEEN 1 AND 5),
+    CONSTRAINT chk_room_reviews_status CHECK (status IN ('published', 'hidden')),
+    CONSTRAINT fk_room_reviews_booking FOREIGN KEY (booking_id) REFERENCES bookings (booking_id) ON DELETE CASCADE,
+    CONSTRAINT fk_room_reviews_room FOREIGN KEY (room_id) REFERENCES rooms (room_id) ON DELETE CASCADE,
+    CONSTRAINT fk_room_reviews_customer FOREIGN KEY (customer_id) REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 15. Bảng booking_details: Chi tiết thiết bị thuê kèm trong đơn
 CREATE TABLE IF NOT EXISTS booking_details (
     detail_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
@@ -241,7 +321,7 @@ CREATE TABLE IF NOT EXISTS booking_details (
     INDEX idx_booking_details_eq_bk (equipment_id, booking_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 15. Bảng payments: Giao dịch thanh toán cọc/hoàn tất đơn
+-- 16. Bảng payments: Giao dịch thanh toán cọc/hoàn tất đơn
 CREATE TABLE IF NOT EXISTS payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     booking_id INT NOT NULL,
@@ -250,16 +330,18 @@ CREATE TABLE IF NOT EXISTS payments (
     amount DECIMAL(12, 2) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'success',
     transaction_code VARCHAR(100) NOT NULL UNIQUE,
+    idempotency_key VARCHAR(100) NOT NULL UNIQUE,
     paid_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_payments_type CHECK (payment_type IN ('deposit', 'remaining', 'full')),
     CONSTRAINT chk_payments_status CHECK (status IN ('pending', 'success', 'failed')),
-    CONSTRAINT chk_payments_amount CHECK (amount > 0),
+    -- A zero-value "remaining" settlement is valid when the deposit covered the full total.
+    CONSTRAINT chk_payments_amount CHECK (amount >= 0),
     CONSTRAINT fk_payments_booking FOREIGN KEY (booking_id) REFERENCES bookings (booking_id) ON DELETE CASCADE,
     INDEX idx_payments_lookup (booking_id, payment_type, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 16. Bảng audit_logs: Nhật ký hoạt động và kiểm toán hệ thống
+-- 17. Bảng audit_logs: Nhật ký hoạt động và kiểm toán hệ thống
 CREATE TABLE IF NOT EXISTS audit_logs (
     log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NULL,
@@ -271,5 +353,61 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE SET NULL,
     INDEX idx_audit_entity (entity_type, entity_id),
     INDEX idx_audit_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 18. Bảng revoked_jwt_tokens: JWT tokens đã bị thu hồi (logout)
+CREATE TABLE IF NOT EXISTS revoked_jwt_tokens (
+    jti CHAR(64) NOT NULL PRIMARY KEY,
+    expires_at DATETIME NOT NULL,
+    revoked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_revoked_jwt_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 19. Bảng api_rate_limits: Giới hạn tốc độ API theo bucket
+CREATE TABLE IF NOT EXISTS api_rate_limits (
+    bucket_key CHAR(64) NOT NULL PRIMARY KEY,
+    scope VARCHAR(40) NOT NULL,
+    window_started_at DATETIME NOT NULL,
+    request_count INT UNSIGNED NOT NULL,
+    expires_at DATETIME NOT NULL,
+    INDEX idx_api_rate_limits_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 20. Bảng studio_policies: Chính sách thanh toán và hủy đặt phòng của từng studio
+CREATE TABLE IF NOT EXISTS studio_policies (
+    studio_id INT PRIMARY KEY,
+    payment_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 15,
+    deposit_percent DECIMAL(5,2) NOT NULL DEFAULT 30.00,
+    cancel_hours SMALLINT UNSIGNED NOT NULL DEFAULT 24,
+    change_hours SMALLINT UNSIGNED NOT NULL DEFAULT 24,
+    refund_tiers JSON NULL,
+    overtime_per_30m INT UNSIGNED NOT NULL DEFAULT 0,
+    open_hour TINYINT UNSIGNED NOT NULL DEFAULT 8,
+    close_hour TINYINT UNSIGNED NOT NULL DEFAULT 22,
+    updated_by INT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_policy_payment_minutes CHECK (payment_minutes BETWEEN 1 AND 1440),
+    CONSTRAINT chk_policy_deposit_percent CHECK (deposit_percent BETWEEN 0 AND 100),
+    CONSTRAINT chk_policy_hours CHECK (open_hour < close_hour AND close_hour <= 24),
+    CONSTRAINT fk_studio_policy_studio FOREIGN KEY (studio_id) REFERENCES studios(studio_id) ON DELETE CASCADE,
+    CONSTRAINT fk_studio_policy_user FOREIGN KEY (updated_by) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 21. Bảng booking_refunds: Giao dịch hoàn tiền cho booking
+CREATE TABLE IF NOT EXISTS booking_refunds (
+    refund_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    payment_id INT NOT NULL UNIQUE,
+    booking_id INT NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'success',
+    reason VARCHAR(50) NOT NULL,
+    transaction_code VARCHAR(100) NOT NULL UNIQUE,
+    idempotency_key VARCHAR(100) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_booking_refund_amount CHECK (amount > 0),
+    CONSTRAINT chk_booking_refund_status CHECK (status IN ('pending','success','failed')),
+    CONSTRAINT fk_booking_refund_payment FOREIGN KEY (payment_id) REFERENCES payments(payment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_booking_refund_booking FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE RESTRICT,
+    INDEX idx_booking_refunds_booking (booking_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
