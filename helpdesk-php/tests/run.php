@@ -328,6 +328,35 @@ test('MySQL facts projection exposes missing data, not private columns or invent
     $facts=\App\Modules\Rooms\RoomHelpdeskService::project($room,$p,array_fill(0,10,['name'=>str_repeat('e',150),'unit_price'=>100,'pricing_unit'=>'hour']));
     check(mb_strlen($facts['text'])<=4000,'must fit browser response validation');
 });
+test('discovery shortcut asks purpose without requiring a room ID or spending a model call',function()use($guest){
+    $m=new ScriptedModel([]);[$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Tôi muốn tìm phòng phù hợp','clientMessageId'=>Util::id()],$guest);
+    check($m->calls===0);check($r['response']['state']==='answered');
+    check(str_contains($r['response']['text'],'lookbook'));check(!str_contains($r['response']['text'],'mã phòng'));
+});
+test('lookbook follow-up can search live catalog and latest booking intent remains available',function()use($guest){
+    $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$store=new Store($cfg);$store->migrate();global $corpus,$manifest;
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['items'=>[['room_id'=>10,'name'=>'Daylight Lookbook','capacity'=>8,'description'=>'Phòng chụp thời trang']]]]]]);
+    $m=new ScriptedModel([function($messages){
+        check(str_contains(Util::json($messages),'lookbook&fashion'));
+        return call('search_rooms',['keyword'=>'lookbook']);
+    },['content'=>Util::json(['kind'=>'rooms'])],['content'=>Util::json(['kind'=>'booking_guide'])]]);
+    $s=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m,new PublicCatalog($cfg,$http));
+    $id=$s->create([],$guest)['conversation']['id'];
+    $s->send($id,['text'=>'Tôi muốn tìm phòng phù hợp','clientMessageId'=>Util::id()],$guest);
+    $r=$s->send($id,['text'=>'lookbook&fashion á','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['cards'][0]['roomId']==='10');check($r['response']['state']==='answered');
+    $r=$s->send($id,['text'=>'Làm sao để đặt Studio?','clientMessageId'=>Util::id()],$guest);
+    check($r['answerKind']==='booking_guide');
+});
+test('empty search returns a useful refinement prompt',function()use($guest){
+    $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$store=new Store($cfg);$store->migrate();global $corpus,$manifest;
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['items'=>[]]]]]);
+    $m=new ScriptedModel([call('search_rooms',['keyword'=>'not-found']),['content'=>Util::json(['kind'=>'rooms'])]]);
+    $s=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m,new PublicCatalog($cfg,$http));
+    $id=$s->create([],$guest)['conversation']['id'];$r=$s->send($id,['text'=>'Phòng chưa có','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['state']==='answered');check(str_contains($r['response']['text'],'từ khóa khác'));
+});
 $failed=0;
 foreach($tests as$name=>$fn){try{$fn();echo "PASS $name\n";}catch(Throwable $e){$failed++;echo "FAIL $name: ".$e->getMessage()."\n";}}
 echo Util::json(['tests'=>count($tests),'passed'=>count($tests)-$failed,'failed'=>$failed,'assertions'=>$assertions,'provider'=>'scripted/mocked, no live gateway claim'])."\n";

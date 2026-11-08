@@ -10,6 +10,7 @@ use StudioHub\Helpdesk\Util;
 use StudioHub\Helpdesk\Knowledge\CitationBuilder;
 use StudioHub\Helpdesk\LLM\LanguageModel;
 use StudioHub\Helpdesk\Security\Actor;
+use StudioHub\Helpdesk\Retrieval\LexicalRetriever;
 
 /**
  * Điều phối vòng lặp "agent": gọi mô hình ngôn ngữ, thực thi các tool mà mô hình yêu cầu,
@@ -72,6 +73,7 @@ final class AgentOrchestrator
 
     /** Câu hỏi làm rõ theo từng trường thông tin còn thiếu. */
     private const CLARIFICATION_QUESTIONS = [
+        'room_requirements' => 'Bạn cần phòng cho chụp lookbook/thời trang, sản phẩm, quay video hay thu âm? Nếu tiện, cho mình thêm số người, khu vực và ngân sách để lọc sát hơn; chưa cần biết tên phòng.',
         'description' => 'Bạn mô tả ngắn sự cố cần hỗ trợ được không? Không gửi mật khẩu hoặc thông tin thanh toán.',
         'studio'      => 'Bạn đang hỏi Studio hoặc phòng nào? Cho mình tên hoặc mã phòng để tra đúng thông tin.',
         'category'    => 'Bạn cần hỗ trợ tài khoản, lỗi nền tảng, điều kiện phòng hay tranh chấp cọc?',
@@ -98,6 +100,13 @@ final class AgentOrchestrator
      */
     public function run(string $text, array $history, Actor $actor, array &$evidence): array
     {
+        // The widget's generic discovery shortcut must never ask for an existing room ID.
+        if (in_array(LexicalRetriever::normalize($text), [
+            'toi muon tim phong phu hop', 'tim phong phu hop', 'tim phong', 'tim studio',
+        ], true)) {
+            return array_replace(self::base(self::CLARIFICATION_QUESTIONS['room_requirements'], 'answered'),
+                ['answerKind'=>'clarification', 'reasonCode'=>null]);
+        }
         // Keep the complete turn below the proxy's request deadline to avoid 504s.
         $deadline = microtime(true) + $this->config->int('HELPDESK_TURN_TIMEOUT_SECONDS', 22, 3, 25);
         $maxSteps = $this->config->int('HELPDESK_MAX_AGENT_STEPS', 5, 1, 8);
@@ -328,6 +337,15 @@ final class AgentOrchestrator
             ];
         }
 
+        if ($kind === 'catalog_unavailable') {
+            return array_replace(self::base('Mình chưa tải được danh mục phòng để gợi ý. Bạn có thể mở Khám phá Studio để tìm theo nhu cầu; mình vẫn có thể hướng dẫn cách đặt phòng.'),
+                ['reasonCode'=>'catalog_unavailable']);
+        }
+        if ($kind === 'rooms' && !empty($evidence['roomSearchCompleted']) && empty($evidence['rooms'])) {
+            return array_replace(self::base('Lượt tìm kiếm này chưa trả về phòng phù hợp. Bạn muốn thử từ khóa khác hoặc mở rộng khu vực/ngân sách không?', 'answered'),
+                ['answerKind'=>'catalog','reasonCode'=>null]);
+        }
+
         // Danh mục phòng (lấy từ API, chưa kiểm tra phòng trống).
         if ($kind === 'rooms' && !empty($evidence['rooms'])) {
             return [
@@ -370,7 +388,7 @@ final class AgentOrchestrator
             $question = self::CLARIFICATION_QUESTIONS[$final['field'] ?? 'description']
                 ?? self::CLARIFICATION_QUESTIONS['description'];
 
-            return self::base($question);
+            return array_replace(self::base($question, 'answered'), ['answerKind'=>'clarification','reasonCode'=>null]);
         }
 
         // Mặc định (kể cả kind 'unsupported' hoặc thiếu bằng chứng): từ chối an toàn.

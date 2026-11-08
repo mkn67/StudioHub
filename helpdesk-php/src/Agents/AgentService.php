@@ -672,6 +672,7 @@ final class AgentService
             ),
             function ($args) use (&$evidence) {
                 $result = $this->catalog->search($args);
+                $evidence['roomSearchCompleted'] = true;
 
                 foreach ($result['items'] as $item) {
                     $evidence['rooms'][$item['roomId']] = self::roomCard($item);
