@@ -226,6 +226,41 @@ test('JSON mode requested only for structured agent system prompts',function(){
     check($http->requests[0]['body']['response_format']['type']==='json_object');
     $client->complete([['role'=>'user','content'=>'Reply OK']],[],microtime(true)+2);check(!isset($http->requests[1]['body']['response_format']));
 });
+test('Groq GPT-OSS tool roundtrip keeps protocol validation and uses serial tools',function(){
+    $http=new FakeTransport([
+        ['status'=>200,'body'=>['choices'=>[['message'=>['role'=>'assistant','content'=>null,'tool_calls'=>call('search_knowledge',['query'=>'test'])['tool_calls']]]]]],
+        ['status'=>200,'body'=>['choices'=>[['message'=>['role'=>'assistant','content'=>'{"kind":"greeting"}']]]]],
+    ]);
+    $client=new NineRouterClient(config(['NINEROUTER_BASE_URL'=>'https://api.groq.com/openai/v1','NINEROUTER_MODEL'=>'openai/gpt-oss-120b']),$http);
+    $tools=[['type'=>'function','function'=>['name'=>'search_knowledge','parameters'=>ToolRegistry::object(['query'=>ToolRegistry::string()],['query'])]]];
+    $messages=[['role'=>'system','content'=>'Reply in JSON or call a tool.'],['role'=>'user','content'=>'Hello']];
+    $reply=$client->complete($messages,$tools,microtime(true)+2);
+    $messages[]=$reply['message'];
+    $messages[]=['role'=>'tool','tool_call_id'=>$reply['message']['tool_calls'][0]['id'],'content'=>'{"chunks":[]}'];
+    $final=$client->complete($messages,$tools,microtime(true)+2);
+    check($final['message']['content']==='{"kind":"greeting"}');
+    foreach($http->requests as$request){
+        check($request['url']==='https://api.groq.com/openai/v1/chat/completions');
+        check(!isset($request['body']['max_tokens']));
+        check($request['body']['max_completion_tokens']===900);
+        check($request['body']['parallel_tool_calls']===false);
+        check($request['body']['reasoning_effort']==='low');
+        check(!isset($request['body']['response_format']));
+    }
+});
+test('provider rejection diagnostics never log key, message or failed generation',function(){
+    $file=tempnam(sys_get_temp_dir(),'helpdesk-provider-log-');$old=ini_get('error_log');ini_set('error_log',$file);
+    try{
+        $http=new FakeTransport([['status'=>400,'body'=>['error'=>['type'=>'invalid_request_error','param'=>'response_format','message'=>'PRIVATE PROMPT test-only-key','failed_generation'=>'PRIVATE GENERATED CONTENT']]]]);
+        $client=new NineRouterClient(config(),$http);
+        fails(fn()=>$client->complete([['role'=>'user','content'=>'PRIVATE PROMPT']],[],microtime(true)+2),'provider_unavailable');
+        check(count($http->requests)===1,'do not retry HTTP 400');
+        $log=file_get_contents($file);
+        check(str_contains($log,'"upstreamStatus":400'));
+        check(str_contains($log,'"providerParam":"response_format"'));
+        check(!str_contains($log,'PRIVATE')&&!str_contains($log,'test-only-key'));
+    }finally{ini_set('error_log',$old);unlink($file);}
+});
 $failed=0;
 foreach($tests as$name=>$fn){try{$fn();echo "PASS $name\n";}catch(Throwable $e){$failed++;echo "FAIL $name: ".$e->getMessage()."\n";}}
 echo Util::json(['tests'=>count($tests),'passed'=>count($tests)-$failed,'failed'=>$failed,'assertions'=>$assertions,'provider'=>'scripted/mocked, no live gateway claim'])."\n";
