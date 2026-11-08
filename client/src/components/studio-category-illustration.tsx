@@ -1,10 +1,19 @@
 import type { ReactNode } from "react";
 import type { RoomType } from "@/domain/models";
 
-type Pictogram = "photography" | "filmmaking" | "workshop" | "recording" | "podcast" | "livestream" | "multipurpose";
+type Pictogram = "photography" | "filmmaking" | "workshop" | "recording" | "podcast" | "livestream" | "multipurpose" | "cyclorama" | "fashion" | "set" | "greenscreen" | "acoustic";
 
 // Presentation lookup only: links and filter values still use the original category.
 const categoryPictograms = {
+  "Cyclorama Studio": "cyclorama",
+  "Lookbook & Fashion": "fashion",
+  "Concept & Set Design": "set",
+  "Green Screen & VFX": "greenscreen",
+  "Acoustic Soundstage": "acoustic",
+  "Podcast & Livestream Hub": "podcast",
+  "Livestream & E-commerce": "livestream",
+  "Workshop & Event Studio": "workshop",
+  "Music Recording Studio": "recording",
   "Chụp ảnh": "photography",
   "Quay phim": "filmmaking",
   Workshop: "workshop",
@@ -35,6 +44,33 @@ const microphone = <>
 </>;
 
 const pictograms = {
+  cyclorama: <>
+    <path className="pictogram-paper" d="M35 13h90v76H35z" />
+    <path className="pictogram-spot" d="M35 13h90v39c0 16-17 26-45 26H35z" />
+    <path d="M35 52c0 17 17 26 45 26M23 26v57m-8 6 8-9 8 9M137 26v57m-8 6 8-9 8 9" />
+  </>,
+  fashion: <>
+    <path d="M30 89V20h100v69M22 89h16m84 0h16M80 23v9m-6 0a6 6 0 1 1 6 6v5" />
+    <path className="pictogram-spot" d="m80 43-30 16h60z" />
+    <path className="pictogram-paper" d="m65 60-8 24h46l-8-24M58 45l-13 7-6 18 12 3 7-12m44-16 13 7 6 18-12 3-7-12" />
+  </>,
+  set: <>
+    <path className="pictogram-paper" d="M29 83V21h49v62z" />
+    <path className="pictogram-spot" d="M61 83V49a25 25 0 0 1 50 0v34z" />
+    <circle className="pictogram-paper" cx="120" cy="28" r="13" />
+    <path className="pictogram-paper" d="M97 68h39v19H97z" /><path d="M23 88h119" />
+  </>,
+  greenscreen: <>
+    <path className="pictogram-spot" d="M27 17h106v61H27z" />
+    <path d="M27 29v-12h13m80 0h13v12M38 78l-9 12m93-12 9 12" />
+    <rect className="pictogram-paper" x="56" y="46" width="43" height="29" />
+    <path className="pictogram-paper" d="m99 54 17-8v29l-17-8z" /><path d="M77 75v15m0-9-12 9m12-9 12 9" />
+  </>,
+  acoustic: <>
+    <path className="pictogram-paper" d="M27 20h22v63H27zm84 0h22v63h-22z" />
+    <path d="M34 30v43m8-43v43m76-43v43m8-43v43" />
+    <path className="pictogram-accent-line" d="M60 45v14m10-30v47m10-55v63m10-55v47m10-31v14" />
+  </>,
   photography: camera,
   filmmaking: <>
     <path className="pictogram-paper" d="M35 42h91v42H35z" />

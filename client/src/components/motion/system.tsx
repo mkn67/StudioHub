@@ -51,6 +51,7 @@ export function MotionSurface({ children, operational = false }: { children: Rea
         };
         timeline.addLabel("plate", 0);
         layer(".hero-editorial",18,.84,duration.section,"plate");
+        layer(".home-hero .riso-headline",6,.86,.3,"plate+=0.05");
         layer(".hero-editorial > p",6,.82,.3,"plate+=0.10");
         timeline.addLabel("search", .16);
         layer(".hero-search",12,.86,duration.card,"search");
@@ -61,7 +62,7 @@ export function MotionSurface({ children, operational = false }: { children: Rea
       }
       if (!operational) {
         // Create triggers in DOM order. Group only true sibling card collections.
-        root.querySelectorAll<HTMLElement>(".section-head, .categories, .how-grid > h2, .host-cta, .room-related-section > div:first-child, .room-information > h2").forEach((trigger, index) => {
+        root.querySelectorAll<HTMLElement>(".section-head, .categories:not(.home-category-grid), .how-grid > h2, .host-cta, .room-related-section > div:first-child, .room-information > h2").forEach((trigger, index) => {
           const group = trigger.matches(".categories");
           const photographic = trigger.matches(".host-cta");
           // Photograph-heavy listings stay still; their section heading carries the reveal.
@@ -107,6 +108,25 @@ export function MotionSurface({ children, operational = false }: { children: Rea
     return () => media.revert();
   }, { scope, dependencies:[path,operational], revertOnUpdate:true });
   return <div ref={scope} className="motion-surface">{children}</div>;
+}
+
+/** API categories can arrive after the initial page animation has been created. */
+export function useHomepageCategoryMotion(categoryKey: string) {
+  const scope = useRef<HTMLDivElement>(null);
+  useGSAP(() => {
+    const media = gsap.matchMedia();
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      scope.current?.querySelectorAll<HTMLElement>(".categories > a").forEach((card, index) => {
+        gsap.fromTo(card, { opacity: .78, y: 12 }, {
+          opacity: 1, y: 0, duration: .35, delay: (index % 3) * .04,
+          ease: gsapEase, immediateRender: false, clearProps: "opacity,transform",
+          scrollTrigger: { trigger: card, start: "top 96%", once: true },
+        });
+      });
+    }, scope);
+    return () => media.revert();
+  }, { scope, dependencies: [categoryKey], revertOnUpdate: true });
+  return scope;
 }
 
 /** Commit actual results first; never retain stale rows or animate incorrect amounts. */

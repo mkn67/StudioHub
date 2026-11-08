@@ -8,6 +8,7 @@ import "./editorial.css";
 import "./marketplace-soft.css";
 import "./motion.css";
 import "./explore.css";
+import "./homepage.css";
 import { motionTokenCSS } from "@/components/motion/tokens";
 import { Provider } from "@/components/store";
 import { ApiSessionProvider } from "@/components/api-session";

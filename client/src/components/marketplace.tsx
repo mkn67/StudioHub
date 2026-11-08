@@ -1,8 +1,8 @@
 "use client";
-import { Presence, SharedPhoto, useContentMotion } from "./motion/system";
+import { Presence, SharedPhoto, useContentMotion, useHomepageCategoryMotion } from "./motion/system";
 import { GalleryImage } from "./motion/gallery-image";
 import Image from "@/components/image";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "./motion/navigation-link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -58,37 +58,45 @@ export function Home() {
     ? (catalog.data ?? []).map(t => ({ id: String(t.space_type_id), category: t.name, group: t.category || "Không gian khác", description: t.description || categoryCopy[t.name] }))
     : state.types.map(t => ({ ...t, group: "Không gian sáng tạo", description: categoryCopy[t.category] || "Không gian chuyên dụng cho hoạt động sáng tạo và sản xuất nội dung." }));
   const categoryGroups = categories.reduce((groups, type) => groups.set(type.group, [...(groups.get(type.group) ?? []), type]), new Map<string, typeof categories>());
+  const preferredGroups = ["Visual & Photo Studio", "Video & Film Production", "Livestream & Broadcast", "Audio & Event"];
+  const orderedGroups = [...preferredGroups.filter(group => categoryGroups.has(group)), ...Array.from(categoryGroups.keys()).filter(group => !preferredGroups.includes(group))];
+  const categoryMotion = useHomepageCategoryMotion(categories.map(type => type.id).join("|"));
+  const [searchPending, startSearch] = useTransition();
   return (
     <>
-      <section className="hero">
+      <section className="hero home-hero" aria-labelledby="home-title">
         <Image
-          width={1400}
+          width={1500}
           height={1000}
           className="hero-photo"
           src="/images/cyclorama-2.jpg"
-          alt="Studio ánh sáng tự nhiên, phông ấm, sàn gỗ và thiết bị chụp ảnh"
+          sizes="100vw"
+          alt="Studio trắng thoáng sáng với cửa sổ lớn và ánh sáng tự nhiên"
           fetchPriority="high"
+          loading="eager"
         />
         <div className="hero-shade" />
         <div className="hero-inner">
           <div className="hero-editorial">
-          <h1 className="riso-headline">
-            Tìm không gian
-            <br />cho ý tưởng<span className="hero-emphasis"> tiếp theo.</span>
+          <span className="hero-kicker">Không gian sáng tạo / StudioHub</span>
+          <h1 className="riso-headline" id="home-title">
+            <span>StudioHub-UIT</span>
+            <span className="hero-emphasis">Xin chào bạn!</span>
           </h1>
           <p>
-            Khám phá phòng chụp, phim trường, phòng thu và không gian sự kiện.
+            Hệ thống tìm kiếm Studio lớn nhì UIT. Tiện lợi, nhanh chóng.
           </p>
           </div>
           <form
             className="hero-search"
+            aria-busy={searchPending}
             onSubmit={(e) => {
               e.preventDefault();
               const p = new URLSearchParams();
               if (location) p.set(backendEnabled ? "keyword" : "location", location);
               if (category) p.set(backendEnabled ? "space_type_id" : "category", category);
               if (date && !backendEnabled) p.set("date", date);
-              router.push("/rooms?" + p.toString());
+              startSearch(() => router.push("/rooms?" + p.toString()));
             }}
           >
             <label>
@@ -125,22 +133,19 @@ export function Home() {
                 onChange={(e) => setDate(e.target.value)}
               />}
             </label>
-            <button className="btn" type="submit">
+            <button className="btn" type="submit" disabled={searchPending}>
               <Search size={18} />
-              Tìm Studio
+              {searchPending ? "Đang tìm…" : "Tìm Studio"}
             </button>
           </form>
         </div>
         <div className="hero-caption">
           <span>Studio sáng tạo · TP. Hồ Chí Minh</span>
-          <span>
-            Ảnh không gian minh họa <ArrowUpRight size={14} />
-          </span>
         </div>
       </section>
-      <section className="section container">
+      <section className="section container home-categories" aria-labelledby="home-categories-title">
         <div className="section-head">
-          <h2>
+          <h2 id="home-categories-title">
             Mỗi ý tưởng,
             <br />
             một không gian.
@@ -151,12 +156,12 @@ export function Home() {
             Chọn không gian theo cách bạn sáng tạo.
           </p>
         </div>
-        <div className="space-category-groups">
-          {["Visual & Photo Studio", "Video & Film Production", "Livestream & Broadcast", "Audio & Event"].filter(group => categoryGroups.has(group)).map(group => {
+        <div className="space-category-groups" ref={categoryMotion}>
+          {orderedGroups.map(group => {
             const types = categoryGroups.get(group) ?? [];
-            return <section className="space-category-group" key={group}>
-            <h3>{group}</h3>
-            <div className="categories">
+            return <section className="space-category-group" data-tone={Math.max(0, preferredGroups.indexOf(group)) % 4} key={group}>
+            <h3><span>{group}</span><small>{types.length.toString().padStart(2, "0")} loại không gian</small></h3>
+            <div className="categories home-category-grid">
               {types.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${type.id}` : `/rooms?category=${encodeURIComponent(type.category)}`}>
                 <StudioCategoryIllustration category={type.category}/>
                 <span>{type.category}</span><ArrowUpRight size={22}/>

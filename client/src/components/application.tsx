@@ -107,7 +107,7 @@ export default function Application() {
       <a className="skip-link" href="#main-content">
         Đến nội dung chính
       </a>
-      {!ops && <header className={`site-header ${hero ? "over-hero" : ""}`}>
+      {!ops && <header className={`site-header public-header ${hero ? "over-hero" : ""}`}>
         <Link className="brand" href="/">
           StudioHub<span>®</span>
         </Link>
@@ -234,7 +234,7 @@ export default function Application() {
           <div className="footer-bottom container">
             <span>© 2026 StudioHub</span>
             <span>
-              {backendEnabled ? "Kết nối API · Thanh toán sandbox, không chuyển tiền thật" : demoMode ? "Môi trường demo · Dữ liệu minh họa · Không thanh toán thật" : "StudioHub · Đặt thuê không gian sáng tạo"}
+              {backendEnabled ? "Trường Đại học Công nghệ Thông tin - ĐHQG TP Hồ Chí Minh" : demoMode ? "Môi trường demo · Dữ liệu minh họa · Không thanh toán thật" : "StudioHub · Đặt thuê không gian sáng tạo"}
             </span>
           </div>
         </footer>

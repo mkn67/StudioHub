@@ -1,5 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+
+// Nested volume mountpoints must exist before Docker mounts server/ read-only.
+for (const directory of ["storage", "public/uploads", "vendor"]) {
+  await mkdir(new URL(`../server/${directory}/`, import.meta.url), { recursive: true });
+}
 
 const target = new URL("../.env", import.meta.url);
 let template = await readFile(new URL("../.env.example", import.meta.url), "utf8");
