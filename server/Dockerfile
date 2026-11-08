@@ -30,7 +30,9 @@ RUN composer install --no-dev --no-autoloader --no-interaction --prefer-dist --n
 COPY . .
 RUN composer dump-autoload --no-dev --optimize \
     && mkdir -p public/uploads storage \
-    && chown -R www-data:www-data public/uploads storage
+    && chown -R www-data:www-data public/uploads storage \
+    && (getent group 1000 >/dev/null || groupadd --gid 1000 render-secrets) \
+    && usermod -a -G "$(getent group 1000 | cut -d: -f1)" www-data
 
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && printf '%s\n' \

@@ -89,7 +89,8 @@ test("Helpdesk bridge rejects insecure production origins and upstream URLs", as
     assert.equal(insecureUpstream.status, 503);
   } finally {
     keys.forEach((key, index) => {
-      if (previous[index] === undefined) delete process.env[key]; else process.env[key] = previous[index];
+      if (previous[index] === undefined) Reflect.deleteProperty(process.env, key);
+      else Reflect.set(process.env, key, previous[index]);
     });
   }
 });
