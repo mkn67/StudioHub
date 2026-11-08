@@ -14,14 +14,15 @@ const failure = (status: number, code: string) => Response.json({
 export async function proxyHelpdesk(request: Request, segments: string[], session: string, fetcher: typeof fetch = fetch): Promise<Response> {
   const path = segments.join("/");
   if (!routes.some(rule => rule.test(path)) || segments.some(s => s.includes("..") || s.includes("%"))) return failure(404, "resource_not_found");
-  const configuredOrigins = (process.env.HELPDESK_FRONTEND_ORIGIN || "http://localhost:3000")
+  const configuredOrigins = (process.env.HELPDESK_FRONTEND_ORIGIN || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000"))
     .split(",").map(origin => origin.trim()).filter(Boolean);
   let allowedOrigins: URL[];
   try {
     allowedOrigins = configuredOrigins.map(origin => {
       const url = new URL(origin);
       if (!["http:", "https:"].includes(url.protocol) || url.username || url.password ||
-        url.pathname !== "/" || url.search || url.hash) throw new Error("Invalid frontend origin");
+        url.pathname !== "/" || url.search || url.hash ||
+        (process.env.NODE_ENV === "production" && url.protocol !== "https:")) throw new Error("Invalid frontend origin");
       return url;
     });
   } catch { return failure(503, "invalid_frontend_origin_configuration"); }
@@ -39,7 +40,8 @@ export async function proxyHelpdesk(request: Request, segments: string[], sessio
   if (!matchedOrigin || (requestOrigin !== matchedOrigin.origin && !sameOriginGet)) return failure(403, "origin_denied");
   const secret = process.env.HELPDESK_BRIDGE_SECRET || "";
   if (secret.length < 32) return failure(503, "bridge_not_configured");
-  const base = process.env.HELPDESK_API_URL || "http://127.0.0.1:8010";
+  const base = process.env.HELPDESK_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:8010");
+  if (!base) return failure(503, "invalid_bridge_configuration");
   let upstream: URL;
   try {
     upstream = new URL(base);
@@ -47,6 +49,7 @@ export async function proxyHelpdesk(request: Request, segments: string[], sessio
     const httpHosts = ["localhost", "127.0.0.1", "[::1]", ...(process.env.HELPDESK_HTTP_HOSTS || "").split(",").map(host => host.trim().toLowerCase()).filter(Boolean)];
     if (upstream.username || upstream.password || upstream.search || upstream.hash || upstream.pathname !== "/" ||
       !["https:", "http:"].includes(upstream.protocol) ||
+      (process.env.NODE_ENV === "production" && upstream.protocol !== "https:") ||
       (upstream.protocol === "http:" && !httpHosts.includes(upstream.hostname))) return failure(503, "invalid_bridge_configuration");
   } catch { return failure(503, "invalid_bridge_configuration"); }
   const query = new URL(request.url).search;
@@ -78,7 +81,7 @@ export async function proxyHelpdesk(request: Request, segments: string[], sessio
   try {
     const result = await fetcher(upstream, {
       method: request.method, headers, body, cache: "no-store", redirect: "error",
-      signal: AbortSignal.any([request.signal, AbortSignal.timeout(65000)]),
+      signal: AbortSignal.any([request.signal, AbortSignal.timeout(28000)]),
     });
     if (!result.body) return failure(502, "invalid_helpdesk_response");
     const reader = result.body.getReader(); const parts: Uint8Array[] = []; let received = 0;

@@ -41,10 +41,10 @@ RUN mkdir -p var \
     && chown www-data:www-data var \
     && chmod 0770 var
 
-ENV HELPDESK_DATABASE_URL=sqlite:var/helpdesk.sqlite \
-    HELPDESK_FRONTEND_ORIGIN=http://localhost:3000
+ENV HELPDESK_FRONTEND_ORIGIN=http://localhost:3000 \
+    PORT=10000
 VOLUME ["/app/helpdesk-php/var"]
-EXPOSE 80
+EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD php -r '$body = @file_get_contents("http://127.0.0.1/health"); exit($body !== false && (json_decode($body, true)["status"] ?? "") === "success" ? 0 : 1);'
-CMD ["sh", "-ec", "php bin/migrate.php --apply && exec apache2-foreground"]
+    CMD php -r '$port = (int) (getenv("PORT") ?: 10000); $body = @file_get_contents("http://127.0.0.1:" . $port . "/health"); exit($body !== false && (json_decode($body, true)["status"] ?? "") === "success" ? 0 : 1);'
+CMD ["sh", "-ec", "port=\"${PORT:-10000}\"; case \"$port\" in ''|*[!0-9]*) echo 'PORT must be numeric' >&2; exit 1;; esac; if [ \"$port\" -lt 1 ] || [ \"$port\" -gt 65535 ]; then echo 'PORT is outside the valid range' >&2; exit 1; fi; sed -ri \"s/^Listen 80$/Listen ${port}/\" /etc/apache2/ports.conf; sed -ri \"s#<VirtualHost \\*:80>#<VirtualHost *:${port}>#\" /etc/apache2/sites-available/000-default.conf; php bin/migrate.php --apply && exec apache2-foreground"]

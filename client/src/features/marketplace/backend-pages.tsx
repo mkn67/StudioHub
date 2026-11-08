@@ -9,6 +9,8 @@ import { formatApiTime, unitLabels } from "@/services/api/contracts";
 import { money } from "@/domain/models";
 import { ApiMessage } from "@/components/api-ui";
 import { Modal } from "@/components/ui";
+import { RoomListingCard, RoomListingSkeleton } from "./RoomListingCard";
+import { discoveryPurposes, typesForPurpose } from "./discovery-purposes";
 import { MIN_PRICE, MAX_PRICE, PRICE_STEP, SEARCH_RATE_UNITS, readRoomSearch, roomSearchRequest, roomSearchUrl, formatSearchPrice, type RoomSearch } from "@/services/api/room-search";
 export function ApiImage({ src, alt }: {
     src?: string | null;
@@ -152,20 +154,24 @@ export function BackendSearchResults({ home = false }: { home?: boolean }) {
         </aside>
         <section className="explore-results" aria-label="Kết quả tìm kiếm" aria-busy={rooms.loading}>
           <div className="explore-results-heading" aria-live="polite"><h2>{rooms.data ? `${rooms.data.pagination.total_items} phòng phù hợp` : rooms.loading ? "Đang tìm phòng…" : "Kết quả tìm kiếm"}</h2><label className="explore-sort">Sắp xếp<select value={applied.sort} onChange={event => apply({ ...applied, sort: event.target.value, page: 1 })}><option value="recommended">Đề xuất</option><option value="price_asc">Giá thấp đến cao</option><option value="price_desc">Giá cao đến thấp</option><option value="area_desc">Diện tích lớn nhất</option><option value="capacity_desc">Sức chứa lớn nhất</option><option value="newest">Mới cập nhật</option></select></label></div>
+          <nav className="quick-filter-chips" aria-label="Lọc nhanh theo mục đích"><span>Tìm theo nhu cầu</span><button type="button" aria-pressed={!applied.spaceType} className={!applied.spaceType ? "active" : ""} onClick={() => apply({ ...applied, spaceType: "", page: 1 })}>Tất cả</button>{discoveryPurposes.map(purpose => typesForPurpose(types.data ?? [], purpose.typeNames).map(type => <button type="button" key={`${purpose.id}-${type.space_type_id}`} aria-pressed={applied.spaceType === String(type.space_type_id)} className={applied.spaceType === String(type.space_type_id) ? "active" : ""} onClick={() => apply({ ...applied, spaceType: String(type.space_type_id), page: 1 })}>{purpose.label}</button>))}</nav>
           {!!activeChips.length && <ul className="active-filter-chips" aria-label="Bộ lọc đang áp dụng">{activeChips.map((chip, index) => <li key={`${chip.label}:${index}`}><button type="button" onClick={chip.clear}>{chip.label}<span aria-hidden="true">×</span><span className="sr-only"> · Xóa bộ lọc</span></button></li>)}<li><button type="button" onClick={reset}>Xóa tất cả</button></li></ul>}
-          <ApiMessage loading={rooms.loading} error={rooms.error}/>
+          <ApiMessage error={rooms.error}/>
           {rooms.error && <button className="btn secondary" onClick={rooms.reload}>Thử lại</button>}
           {rooms.data && <>
             {rooms.data.items.length === 0 && <div className="explore-empty"><p>Không tìm thấy phòng phù hợp với bộ lọc.</p><button className="btn secondary" onClick={reset}>Xóa bộ lọc</button></div>}
-            <div className="explore-room-list">{rooms.data.items.map(r => <Link className="room-card explore-room-card" key={r.room_id} href={`/rooms/${r.room_id}`}>
-              <div className="room-image"><ApiImage src={r.thumbnail_url} alt={r.name}/></div>
-              <div className="room-copy"><p>{r.studio.name} · {r.studio.district}</p><h2>{r.name}</h2>{r.review_summary && r.review_summary.review_count > 0 && <p className="explore-room-rating" aria-label={`${r.review_summary.average_rating} trên 5 sao, ${r.review_summary.review_count} đánh giá`}>★ {r.review_summary.average_rating.toFixed(1)} <span>({r.review_summary.review_count} đánh giá)</span></p>}<p>{r.primary_space_type?.name || "Studio sáng tạo"} · {r.area} m² · Tối đa {r.capacity} người</p>
-                {!!r.amenities?.length && <ul className="explore-room-amenities" aria-label="Tiện ích nổi bật">{r.amenities.slice(0, 3).map(item => <li key={item.amenity_id}>{item.name}</li>)}</ul>}
-                <div className="explore-room-bottom"><strong>{r.display_rate ? `${formatSearchPrice(r.display_rate.unit_price)} / ${unitLabels[r.display_rate.rate_unit] ?? r.display_rate.rate_unit}${r.display_rate.rate_unit === "session" && r.display_rate.unit_minutes ? ` (${r.display_rate.unit_minutes / 60} giờ)` : ""}` : "Chưa có bảng giá"}</strong><span>Xem phòng →</span></div>
-              </div>
-            </Link>)}</div>
+            <div className="explore-room-list">{rooms.data.items.map(room => <RoomListingCard key={room.room_id} className="explore-room-card" room={{
+              href: `/rooms/${room.room_id}`, image: <ApiImage src={room.thumbnail_url} alt={room.name}/>, title: room.name,
+              studio: room.studio.name, district: room.studio.district, type: room.primary_space_type?.name || "Studio sáng tạo",
+              details: `${room.area} m² · Tối đa ${room.capacity} người`,
+              ...(room.review_summary && room.review_summary.review_count > 0 ? { rating: { average: room.review_summary.average_rating, count: room.review_summary.review_count } } : {}),
+              amenities: (room.amenities ?? []).map(item => item.name),
+              price: room.display_rate ? `${formatSearchPrice(room.display_rate.unit_price)} / ${unitLabels[room.display_rate.rate_unit] ?? room.display_rate.rate_unit}` : "Chưa có bảng giá",
+              priceContext: room.display_rate?.rate_unit === "session" && room.display_rate.unit_minutes ? `${room.display_rate.unit_minutes / 60} giờ mỗi buổi` : undefined,
+            }} />)}</div>
             {rooms.data.pagination.total_items > 0 && <nav className="explore-pagination" aria-label="Phân trang kết quả"><button className="btn secondary" disabled={applied.page <= 1 || rooms.loading} onClick={() => apply({ ...applied, page: applied.page - 1 })}>Trang trước</button><span>Trang {applied.page} / {Math.max(1, rooms.data.pagination.total_pages)}</span><button className="btn secondary" disabled={applied.page >= rooms.data.pagination.total_pages || rooms.loading} onClick={() => apply({ ...applied, page: applied.page + 1 })}>Trang sau</button></nav>}
           </>}
+          {rooms.loading && <div className="explore-room-list" aria-hidden="true">{Array.from({ length: 3 }, (_, index) => <RoomListingSkeleton key={index}/>)}</div>}
         </section>
       </div>
     </div>;

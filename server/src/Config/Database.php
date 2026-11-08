@@ -19,11 +19,11 @@ class Database
     public static function getConnection(): PDO
     {
         if (self::$connection === null) {
-            $host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'db';
-            $port = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: '3306';
-            $dbName = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?: 'studio_dev';
-            $user = $_ENV['DB_USER'] ?? getenv('DB_USER') ?: 'studio_user';
-            $password = $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? getenv('DB_PASS') ?: getenv('DB_PASSWORD') ?: '';
+            $host = self::environment('DB_HOST', 'db');
+            $port = self::environment('DB_PORT', '3306');
+            $dbName = self::environment('DB_NAME', 'studio_dev');
+            $user = self::environment('DB_USER', 'studio_user');
+            $password = self::environment('DB_PASS', self::environment('DB_PASSWORD'));
             if ($password === '') {
                 throw new RuntimeException('DB_PASS must be configured');
             }
@@ -41,5 +41,11 @@ class Database
         }
 
         return self::$connection;
+    }
+
+    private static function environment(string $key, string $default = ''): string
+    {
+        $value = getenv($key);
+        return $value !== false ? $value : (string) ($_ENV[$key] ?? $default);
     }
 }

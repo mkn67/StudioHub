@@ -19,25 +19,15 @@ export class ApiError extends Error {
   }
 }
 
-export function getStoredApiToken(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.sessionStorage.getItem("studiohub.api-token");
-  } catch {
-    return null;
-  }
-  return null;
-}
-
 export const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 export const backendEnabled =
   apiMode === "rest";
 
-export function setStoredApiToken(token: string | null) {
-  if (token) window.sessionStorage.setItem("studiohub.api-token", token);
-  else window.sessionStorage.removeItem("studiohub.api-token");
-}
+// Auth lives in an HttpOnly same-origin cookie set by the Next.js BFF.
+// These compatibility exports deliberately never persist JWTs in browser storage.
+export function getStoredApiToken(): string | null { return null; }
+export function setStoredApiToken(token: string | null): void { void token; }
 
 export async function apiRequest<T>(
   path: string,
@@ -49,13 +39,13 @@ export async function apiRequest<T>(
     responseType?: "pdf";
   } = {},
 ): Promise<T> {
-  if (!apiBaseUrl) throw new ApiError("Backend chưa được cấu hình. Đặt NEXT_PUBLIC_API_URL.", 0);
+  if (!/^\/api\/[A-Za-z0-9_/?=&%.-]+$/.test(path) || path.includes(".."))
+    throw new ApiError("Đường dẫn API không hợp lệ.", 0, "invalid_api_path");
   let response: Response;
-  const token = options.token !== undefined ? options.token : getStoredApiToken();
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
 
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetch(`/api/rest${path.slice(4)}`, {
       method: options.method ?? "GET",
       cache: "no-store",
       signal: AbortSignal.timeout(20000),
@@ -64,7 +54,6 @@ export async function apiRequest<T>(
         ...(isFormData || options.body === undefined
           ? {}
           : { "Content-Type": "application/json" }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
       },
       body:
@@ -76,7 +65,7 @@ export async function apiRequest<T>(
     });
   } catch {
     throw new ApiError(
-      "Không kết nối được máy chủ. Kiểm tra API đang chạy và địa chỉ NEXT_PUBLIC_API_URL.",
+      "Không kết nối được máy chủ. Vui lòng thử lại sau.",
       0,
     );
   }
@@ -105,8 +94,8 @@ export async function apiRequest<T>(
   if (payload.errors && !Array.isArray(payload.errors)) payload.errors = [];
   if (payload.errors) payload.errors = payload.errors.filter(e => e && typeof e.field === "string" && typeof e.code === "string" && typeof e.message === "string");
   if (!response.ok || payload.status !== "success") {
-    if (token && getStoredApiToken() === token && (response.status === 401 || payload.error_code === "account_locked" || payload.code === "account_locked" || payload.errors?.some(e => e?.code === "account_locked"))) {
-      try { setStoredApiToken(null); } catch { /* Session still expires in memory. */ }
+    const profileRequest = /^\/api\/auth\/profile(?:\?|$)/.test(path);
+    if ((response.status === 401 && !profileRequest) || payload.error_code === "account_locked" || payload.code === "account_locked" || payload.errors?.some(e => e?.code === "account_locked")) {
       if (typeof window !== "undefined") window.dispatchEvent(new Event("studiohub:session-expired"));
     }
     throw new ApiError(

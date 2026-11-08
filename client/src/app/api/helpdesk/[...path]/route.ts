@@ -4,6 +4,7 @@ import { proxyHelpdesk } from "@/features/helpdesk/server/bridge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 async function handle(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
@@ -17,7 +18,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   const response = await proxyHelpdesk(authenticated, path, session);
   const result = new NextResponse(response.body, { status: response.status, headers: response.headers });
   if (!previous || previous !== session) result.cookies.set("studiohub_helpdesk_session", session, {
-    httpOnly: true, secure: request.nextUrl.protocol === "https:", sameSite: "lax", path: "/api/helpdesk", maxAge: 86400,
+    httpOnly: true, secure: request.nextUrl.protocol === "https:" || process.env.NODE_ENV === "production", sameSite: "lax", path: "/api/helpdesk", maxAge: 86400,
   });
   return result;
 }

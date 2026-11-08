@@ -19,7 +19,17 @@ final class PdoOptions
             PDO::ATTR_TIMEOUT => 5,
         ];
 
-        $caFile = $_ENV['DB_SSL_CA'] ?? getenv('DB_SSL_CA') ?: '';
+        // An explicitly empty process environment value must override a CA path
+        // loaded from server/.env (Compose uses this for its local MySQL service).
+        $environmentCaFile = getenv('DB_SSL_CA');
+        $caFile = $environmentCaFile !== false
+            ? $environmentCaFile
+            : ($_ENV['DB_SSL_CA'] ?? '');
+        $appEnvironment = getenv('APP_ENV');
+        $appEnvironment = $appEnvironment !== false ? $appEnvironment : ($_ENV['APP_ENV'] ?? '');
+        if ($appEnvironment === 'production' && $caFile === '') {
+            throw new RuntimeException('DB_SSL_CA is required in production to verify the MySQL TLS connection');
+        }
         if ($caFile !== '') {
             if (!is_file($caFile) || !is_readable($caFile)) {
                 throw new RuntimeException('DB_SSL_CA must point to a readable CA certificate file');

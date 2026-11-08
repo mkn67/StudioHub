@@ -24,6 +24,43 @@ function service(ScriptedModel $model,bool $draft=true): array {
     global $corpus,$manifest;$cfg=config();$store=new Store($cfg);$store->migrate();$knowledge=new Repository($corpus,$manifest,$draft);
     return [new AgentService($cfg,$store,$knowledge,$model,new PublicCatalog($cfg,new FakeTransport([])),true),$store,$knowledge];
 }
+test('Helpdesk selects configured MySQL fields when DSN is blank',function(){
+    $ca = tempnam(sys_get_temp_dir(), 'studiohub-helpdesk-ca-');
+    if ($ca === false) throw new RuntimeException('could not create temporary test CA');
+    file_put_contents($ca, 'test-only CA placeholder');
+    try {
+        new Store(config([
+            'HELPDESK_DATABASE_URL'=>'',
+            'HELPDESK_DB_HOST'=>'127.0.0.1',
+            'HELPDESK_DB_PORT'=>'1',
+            'HELPDESK_DB_NAME'=>'helpdesk_test',
+            'HELPDESK_DB_USER'=>'test',
+            'HELPDESK_DB_PASSWORD'=>'',
+            'HELPDESK_DB_SSL_CA'=>$ca,
+        ]));
+    } catch (Failure $failure) {
+        check($failure->reason==='storage_unavailable','configured MySQL fields should select MySQL, not silently fall back to SQLite');
+        unlink($ca);
+        return;
+    } finally {
+        if (is_file($ca)) unlink($ca);
+    }
+    throw new RuntimeException('expected a failed MySQL connection to the intentionally closed QA port');
+});
+test('Helpdesk refuses a MySQL connection without a CA certificate',function(){
+    try {
+        new Store(config([
+            'HELPDESK_DATABASE_URL'=>'mysql:host=127.0.0.1;port=1;dbname=helpdesk_test;charset=utf8mb4',
+            'HELPDESK_DB_USER'=>'test',
+            'HELPDESK_DB_PASSWORD'=>'test',
+            'HELPDESK_DB_SSL_CA'=>'',
+        ]));
+    } catch (Failure $failure) {
+        check($failure->reason==='invalid_storage_configuration','MySQL must require a configured CA certificate');
+        return;
+    }
+    throw new RuntimeException('expected missing MySQL CA to be rejected');
+});
 $guest=new Actor('guest:test-a');$other=new Actor('guest:test-b');$host=new Actor('user:2','host','2');$customer=new Actor('user:1','customer','1');$operator=new Actor('user:9','admin','9',true);
 test('draft corpus closed in normal runtime',function()use($corpus,$manifest,$guest){check(count((new Repository($corpus,$manifest))->eligible($guest))===0);});
 test('draft CLI visibility excludes held and host entries',function()use($corpus,$manifest,$guest,$host){

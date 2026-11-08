@@ -28,6 +28,8 @@ import type { ApiRoom } from "@/services/api/contracts";
 import { unitLabels } from "@/services/api/contracts";
 import { ApiImage } from "@/features/marketplace/backend-pages";
 import { ApiMessage } from "./api-ui";
+import { RoomListingCard, RoomListingSkeleton } from "@/features/marketplace/RoomListingCard";
+import { discoveryPurposes, typesForPurpose } from "@/features/marketplace/discovery-purposes";
 import {
   roomRate,
   studioFor,
@@ -166,6 +168,16 @@ export function Home() {
           </section>;
           })}
         </div>
+        <section className="purpose-discovery" aria-labelledby="purpose-discovery-title">
+          <div className="purpose-discovery-heading"><div><span className="mono">BẮT ĐẦU TỪ Ý TƯỞNG</span><h3 id="purpose-discovery-title">Bạn đang tìm không gian cho mục đích gì?</h3></div><p>Chọn nhu cầu trước; xem loại phòng phù hợp ở bước tiếp theo.</p></div>
+          <div className="purpose-discovery-grid">
+            {discoveryPurposes.map(purpose => {
+              const matches = typesForPurpose(categories.map(type => ({ id: type.id, name: type.category })), purpose.typeNames);
+              if (!matches.length) return null;
+              return <article className="purpose-card" key={purpose.id}><span className="purpose-card-icon" aria-hidden="true"><StudioCategoryIllustration category={matches[0].name}/></span><div><h4>{purpose.label}</h4><p>{purpose.detail}</p></div><div className="purpose-card-links" aria-label={`Chọn loại phòng cho ${purpose.label}`}>{matches.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${encodeURIComponent(type.id)}` : `/rooms?category=${encodeURIComponent(type.name)}`}>{matches.length > 1 ? type.name : "Xem phòng phù hợp"} <ArrowUpRight size={14}/></Link>)}</div></article>;
+            })}
+          </div>
+        </section>
       </section>
       <section className="section container">
         <div className="section-head">
@@ -180,11 +192,34 @@ export function Home() {
           </Link>
         </div>
         <div className="featured-grid">
-          {backendEnabled ? <><ApiMessage loading={featured.loading} error={featured.error || catalog.error} />{featured.data?.items.map(r => <Link className="room-card" key={r.room_id} href={`/rooms/${r.room_id}`}><div className="room-image"><ApiImage src={r.thumbnail_url} alt={r.name} /></div><div className="room-copy"><p>{r.studio.name}{r.primary_space_type?.name ? ` · ${r.primary_space_type.name}` : ""}</p><h3>{r.name}</h3><p>{r.area} m² · {r.capacity} người</p>{!!r.amenities?.length && <ul className="explore-room-amenities" aria-label="Tiện ích nổi bật">{r.amenities.slice(0, 2).map(item => <li key={item.amenity_id}>{item.name}</li>)}</ul>}<strong>{r.display_rate ? `${money(r.display_rate.unit_price)} / ${unitLabels[r.display_rate.rate_unit]}` : "Xem bảng giá"}</strong></div></Link>)}{featured.data && !featured.data.items.length && <p>Chưa có phòng đang mở cho thuê.</p>}</> : state.rooms
-            .filter((_, i) => [0, 2, 4].includes(i))
-            .map((room) => (
-              <RoomCard key={room.id} room={room} editorial />
-            ))}
+          {backendEnabled ? <>
+            {featured.loading && Array.from({ length: 3 }, (_, index) => <RoomListingSkeleton compact key={index}/>)}
+            {featured.error && <div className="room-listing-error"><ApiMessage error={featured.error || catalog.error}/><button className="btn secondary" type="button" onClick={featured.reload}>Thử tải lại</button></div>}
+            {featured.data?.items.map(room => <RoomListingCard key={room.room_id} room={{
+              href: `/rooms/${room.room_id}`, image: <ApiImage src={room.thumbnail_url} alt={room.name}/>, title: room.name,
+              studio: room.studio.name, district: room.studio.district, type: room.primary_space_type?.name ?? "Studio sáng tạo",
+              details: `${room.area} m² · Tối đa ${room.capacity} người`,
+              ...(room.review_summary && room.review_summary.review_count > 0 ? { rating: { average: room.review_summary.average_rating, count: room.review_summary.review_count } } : {}),
+              amenities: (room.amenities ?? []).map(item => item.name),
+              price: room.display_rate ? `${money(room.display_rate.unit_price)} / ${unitLabels[room.display_rate.rate_unit] ?? room.display_rate.rate_unit}` : "Xem bảng giá",
+              priceContext: room.display_rate?.rate_unit === "session" && room.display_rate.unit_minutes ? `${room.display_rate.unit_minutes / 60} giờ mỗi buổi` : undefined,
+            }} />)}
+            {featured.data && !featured.data.items.length && <p>Chưa có phòng đang mở cho thuê.</p>}
+          </> : state.rooms.filter((_, i) => [0, 2, 4].includes(i)).map(room => {
+            const type = state.types.find(item => item.id === room.typeId);
+            const studio = state.studios.find(item => item.id === type?.studioId);
+            const plans = effectivePricingPlans(state, room.id);
+            const selectedPlan = room.featuredPricing ? plans.find(plan => plan.plan === room.featuredPricing?.plan) : undefined;
+            const rate = selectedPlan ?? plans.find(plan => plan.kind === "hourly") ?? plans[0];
+            return <RoomListingCard key={room.id} className="demo-room" room={{
+              href: `/rooms/${room.id}`, image: <SharedPhoto name={`room-${room.id}`}><Image width={1400} height={1000} src={room.images[0]} alt={`${room.name}, ảnh minh họa`} loading="lazy"/></SharedPhoto>,
+              title: room.name, studio: studio?.name ?? "Studio minh họa", district: studio?.district ?? "TP. Hồ Chí Minh",
+              type: type?.category ?? "Không gian sáng tạo", details: `${room.area} m² · Tối đa ${room.capacity} người`,
+              amenities: room.amenities, price: rate ? `${money(rate.amount)} ${rate.unit}` : "Xem bảng giá",
+              priceContext: rate?.kind === "duration" ? rate.duration : rate?.kind === "session" ? rate.duration : undefined,
+              badge: `Demo · ${room.code}`,
+            }} />;
+          })}
         </div>
       </section>
       <section className="how-section">

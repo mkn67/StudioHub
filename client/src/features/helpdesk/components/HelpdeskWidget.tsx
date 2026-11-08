@@ -12,13 +12,14 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatComposer } from "./ChatComposer";
 import { TypingIndicatorBubble } from "./TypingIndicatorBubble";
 import styles from "../styles/helpdesk.module.css";
+import { shouldShowHelpdesk } from "./widgetVisibility";
 
 gsap.registerPlugin(useGSAP);
 
 export function HelpdeskWidget({ transport = helpdeskClient }: { transport?: HelpdeskTransport }) {
   const path = usePathname();
 
-  if (["/host", "/admin"].some(route => path === route || path.startsWith(`${route}/`))) {
+  if (!shouldShowHelpdesk(path)) {
     return null;
   }
 

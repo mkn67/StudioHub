@@ -54,7 +54,7 @@ try {
         }
         foreach (preg_split('/;\s*$/m', $contents) ?: [] as $statement) {
             if (trim($statement) !== '') {
-                $pdo->exec($statement);
+                \App\Config\SqlMigrationStatement::execute($pdo, $statement);
             }
         }
         $record->execute([$name]);

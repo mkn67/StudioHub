@@ -66,7 +66,7 @@ export function createPhpHelpdeskAdapter(fetcher: typeof fetch = fetch): Helpdes
     return json.data;
   }
   return {
-    mode: "connected", timeoutMs: 70000,
+    mode: "connected", timeoutMs: 32000,
     reset() { conversationId = undefined; retry = undefined; },
     async sendMessage(text: string, context?: HelpdeskContext, options?) {
       if (!conversationId) {

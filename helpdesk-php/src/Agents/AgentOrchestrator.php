@@ -98,8 +98,8 @@ final class AgentOrchestrator
      */
     public function run(string $text, array $history, Actor $actor, array &$evidence): array
     {
-        // Hạn chót tuyệt đối cho cả lượt (giây, cấu hình trong khoảng 3-60, mặc định 55).
-        $deadline = microtime(true) + $this->config->int('HELPDESK_TURN_TIMEOUT_SECONDS', 55, 3, 60);
+        // Keep the complete turn below the proxy's request deadline to avoid 504s.
+        $deadline = microtime(true) + $this->config->int('HELPDESK_TURN_TIMEOUT_SECONDS', 22, 3, 25);
         $maxSteps = $this->config->int('HELPDESK_MAX_AGENT_STEPS', 5, 1, 8);
         $maxToolCalls = $this->config->int('HELPDESK_MAX_TOOL_CALLS', 6, 1, 12);
 
