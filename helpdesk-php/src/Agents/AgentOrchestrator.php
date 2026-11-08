@@ -10,6 +10,7 @@ use StudioHub\Helpdesk\Util;
 use StudioHub\Helpdesk\Knowledge\CitationBuilder;
 use StudioHub\Helpdesk\LLM\LanguageModel;
 use StudioHub\Helpdesk\Security\Actor;
+use StudioHub\Helpdesk\Retrieval\LexicalRetriever;
 
 /**
  * Điều phối vòng lặp "agent": gọi mô hình ngôn ngữ, thực thi các tool mà mô hình yêu cầu,
@@ -72,8 +73,9 @@ final class AgentOrchestrator
 
     /** Câu hỏi làm rõ theo từng trường thông tin còn thiếu. */
     private const CLARIFICATION_QUESTIONS = [
+        'room_requirements' => 'Bạn cần phòng cho chụp lookbook/thời trang, sản phẩm, quay video hay thu âm? Nếu tiện, cho mình thêm số người, khu vực và ngân sách để lọc sát hơn; chưa cần biết tên phòng.',
         'description' => 'Bạn mô tả ngắn sự cố cần hỗ trợ được không? Không gửi mật khẩu hoặc thông tin thanh toán.',
-        'studio'      => 'Sự cố xảy ra tại Studio nào? Thông tin bạn cung cấp chưa được xác minh.',
+        'studio'      => 'Bạn đang hỏi Studio hoặc phòng nào? Cho mình tên hoặc mã phòng để tra đúng thông tin.',
         'category'    => 'Bạn cần hỗ trợ tài khoản, lỗi nền tảng, điều kiện phòng hay tranh chấp cọc?',
     ];
 
@@ -98,8 +100,15 @@ final class AgentOrchestrator
      */
     public function run(string $text, array $history, Actor $actor, array &$evidence): array
     {
-        // Hạn chót tuyệt đối cho cả lượt (giây, cấu hình trong khoảng 3-60, mặc định 55).
-        $deadline = microtime(true) + $this->config->int('HELPDESK_TURN_TIMEOUT_SECONDS', 55, 3, 60);
+        // The widget's generic discovery shortcut must never ask for an existing room ID.
+        if (in_array(LexicalRetriever::normalize($text), [
+            'toi muon tim phong phu hop', 'tim phong phu hop', 'tim phong', 'tim studio',
+        ], true)) {
+            return array_replace(self::base(self::CLARIFICATION_QUESTIONS['room_requirements'], 'answered'),
+                ['answerKind'=>'clarification', 'reasonCode'=>null]);
+        }
+        // Keep the complete turn below the proxy's request deadline to avoid 504s.
+        $deadline = microtime(true) + $this->config->int('HELPDESK_TURN_TIMEOUT_SECONDS', 22, 3, 25);
         $maxSteps = $this->config->int('HELPDESK_MAX_AGENT_STEPS', 5, 1, 8);
         $maxToolCalls = $this->config->int('HELPDESK_MAX_TOOL_CALLS', 6, 1, 12);
 
@@ -269,12 +278,48 @@ final class AgentOrchestrator
             return self::handoffPendingResponse();
         }
 
+        if ($kind === 'room_facts' && is_int($final['roomId'] ?? null)
+            && isset($evidence['roomFacts'][(string)$final['roomId']])) {
+            $facts=$evidence['roomFacts'][(string)$final['roomId']];
+            // Render the exact API projection; model-authored prices or refund claims are never used.
+            return array_replace(self::base($facts['text'], 'answered'),[
+                'answerKind'=>'catalog','reasonCode'=>null,
+            ]);
+        }
+
         // Chào hỏi.
         if ($kind === 'greeting') {
             return array_replace(
                 self::base(self::MSG_GREETING, 'answered'),
                 ['answerKind' => 'greeting', 'reasonCode' => null],
             );
+        }
+
+        if ($kind === 'booking_guide') {
+            // Reviewed against the customer booking UI, independent of unapproved business policies.
+            return array_replace(self::base(
+                "Bạn đặt Studio trên website theo các bước:\n"
+                . "1. Vào Khám phá Studio, chọn phòng rồi mở trang chi tiết.\n"
+                . "2. Chọn lịch thuê và vào trang đặt phòng.\n"
+                . "3. Chọn gói thuê, ngày giờ, số người và thiết bị thuê thêm nếu cần.\n"
+                . "4. Đăng nhập tài khoản khách hàng, điền thông tin liên hệ, kiểm tra giá và nội quy rồi tạo đơn.\n"
+                . "5. Vào Đơn của tôi để xem chi tiết và các bước tiếp theo.\n"
+                . "Giá và lịch được máy chủ kiểm tra khi đặt; mình chưa tạo đơn hoặc giữ chỗ cho bạn.",
+                'answered',
+            ), ['answerKind' => 'booking_guide', 'reasonCode' => null]);
+        }
+
+        if ($kind === 'policy_unavailable') {
+            foreach ($evidence['trace'] ?? [] as $tool) {
+                if (($tool['tool'] ?? '') === 'search_knowledge' && ($tool['outcome'] ?? '') === 'success'
+                    && empty($evidence['chunks'])) {
+                    return array_replace(self::base(
+                        'Mình chưa có chính sách hủy và hoàn cọc được xác nhận để trả lời. '
+                        . 'Bạn hãy liên hệ Studio để xác nhận điều kiện hủy, thời hạn và khoản được hoàn trước khi đặt. '
+                        . 'Nếu đã có đơn, hãy mở Đơn của tôi để xem chi tiết; bạn cũng có thể yêu cầu gặp nhân viên hỗ trợ.',
+                    ), ['reasonCode' => 'policy_not_published']);
+                }
+            }
         }
 
         // Câu hỏi về chính sách: trả lời kèm trích dẫn từ các đoạn tài liệu đã truy xuất (RAG).
@@ -290,6 +335,15 @@ final class AgentOrchestrator
                 'answerKind' => 'rag',
                 'reasonCode' => null,
             ];
+        }
+
+        if ($kind === 'catalog_unavailable') {
+            return array_replace(self::base('Mình chưa tải được danh mục phòng để gợi ý. Bạn có thể mở Khám phá Studio để tìm theo nhu cầu; mình vẫn có thể hướng dẫn cách đặt phòng.'),
+                ['reasonCode'=>'catalog_unavailable']);
+        }
+        if ($kind === 'rooms' && !empty($evidence['roomSearchCompleted']) && empty($evidence['rooms'])) {
+            return array_replace(self::base('Lượt tìm kiếm này chưa trả về phòng phù hợp. Bạn muốn thử từ khóa khác hoặc mở rộng khu vực/ngân sách không?', 'answered'),
+                ['answerKind'=>'catalog','reasonCode'=>null]);
         }
 
         // Danh mục phòng (lấy từ API, chưa kiểm tra phòng trống).
@@ -334,7 +388,7 @@ final class AgentOrchestrator
             $question = self::CLARIFICATION_QUESTIONS[$final['field'] ?? 'description']
                 ?? self::CLARIFICATION_QUESTIONS['description'];
 
-            return self::base($question);
+            return array_replace(self::base($question, 'answered'), ['answerKind'=>'clarification','reasonCode'=>null]);
         }
 
         // Mặc định (kể cả kind 'unsupported' hoặc thiếu bằng chứng): từ chối an toàn.

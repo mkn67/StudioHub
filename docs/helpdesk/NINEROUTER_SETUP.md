@@ -47,6 +47,6 @@ Only the mode is public; no LLM key is sent to Next.js/browser code. The bridge 
 
 PHP authentication is separately verified through the configured StudioHub /auth/profile HTTP API when a Bearer token is supplied. The current marketplace UI remains a mock persona system and does not automatically provide a genuine PHP token. Public widget sessions therefore stay guest sessions; private capabilities stay disabled.
 
-Public catalog tools are independent of 9Router setup. If the existing StudioHub API becomes available, explicitly set STUDIOHUB_PUBLIC_TOOLS=true and run bin/catalog-smoke.php. It must verify actual search/detail/rates samples before those tools are advertised; no calendar result is promoted to a bookability guarantee.
+Public catalog tools are independent of model setup. Explicitly set STUDIOHUB_PUBLIC_TOOLS=true to advertise the fixed read-only tools. Each call validates the live API response; no transient CLI marker or paid Render Shell is required. bin/catalog-smoke.php remains an optional diagnostic for search/details/rates; it does not guarantee availability. See [MySQL catalog](MYSQL_CATALOG.md).
 
 For starting PHP/Next.js, storage initialization and tests see [module README](../../helpdesk-php/README.md).

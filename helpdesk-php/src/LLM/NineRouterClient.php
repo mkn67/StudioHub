@@ -187,6 +187,20 @@ final class NineRouterClient implements LanguageModel
 
             // Lỗi không thể thử lại, hoặc đã hết số lần thử.
             if (!in_array($status, self::RETRYABLE_STATUSES, true) || $attempt >= $maxRetries) {
+                // Log only bounded diagnostic metadata, never prompts, keys or error messages.
+                $error = $response['body']['error'] ?? [];
+                $knownCodes = ['invalid_request_error', 'invalid_api_key', 'model_not_found',
+                    'model_decommissioned', 'model_permission_blocked', 'rate_limit_exceeded',
+                    'tool_use_failed', 'json_validate_failed', 'unsupported_parameter'];
+                error_log(json_encode([
+                    'event' => 'llm_provider_rejected',
+                    'upstreamStatus' => $status,
+                    'providerCode' => in_array($error['code'] ?? null, $knownCodes, true) ? $error['code'] : null,
+                    'providerType' => in_array($error['type'] ?? null, $knownCodes, true) ? $error['type'] : null,
+                    'providerParam' => in_array($error['param'] ?? null, ['model', 'messages', 'tools',
+                        'tool_choice', 'response_format', 'temperature', 'max_tokens',
+                        'max_completion_tokens', 'parallel_tool_calls', 'reasoning_effort'], true) ? $error['param'] : null,
+                ], JSON_UNESCAPED_SLASHES));
                 throw new Failure($status === 429 ? 'provider_rate_limited' : 'provider_unavailable', 503);
             }
 
@@ -229,8 +243,24 @@ final class NineRouterClient implements LanguageModel
             'max_tokens'  => self::MAX_COMPLETION_TOKENS,
         ];
 
+        $isGroq = parse_url($this->config->get('NINEROUTER_BASE_URL'), PHP_URL_HOST) === 'api.groq.com';
+        if ($isGroq) {
+            unset($body['max_tokens']);
+            $body['max_completion_tokens'] = self::MAX_COMPLETION_TOKENS;
+            if (in_array($model, ['openai/gpt-oss-20b', 'openai/gpt-oss-120b'], true)) {
+                // GPT-OSS on Groq does not support parallel tool use. Reduce reasoning
+                // work to preserve the application's bounded turn deadline.
+                $body['reasoning_effort'] = 'low';
+                if ($tools) {
+                    $body['parallel_tool_calls'] = false;
+                }
+            }
+        }
+
         // Chỉ bật JSON mode khi system prompt yêu cầu trả JSON và cấu hình cho phép.
-        if ($this->expectsJsonReply($messages) && $this->config->get('NINEROUTER_JSON_MODE', 'true') === 'true') {
+        // During Groq tool turns, rely on the JSON instruction plus the existing
+        // strict final-response validator; reserve response_format for plain chat.
+        if (!($isGroq && $tools) && $this->expectsJsonReply($messages) && $this->config->get('NINEROUTER_JSON_MODE', 'true') === 'true') {
             $body['response_format'] = ['type' => 'json_object'];
         }
 

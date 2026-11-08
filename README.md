@@ -1,10 +1,8 @@
 # 🎬 Studio & Equipment Rental Web Platform
 
-> **Tích hợp frontend:** `client/` sử dụng Next.js, React 19 và TypeScript, có chế độ API PHP/MySQL và demo tách biệt. Xem [hướng dẫn frontend](client/README.md), [audit](docs/integration-audit.md) và [kết quả xác minh](docs/integration-verification.md). Backend/database không được chỉnh sửa trong đợt tích hợp này. Các mô tả Next.js 14/React 18 bên dưới là tài liệu của phiên bản trước.
-> Hệ thống Web cho thuê Studio và Nội thất / Thiết bị quay chụp nghệ thuật.
-> Kiến trúc Monorepo tiêu chuẩn, hỗ trợ cả **Podman Compose** và **Docker Compose**.
+> StudioHub là nền tảng đặt thuê studio sáng tạo, gồm frontend Next.js, PHP REST API, MySQL và Helpdesk. Xem [hướng dẫn frontend](client/README.md), [audit tích hợp](docs/integration-audit.md), [kết quả xác minh](docs/integration-verification.md) và [hướng dẫn Compose](docs/docker-compose.md).
 
-Chạy stack Docker hiện tại: `node scripts/setup-docker.mjs`, sau đó `docker compose up -d --build`. Xem [hướng dẫn Compose](docs/docker-compose.md) để biết service, volume, cấu hình và cách kiểm tra. Các hướng dẫn cũ bên dưới có thể khác cấu hình hiện tại.
+Chạy stack local: `node scripts/setup-docker.mjs`, sau đó `podman-compose --env-file .env.compose up -d --build` (hoặc `docker compose --env-file .env.compose up -d --build`). Cấu hình local nằm riêng trong `.env.compose`, không dùng nhầm thông tin Aiven trong `.env`.
 
 ---
 
@@ -93,26 +91,26 @@ Tuỳ thuộc vào môi trường máy tính của bạn:
 
 * **Trên máy dùng Podman (Fedora / RHEL / Linux):**
   ```bash
-  podman-compose up -d
+  podman-compose --env-file .env.compose up -d --build
   ```
 
 * **Trên máy dùng Docker (Ubuntu / macOS / Windows):**
   ```bash
-  docker compose up -d
+  docker compose --env-file .env.compose up -d --build
   ```
 
-*(Lần đầu chạy, hệ thống sẽ tự động build images và khởi động cả 3 container trong nền).*
+*(Lần đầu chạy, hệ thống sẽ build images và khởi động MySQL, API, Helpdesk, frontend và job xử lý đơn hết hạn.)*
 
 ### Bước 2: Kiểm tra trạng thái hoạt động
 
 ```bash
 # Podman:
-podman-compose ps
+podman-compose --env-file .env.compose ps
 
 # Docker:
-docker compose ps
+docker compose --env-file .env.compose ps
 ```
-Cả 3 container `studio_db` (healthy), `studio_api` (Up), `studio_web` (Up) đều đang chạy là thành công.
+Xác nhận `db`, `api`, `helpdesk-php`, `client` ở trạng thái healthy/running và `cron` đang chạy.
 
 ### Bước 3: Truy cập ứng dụng
 
@@ -127,37 +125,29 @@ Cả 3 container `studio_db` (healthy), `studio_api` (Up), `studio_web` (Up) đ�
 
 | Thao tác | Lệnh Podman Compose | Lệnh Docker Compose |
 | :--- | :--- | :--- |
-| **Bật toàn bộ hệ thống** | `podman-compose up -d` | `docker compose up -d` |
-| **Xem trạng thái container** | `podman-compose ps` | `docker compose ps` |
-| **Xem log realtime (cả 3 service)** | `podman-compose logs -f` | `docker compose logs -f` |
-| **Xem log riêng Next.js** | `podman logs -f studio_web` | `docker logs -f studio_web` |
-| **Xem log riêng PHP API** | `podman logs -f studio_api` | `docker logs -f studio_api` |
-| **Khởi động lại 1 service** | `podman-compose restart api` | `docker compose restart api` |
-| **Tắt toàn bộ hệ thống** | `podman-compose down` | `docker compose down` |
-| **Build lại khi sửa Dockerfile** | `podman-compose build` | `docker compose build` |
+| **Bật toàn bộ hệ thống** | `podman-compose --env-file .env.compose up -d --build` | `docker compose --env-file .env.compose up -d --build` |
+| **Xem trạng thái container** | `podman-compose --env-file .env.compose ps` | `docker compose --env-file .env.compose ps` |
+| **Xem log realtime** | `podman-compose --env-file .env.compose logs -f` | `docker compose --env-file .env.compose logs -f` |
+| **Xem log riêng Next.js** | `podman-compose --env-file .env.compose logs -f client` | `docker compose --env-file .env.compose logs -f client` |
+| **Xem log riêng PHP API** | `podman-compose --env-file .env.compose logs -f api` | `docker compose --env-file .env.compose logs -f api` |
+| **Khởi động lại 1 service** | `podman-compose --env-file .env.compose restart api` | `docker compose --env-file .env.compose restart api` |
+| **Tắt toàn bộ hệ thống** | `podman-compose --env-file .env.compose down` | `docker compose --env-file .env.compose down` |
+| **Build lại frontend** | `podman-compose --env-file .env.compose up -d --build client` | `docker compose --env-file .env.compose up -d --build client` |
 
 ---
 
-## 📦 5. Quản lý Thư viện & Fix lỗi gạch đỏ VS Code
+## 📦 5. Frontend dependencies
 
-### 5.1. Cài đặt thêm thư viện Frontend (`npm`)
-Bạn không cần cài Node.js trên máy thật. Chạy lệnh cài xuyên vào container:
-```bash
-# Cài đặt 1 thư viện mới (ví dụ date-fns):
-podman-compose exec web npm install date-fns
-
-# Chạy npm install thông thường:
-podman-compose exec web npm install
-```
-
-### 5.2. Cách sửa lỗi VS Code gạch đỏ (Cannot find module 'react'...)
-Do `node_modules` nằm trong container, để VS Code trên máy thật hiểu được types và hỗ trợ autocomplete (IntelliSense), bạn chỉ cần copy `node_modules` ra máy thật **1 lần duy nhất**:
+Frontend production container không chứa mã nguồn phát triển hoặc npm dependencies đầy đủ. Thêm thư viện trong thư mục `client/` bằng môi trường Node.js phát triển, cập nhật lockfile, rồi build lại service:
 
 ```bash
-# Chạy tại thư mục gốc của project:
-podman cp studio_web:/app/node_modules ./client/node_modules
+cd client
+npm install <package>
+cd ..
+podman-compose --env-file .env.compose up -d --build client
 ```
-👉 *Lập tức toàn bộ lỗi đỏ gạch chân trong VS Code sẽ biến mất hoàn toàn!*
+
+Không chép `node_modules` từ container production vào source. Với VS Code, cài Node.js và chạy `npm ci` trong `client/` để TypeScript/IntelliSense dùng đúng dependency của frontend.
 
 ---
 
@@ -167,10 +157,10 @@ Truy cập dòng lệnh `mysql` client bên trong container:
 
 ```bash
 # Podman:
-podman-compose exec db mysql -u studio_user -pstudio_password studio_db
+podman-compose --env-file .env.compose exec db mysql -u studio_user -pstudio_password studio_dev
 
 # Docker:
-docker compose exec db mysql -u studio_user -pstudio_password studio_db
+docker compose --env-file .env.compose exec db mysql -u studio_user -pstudio_password studio_dev
 ```
 
 Các truy vấn kiểm tra nhanh:
@@ -186,9 +176,7 @@ exit;
 
 ## 🔄 7. Cơ chế Hot Reload khi viết code
 
-Dự án đã cấu hình Volume Bind Mount:
-* **Frontend (`client/`):** Chỉnh sửa file `.tsx`, `.ts`, `.css` ➔ Trình duyệt tự động cập nhật ngay tức thì mà không cần F5.
-* **Backend (`server/`):** Thêm Controller, Model, Route mới ➔ Gọi lại API là có tác dụng ngay lập tức, không cần restart container.
+Compose dùng frontend production image, không bật hot reload. Sau khi sửa frontend, chạy lại lệnh build service `client` trong bảng phía trên. Source PHP được bind mount chỉ đọc; các file code backend mới được cập nhật ngay, nhưng cần khởi động lại `api` nếu thay đổi dependencies hoặc cấu hình tiến trình.
 
 ---
 

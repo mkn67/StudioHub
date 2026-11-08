@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { NextRequest } from "next/server";
 import { createPhpHelpdeskAdapter, validateHelpdeskResponse } from "../services/phpHelpdeskAdapter";
 import { proxyHelpdesk } from "../server/bridge";
+import { POST as helpdeskRoutePost } from "../../../app/api/helpdesk/[...path]/route";
 
 const ok = (data: unknown) => Response.json({ status: "success", code: 200, message: "OK", data });
 const response = { text: "Đây là nội dung từ PHP.", mode: "connected", state: "unavailable", sources: [] };
@@ -51,6 +53,74 @@ test("bridge enforces origin and fixed route; no arbitrary upstream URL", async 
   assert.equal(denied.status, 403);
   const arbitrary = await proxyHelpdesk(new Request("http://localhost:3000/api/helpdesk/https://evil.invalid"), ["https:", "evil.invalid"], "a".repeat(64));
   assert.equal(arbitrary.status, 404);
+});
+
+test("Helpdesk bridge fails closed in production when its trusted origin is missing", async () => {
+  const before = { origin: process.env.HELPDESK_FRONTEND_ORIGIN, nodeEnv: process.env.NODE_ENV };
+  delete process.env.HELPDESK_FRONTEND_ORIGIN;
+  Reflect.set(process.env, "NODE_ENV", "production");
+  try {
+    const response = await proxyHelpdesk(new Request("http://localhost:3000/api/helpdesk/conversations", {
+      method: "POST", headers: { origin: "http://localhost:3000", "content-type": "application/json" }, body: "{}",
+    }), ["conversations"], "a".repeat(64));
+    assert.equal(response.status, 503);
+  } finally {
+    if (before.origin === undefined) delete process.env.HELPDESK_FRONTEND_ORIGIN; else process.env.HELPDESK_FRONTEND_ORIGIN = before.origin;
+    if (before.nodeEnv === undefined) Reflect.deleteProperty(process.env, "NODE_ENV"); else Reflect.set(process.env, "NODE_ENV", before.nodeEnv);
+  }
+});
+
+test("Helpdesk bridge rejects insecure production origins and upstream URLs", async () => {
+  const keys = ["HELPDESK_FRONTEND_ORIGIN", "HELPDESK_API_URL", "HELPDESK_BRIDGE_SECRET", "NODE_ENV"] as const;
+  const previous = keys.map(key => process.env[key]);
+  process.env.HELPDESK_FRONTEND_ORIGIN = "http://studio.example";
+  process.env.HELPDESK_API_URL = "http://support.example";
+  process.env.HELPDESK_BRIDGE_SECRET = "test-only-".repeat(5);
+  Reflect.set(process.env, "NODE_ENV", "production");
+  try {
+    const response = await proxyHelpdesk(new Request("http://studio.example/api/helpdesk/conversations", {
+      method: "POST", headers: { origin: "http://studio.example", "content-type": "application/json" }, body: "{}",
+    }), ["conversations"], "a".repeat(64));
+    assert.equal(response.status, 503);
+    process.env.HELPDESK_FRONTEND_ORIGIN = "https://studio.example";
+    const insecureUpstream = await proxyHelpdesk(new Request("https://studio.example/api/helpdesk/conversations", {
+      method: "POST", headers: { origin: "https://studio.example", "content-type": "application/json" }, body: "{}",
+    }), ["conversations"], "a".repeat(64));
+    assert.equal(insecureUpstream.status, 503);
+  } finally {
+    keys.forEach((key, index) => {
+      if (previous[index] === undefined) Reflect.deleteProperty(process.env, key);
+      else Reflect.set(process.env, key, previous[index]);
+    });
+  }
+});
+
+test("Helpdesk session cookie is secure and HttpOnly in production", async () => {
+  const keys = ["HELPDESK_FRONTEND_ORIGIN", "HELPDESK_API_URL", "HELPDESK_BRIDGE_SECRET", "NODE_ENV"] as const;
+  const previous = keys.map(key => process.env[key]);
+  const previousFetch = globalThis.fetch;
+  process.env.HELPDESK_FRONTEND_ORIGIN = "https://studio.example";
+  process.env.HELPDESK_API_URL = "https://support.example";
+  process.env.HELPDESK_BRIDGE_SECRET = "test-only-".repeat(5);
+  Reflect.set(process.env, "NODE_ENV", "production");
+  globalThis.fetch = async () => ok({ conversation: { id: "11111111-1111-4111-8111-111111111111" } });
+  try {
+    const request = new NextRequest("https://studio.example/api/helpdesk/conversations", {
+      method: "POST", headers: { origin: "https://studio.example", "content-type": "application/json" }, body: "{}",
+    });
+    const response = await helpdeskRoutePost(request, { params: Promise.resolve({ path: ["conversations"] }) });
+    const cookie = response.cookies.get("studiohub_helpdesk_session");
+    assert.equal(cookie?.httpOnly, true);
+    assert.equal(cookie?.secure, true);
+    assert.equal(cookie?.sameSite, "lax");
+    assert.equal(cookie?.path, "/api/helpdesk");
+  } finally {
+    globalThis.fetch = previousFetch;
+    keys.forEach((key, index) => {
+      if (previous[index] === undefined) Reflect.deleteProperty(process.env, key);
+      else Reflect.set(process.env, key, previous[index]);
+    });
+  }
 });
 test("bridge forwards only allowlisted server headers", async () => {
   const old = process.env.HELPDESK_BRIDGE_SECRET; process.env.HELPDESK_BRIDGE_SECRET = "test-only-".repeat(5);

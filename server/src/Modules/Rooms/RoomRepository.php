@@ -48,12 +48,20 @@ class RoomRepository
         $where = ["r.status = 'active'", "s.status = 'active'"];
         $params = [];
 
-        // Filter: Keyword (room name or studio name)
+        // Match discovery labels against public descriptions and space types too.
+        // Bound token count and bind every pattern; never concatenate user SQL.
         if (!empty($filters['keyword'])) {
-            $where[] = '(r.name LIKE :kw_room OR s.name LIKE :kw_studio)';
-            $kw = '%' . trim((string) $filters['keyword']) . '%';
-            $params['kw_room'] = $kw;
-            $params['kw_studio'] = $kw;
+            $terms = preg_split('~[\s&+/|,]+~u', trim((string)$filters['keyword']), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $terms = array_slice(array_values(array_unique($terms)), 0, 5);
+            $matches = [];
+            foreach ($terms as $i=>$term) {
+                $kw = '%' . strtr($term, ['\\'=>'\\\\', '%'=>'\\%', '_'=>'\\_']) . '%';
+                $matches[] = "(r.name LIKE :kw_room_{$i} OR s.name LIKE :kw_studio_{$i} OR r.description LIKE :kw_description_{$i} OR EXISTS (
+                    SELECT 1 FROM room_space_types krst JOIN space_types kst ON kst.space_type_id=krst.space_type_id
+                    WHERE krst.room_id=r.room_id AND kst.name LIKE :kw_type_{$i}))";
+                foreach (['room','studio','description','type'] as $field) $params["kw_{$field}_{$i}"] = $kw;
+            }
+            if ($matches) $where[] = '(' . implode(' OR ', $matches) . ')';
         }
 
         // Filter: Space type

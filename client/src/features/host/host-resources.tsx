@@ -105,7 +105,7 @@ function RoomsList({ studioId, section }: { studioId: string; section: string })
   const groups = rooms.reduce((result, room) => { const name = room.room_type_id ? roomTypeNames.get(String(room.room_type_id)) ?? "Loại phòng chưa xác định" : "Chưa gắn loại phòng"; result.set(name, [...(result.get(name) ?? []), room]); return result; }, new Map<string, HostRoom[]>());
   return <>
     <div className="host-toolbar"><p className="host-scope-label">Phòng vật lý <span>· Trang {page} · gồm phòng đang hoạt động, bảo trì và đã ẩn</span></p>{section === "rooms" && <HostAddButton onClick={() => setEditor("new")} disabled={types.loading || !!types.error}>Thêm phòng vật lý</HostAddButton>}</div>
-    {section === "rooms" && <HostRoomTypes studioId={studioId}/>}
+    {section === "rooms" && <HostRoomTypes studioId={studioId} rooms={inventory.data} roomsUnavailable={!!inventory.error}/>}
     {saved && <p className="host-success" role="status">{saved}</p>}
     <HostResourceState resource={list}/>
     {section === "rooms" && <HostResourceState resource={types}/>}

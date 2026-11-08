@@ -81,6 +81,7 @@ $router->get('/api/rooms', [RoomController::class, 'index']);
 $router->get('/api/rooms/{id:\d+}', [RoomController::class, 'show']);
 $router->get('/api/rooms/{id:\d+}/calendar', [RoomController::class, 'calendar']);
 $router->get('/api/rooms/{id:\d+}/rates', [RoomController::class, 'rates']);
+$router->get('/api/rooms/{id:\d+}/helpdesk-facts', [RoomController::class, 'helpdeskFacts']);
 $router->get('/api/rooms/{id:\d+}/reviews', [ReviewController::class, 'listForRoom']);
 $router->get('/api/equipments', [EquipmentController::class, 'index']);
 $router->get('/api/space-types', [LookupController::class, 'spaceTypes']);

@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { apiRequest, backendEnabled, getStoredApiToken, setStoredApiToken } from "@/services/api/client";
+import { apiRequest, backendEnabled } from "@/services/api/client";
 import type { ApiUser } from "@/services/api/contracts";
 type Session = {
     user: ApiUser | null;
@@ -19,22 +19,15 @@ export function ApiSessionProvider({ children }: {
     const [error, setError] = useState("");
     const refresh = useCallback(async () => {
         setError("");
-        const token = getStoredApiToken();
-        if (!token) {
-            setUser(null);
-            setReady(true);
-            return;
-        }
         try {
             const profile = await apiRequest<ApiUser>("/api/auth/profile");
-            if (getStoredApiToken() === token)
-                setUser(profile);
+            setUser(profile);
         }
         catch (e) {
-            if (getStoredApiToken() === token) {
-                setUser(null);
+            setUser(null);
+            // A 401 on initial load is the normal signed-out state.
+            if (!(e && typeof e === "object" && "status" in e && e.status === 401))
                 setError(e instanceof Error ? e.message : "Không xác minh được phiên đăng nhập.");
-            }
         }
         finally {
             setReady(true);
@@ -51,19 +44,10 @@ export function ApiSessionProvider({ children }: {
         return () => { window.removeEventListener("studiohub:session-expired", expired); window.removeEventListener("focus", focused); };
     }, [refresh]);
     const authenticate = async (path: string, body: unknown) => {
-        const result = await apiRequest<{
-            token: string;
-            user: ApiUser;
-        }>(path, { method: "POST", body, token: null });
-        try {
-            setStoredApiToken(result.token);
-        }
-        catch {
-            throw new Error("Trình duyệt đang chặn lưu phiên. Cho phép sessionStorage rồi đăng nhập lại.");
-        }
+        await apiRequest<{ user: ApiUser }>(path, { method: "POST", body });
         // Login/register responses contain a compact user. Hydrate the full
         // profile so DOB, address and avatar are available without a page reload.
-        const profile = await apiRequest<ApiUser>("/api/auth/profile", { token: result.token });
+        const profile = await apiRequest<ApiUser>("/api/auth/profile");
         setUser(profile);
         setError("");
         return profile;
@@ -75,14 +59,7 @@ export function ApiSessionProvider({ children }: {
         catch (e) {
             setError(e instanceof Error ? e.message : "Không kết nối được API đăng xuất.");
         }
-        finally {
-            try {
-                setStoredApiToken(null);
-            }
-            finally {
-                setUser(null);
-            }
-        }
+        finally { setUser(null); }
     };
     return <Context.Provider value={{ user, ready, error, authenticate, logout, refresh }}>{children}</Context.Provider>;
 }

@@ -21,9 +21,11 @@ FROM dependencies AS builder
 # NEXT_PUBLIC_* values are embedded into the browser bundle at build time.
 # These are public settings; never pass provider keys or bridge secrets here.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_APP_MODE=rest
 ARG NEXT_PUBLIC_DEMO_MODE=false
 ARG NEXT_PUBLIC_HELPDESK_MODE=connected
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    NEXT_PUBLIC_APP_MODE=${NEXT_PUBLIC_APP_MODE} \
     NEXT_PUBLIC_DEMO_MODE=${NEXT_PUBLIC_DEMO_MODE} \
     NEXT_PUBLIC_HELPDESK_MODE=${NEXT_PUBLIC_HELPDESK_MODE}
 COPY . .

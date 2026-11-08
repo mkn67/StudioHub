@@ -657,7 +657,9 @@ final class AgentService
             'Search active public physical rooms; capacity filter is applied to first five API results, '
             . 'not a complete availability search.',
             $obj(
-                ['keyword' => $s(100), 'people' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100]],
+                ['keyword' => $s(100), 'people' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100],
+                    'district'=>$s(100), 'max_price'=>['type'=>'integer','minimum'=>0,'maximum'=>1000000000],
+                    'rate_unit'=>['type'=>'string','enum'=>['hour','session','half_day','day','week','month']]],
                 [],
             ),
             $obj(
@@ -670,6 +672,7 @@ final class AgentService
             ),
             function ($args) use (&$evidence) {
                 $result = $this->catalog->search($args);
+                $evidence['roomSearchCompleted'] = true;
 
                 foreach ($result['items'] as $item) {
                     $evidence['rooms'][$item['roomId']] = self::roomCard($item);
@@ -693,6 +696,20 @@ final class AgentService
                 $evidence['rooms'][$item['roomId']] = self::roomCard($item);
 
                 return $item;
+            },
+            $allow,
+        );
+
+        $registry->add(
+            'get_room_facts',
+            'Read current MySQL-backed public room/Studio facts, prices, amenities, rentable equipment and stored Studio policies. '
+            . 'Use a real room ID from search_rooms. Missing fields are explicitly reported. Never infer a private booking refund.',
+            $obj(['roomId'=>['type'=>'integer','minimum'=>1]],['roomId']),
+            $obj(['roomId'=>$s(20),'text'=>$s(16000),'missingFields'=>['type'=>'array','items'=>$s(100),'maxItems'=>30],'checkedAt'=>$s(100)],['roomId','text','missingFields','checkedAt']),
+            function($args)use(&$evidence){
+                $facts=$this->catalog->facts($args['roomId']);
+                $evidence['roomFacts'][$facts['roomId']]=$facts;
+                return $facts;
             },
             $allow,
         );

@@ -11,11 +11,15 @@ if (file_exists($rootDir . '/.env')) {
     Dotenv\Dotenv::createImmutable($rootDir)->safeLoad();
 }
 
-$host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'db';
-$port = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: '3306';
-$name = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?: '';
-$user = $_ENV['DB_USER'] ?? getenv('DB_USER') ?: '';
-$password = $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? getenv('DB_PASS') ?: getenv('DB_PASSWORD') ?: '';
+$envValue = static function (string $key, string $default = ''): string {
+    $value = getenv($key);
+    return $value !== false ? $value : (string) ($_ENV[$key] ?? $default);
+};
+$host = $envValue('DB_HOST', 'db');
+$port = $envValue('DB_PORT', '3306');
+$name = $envValue('DB_NAME');
+$user = $envValue('DB_USER');
+$password = $envValue('DB_PASS', $envValue('DB_PASSWORD'));
 
 if ($name === '' || $user === '' || $password === '') {
     fwrite(STDERR, "DB_NAME, DB_USER and DB_PASS must be configured.\n");
@@ -55,7 +59,7 @@ try {
         foreach (preg_split('/;\s*$/m', $contents) ?: [] as $statement) {
             $statement = trim($statement);
             if ($statement !== '') {
-                $pdo->exec($statement);
+                App\Config\SqlMigrationStatement::execute($pdo, $statement);
             }
         }
         $record = $pdo->prepare('INSERT INTO schema_migrations (migration) VALUES (?)');

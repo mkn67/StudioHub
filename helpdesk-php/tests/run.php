@@ -24,6 +24,43 @@ function service(ScriptedModel $model,bool $draft=true): array {
     global $corpus,$manifest;$cfg=config();$store=new Store($cfg);$store->migrate();$knowledge=new Repository($corpus,$manifest,$draft);
     return [new AgentService($cfg,$store,$knowledge,$model,new PublicCatalog($cfg,new FakeTransport([])),true),$store,$knowledge];
 }
+test('Helpdesk selects configured MySQL fields when DSN is blank',function(){
+    $ca = tempnam(sys_get_temp_dir(), 'studiohub-helpdesk-ca-');
+    if ($ca === false) throw new RuntimeException('could not create temporary test CA');
+    file_put_contents($ca, 'test-only CA placeholder');
+    try {
+        new Store(config([
+            'HELPDESK_DATABASE_URL'=>'',
+            'HELPDESK_DB_HOST'=>'127.0.0.1',
+            'HELPDESK_DB_PORT'=>'1',
+            'HELPDESK_DB_NAME'=>'helpdesk_test',
+            'HELPDESK_DB_USER'=>'test',
+            'HELPDESK_DB_PASSWORD'=>'',
+            'HELPDESK_DB_SSL_CA'=>$ca,
+        ]));
+    } catch (Failure $failure) {
+        check($failure->reason==='storage_unavailable','configured MySQL fields should select MySQL, not silently fall back to SQLite');
+        unlink($ca);
+        return;
+    } finally {
+        if (is_file($ca)) unlink($ca);
+    }
+    throw new RuntimeException('expected a failed MySQL connection to the intentionally closed QA port');
+});
+test('Helpdesk refuses a MySQL connection without a CA certificate',function(){
+    try {
+        new Store(config([
+            'HELPDESK_DATABASE_URL'=>'mysql:host=127.0.0.1;port=1;dbname=helpdesk_test;charset=utf8mb4',
+            'HELPDESK_DB_USER'=>'test',
+            'HELPDESK_DB_PASSWORD'=>'test',
+            'HELPDESK_DB_SSL_CA'=>'',
+        ]));
+    } catch (Failure $failure) {
+        check($failure->reason==='invalid_storage_configuration','MySQL must require a configured CA certificate');
+        return;
+    }
+    throw new RuntimeException('expected missing MySQL CA to be rejected');
+});
 $guest=new Actor('guest:test-a');$other=new Actor('guest:test-b');$host=new Actor('user:2','host','2');$customer=new Actor('user:1','customer','1');$operator=new Actor('user:9','admin','9',true);
 test('draft corpus closed in normal runtime',function()use($corpus,$manifest,$guest){check(count((new Repository($corpus,$manifest))->eligible($guest))===0);});
 test('draft CLI visibility excludes held and host entries',function()use($corpus,$manifest,$guest,$host){
@@ -188,6 +225,137 @@ test('JSON mode requested only for structured agent system prompts',function(){
     $client=new NineRouterClient(config(),$http);$client->complete([['role'=>'system','content'=>'Respond in JSON.'],['role'=>'user','content'=>'Hello']],[],microtime(true)+2);
     check($http->requests[0]['body']['response_format']['type']==='json_object');
     $client->complete([['role'=>'user','content'=>'Reply OK']],[],microtime(true)+2);check(!isset($http->requests[1]['body']['response_format']));
+});
+test('Groq GPT-OSS tool roundtrip keeps protocol validation and uses serial tools',function(){
+    $http=new FakeTransport([
+        ['status'=>200,'body'=>['choices'=>[['message'=>['role'=>'assistant','content'=>null,'tool_calls'=>call('search_knowledge',['query'=>'test'])['tool_calls']]]]]],
+        ['status'=>200,'body'=>['choices'=>[['message'=>['role'=>'assistant','content'=>'{"kind":"greeting"}']]]]],
+    ]);
+    $client=new NineRouterClient(config(['NINEROUTER_BASE_URL'=>'https://api.groq.com/openai/v1','NINEROUTER_MODEL'=>'openai/gpt-oss-120b']),$http);
+    $tools=[['type'=>'function','function'=>['name'=>'search_knowledge','parameters'=>ToolRegistry::object(['query'=>ToolRegistry::string()],['query'])]]];
+    $messages=[['role'=>'system','content'=>'Reply in JSON or call a tool.'],['role'=>'user','content'=>'Hello']];
+    $reply=$client->complete($messages,$tools,microtime(true)+2);
+    $messages[]=$reply['message'];
+    $messages[]=['role'=>'tool','tool_call_id'=>$reply['message']['tool_calls'][0]['id'],'content'=>'{"chunks":[]}'];
+    $final=$client->complete($messages,$tools,microtime(true)+2);
+    check($final['message']['content']==='{"kind":"greeting"}');
+    foreach($http->requests as$request){
+        check($request['url']==='https://api.groq.com/openai/v1/chat/completions');
+        check(!isset($request['body']['max_tokens']));
+        check($request['body']['max_completion_tokens']===900);
+        check($request['body']['parallel_tool_calls']===false);
+        check($request['body']['reasoning_effort']==='low');
+        check(!isset($request['body']['response_format']));
+    }
+});
+test('provider rejection diagnostics never log key, message or failed generation',function(){
+    $file=tempnam(sys_get_temp_dir(),'helpdesk-provider-log-');$old=ini_get('error_log');ini_set('error_log',$file);
+    try{
+        $http=new FakeTransport([['status'=>400,'body'=>['error'=>['type'=>'invalid_request_error','param'=>'response_format','message'=>'PRIVATE PROMPT test-only-key','failed_generation'=>'PRIVATE GENERATED CONTENT']]]]);
+        $client=new NineRouterClient(config(),$http);
+        fails(fn()=>$client->complete([['role'=>'user','content'=>'PRIVATE PROMPT']],[],microtime(true)+2),'provider_unavailable');
+        check(count($http->requests)===1,'do not retry HTTP 400');
+        $log=file_get_contents($file);
+        check(str_contains($log,'"upstreamStatus":400'));
+        check(str_contains($log,'"providerParam":"response_format"'));
+        check(!str_contains($log,'PRIVATE')&&!str_contains($log,'test-only-key'));
+    }finally{ini_set('error_log',$old);unlink($file);}
+});
+test('booking navigation works with an unpublished production corpus',function()use($guest){
+    $m=new ScriptedModel([['content'=>Util::json(['kind'=>'booking_guide'])]]);
+    [$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Làm sao để đặt Studio?','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['state']==='answered');check($r['answerKind']==='booking_guide');
+    check(str_contains($r['response']['text'],'Khám phá Studio'));
+    check(str_contains($r['response']['text'],'Đơn của tôi'));
+    check($r['response']['sources']===[]);check(count($s->history($id,$guest)['messages'])===2);
+});
+test('unpublished cancellation policy explains missing terms without fabricating refunds',function()use($guest){
+    $m=new ScriptedModel([call('search_knowledge',['query'=>'chính sách hủy hoàn cọc']),['content'=>Util::json(['kind'=>'policy_unavailable'])]]);
+    [$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Chính sách hủy và hoàn cọc?','clientMessageId'=>Util::id()],$guest);
+    check($r['reasonCode']==='policy_not_published');check($r['response']['state']==='unavailable');
+    check(str_contains($r['response']['text'],'liên hệ Studio'));check(!str_contains($r['response']['text'],'%'));
+    check($r['response']['sources']===[]);
+});
+test('policy unavailable response requires an actual successful knowledge search',function()use($guest){
+    $m=new ScriptedModel([['content'=>Util::json(['kind'=>'policy_unavailable'])]]);
+    [$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Chính sách hủy và hoàn cọc?','clientMessageId'=>Util::id()],$guest);
+    check($r['reasonCode']==='unsupported_question');
+});
+test('public catalog opt-in no longer depends on an ephemeral verification file',function(){
+    check((new PublicCatalog(config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']),new FakeTransport([])))->enabled());
+    check(!(new PublicCatalog(config(['STUDIOHUB_PUBLIC_TOOLS'=>'true','STUDIOHUB_API_BASE_URL'=>'file:///etc/passwd']),new FakeTransport([])))->enabled());
+});
+test('catalog filters reach the MySQL-backed API before pagination',function(){
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['items'=>[]]]]]);
+    (new PublicCatalog(config(),$http))->search(['people'=>10,'district'=>'Quận 1','max_price'=>500000,'rate_unit'=>'hour']);
+    parse_str(parse_url($http->requests[0]['url'],PHP_URL_QUERY),$q);
+    check($q['min_capacity']==='10');check($q['district']==='Quận 1');check($q['max_price']==='500000');
+});
+test('live room facts are projected, grounded, and do not permit arbitrary SQL or endpoints',function()use($guest){
+    $facts=['roomId'=>'7','text'=>'Phòng Demo; cọc cấu hình 30%.','missingFields'=>['refund_tiers'],'checkedAt'=>date(DATE_ATOM),'host_email'=>'private@example.test'];
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>$facts]]]);
+    $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$catalog=new PublicCatalog($cfg,$http);
+    fails(fn()=>$catalog->get('/users'),'tool_unavailable');fails(fn()=>$catalog->get('/rooms/7/../../users'),'tool_unavailable');
+    $store=new Store($cfg);$store->migrate();global $corpus,$manifest;
+    $m=new ScriptedModel([call('get_room_facts',['roomId'=>7]),['content'=>Util::json(['kind'=>'room_facts','roomId'=>7,'text'=>'invented free refund'])]]);
+    $s=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m,$catalog);
+    $id=$s->create([],$guest)['conversation']['id'];$r=$s->send($id,['text'=>'Chính sách phòng 7?','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['text']===$facts['text']);check(!str_contains(Util::json($r),'private@example.test'));
+    check(count($http->requests)===1);check($http->requests[0]['method']==='GET');
+    $m2=new ScriptedModel([['content'=>Util::json(['kind'=>'room_facts','roomId'=>8])]]);
+    $s2=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m2,$catalog);
+    $id2=$s2->create([],$guest)['conversation']['id'];$r2=$s2->send($id2,['text'=>'Phòng 8?','clientMessageId'=>Util::id()],$guest);
+    check($r2['response']['state']==='unavailable','unretrieved room must not be answered');
+});
+test('MySQL facts projection exposes missing data, not private columns or invented policy defaults',function(){
+    require_once dirname(__DIR__,2).'/server/src/Modules/Rooms/RoomHelpdeskService.php';
+    $room=['room_id'=>7,'name'=>'Demo','capacity'=>10,'area'=>30,'studio'=>['name'=>'Studio','host_email'=>'private@example.test'],'rates'=>[]];
+    $facts=\App\Modules\Rooms\RoomHelpdeskService::project($room,null,[]);
+    check(in_array('studio_policy',$facts['missingFields'],true));check(in_array('active_rates',$facts['missingFields'],true));
+    check(!str_contains($facts['text'],'30%'));check(!str_contains(Util::json($facts),'private@example.test'));
+    $p=['deposit_percent'=>30,'payment_minutes'=>15,'cancel_hours'=>24,'change_hours'=>24,'open_hour'=>8,'close_hour'=>22,'refund_tiers'=>'[{"hours":48,"percent":100},{"hours":24,"percent":50}]'];
+    $facts=\App\Modules\Rooms\RoomHelpdeskService::project($room,$p,[]);
+    check(str_contains($facts['text'],'48 giờ → 100%'));check(str_contains($facts['text'],'đơn đã đặt')||str_contains($facts['text'],'Đơn đã đặt'));
+    check(!in_array('refund_tiers',$facts['missingFields'],true));
+    $p['refund_tiers']='[{"hours":48,"percent":150}]';
+    $bad=\App\Modules\Rooms\RoomHelpdeskService::project($room,$p,[]);
+    check(in_array('refund_tiers',$bad['missingFields'],true));check(!str_contains($bad['text'],'150%'));
+    $room['description']=str_repeat('d',10000);$room['rules']=str_repeat('r',10000);
+    $room['amenities']=array_fill(0,20,['name'=>str_repeat('a',100)]);
+    $facts=\App\Modules\Rooms\RoomHelpdeskService::project($room,$p,array_fill(0,10,['name'=>str_repeat('e',150),'unit_price'=>100,'pricing_unit'=>'hour']));
+    check(mb_strlen($facts['text'])<=4000,'must fit browser response validation');
+});
+test('discovery shortcut asks purpose without requiring a room ID or spending a model call',function()use($guest){
+    $m=new ScriptedModel([]);[$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Tôi muốn tìm phòng phù hợp','clientMessageId'=>Util::id()],$guest);
+    check($m->calls===0);check($r['response']['state']==='answered');
+    check(str_contains($r['response']['text'],'lookbook'));check(!str_contains($r['response']['text'],'mã phòng'));
+});
+test('lookbook follow-up can search live catalog and latest booking intent remains available',function()use($guest){
+    $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$store=new Store($cfg);$store->migrate();global $corpus,$manifest;
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['items'=>[['room_id'=>10,'name'=>'Daylight Lookbook','capacity'=>8,'description'=>'Phòng chụp thời trang']]]]]]);
+    $m=new ScriptedModel([function($messages){
+        check(str_contains(Util::json($messages),'lookbook&fashion'));
+        return call('search_rooms',['keyword'=>'lookbook']);
+    },['content'=>Util::json(['kind'=>'rooms'])],['content'=>Util::json(['kind'=>'booking_guide'])]]);
+    $s=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m,new PublicCatalog($cfg,$http));
+    $id=$s->create([],$guest)['conversation']['id'];
+    $s->send($id,['text'=>'Tôi muốn tìm phòng phù hợp','clientMessageId'=>Util::id()],$guest);
+    $r=$s->send($id,['text'=>'lookbook&fashion á','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['cards'][0]['roomId']==='10');check($r['response']['state']==='answered');
+    $r=$s->send($id,['text'=>'Làm sao để đặt Studio?','clientMessageId'=>Util::id()],$guest);
+    check($r['answerKind']==='booking_guide');
+});
+test('empty search returns a useful refinement prompt',function()use($guest){
+    $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$store=new Store($cfg);$store->migrate();global $corpus,$manifest;
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['items'=>[]]]]]);
+    $m=new ScriptedModel([call('search_rooms',['keyword'=>'not-found']),['content'=>Util::json(['kind'=>'rooms'])]]);
+    $s=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m,new PublicCatalog($cfg,$http));
+    $id=$s->create([],$guest)['conversation']['id'];$r=$s->send($id,['text'=>'Phòng chưa có','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['state']==='answered');check(str_contains($r['response']['text'],'từ khóa khác'));
 });
 $failed=0;
 foreach($tests as$name=>$fn){try{$fn();echo "PASS $name\n";}catch(Throwable $e){$failed++;echo "FAIL $name: ".$e->getMessage()."\n";}}

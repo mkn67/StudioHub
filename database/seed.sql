@@ -35,6 +35,13 @@ INSERT INTO space_types (space_type_id, name, description, category) VALUES
 (8, 'Livestream & E-commerce', 'Dành cho livestream bán hàng và giới thiệu sản phẩm; thường có mạng LAN riêng, ánh sáng liên tục và khu trưng bày.', 'Livestream & Broadcast'),
 (9, 'Music Recording Studio', 'Dùng để thu giọng hát, nhạc cụ, lồng tiếng và sản xuất nhạc; thường có booth, micro và loa kiểm âm.', 'Audio & Event');
 
+-- Studio-specific types group physical rooms. Their dimensions come from rooms.
+INSERT INTO host_room_types (studio_id, name, description, status)
+SELECT s.studio_id, t.name, t.description, 'active'
+FROM studios s
+CROSS JOIN space_types t
+WHERE t.category <> 'Other';
+
 -- 5. Amenities
 INSERT INTO amenities (amenity_id, name, icon) VALUES
 (1, 'Wifi 1Gbps Dedicated', 'wifi'),
@@ -87,6 +94,13 @@ INSERT INTO room_space_types (room_id, space_type_id, is_primary) VALUES
 (15, 7, 1),
 (16, 9, 1),
 (17, 5, 1);
+
+UPDATE rooms r
+JOIN room_space_types rst ON rst.room_id = r.room_id AND rst.is_primary = 1
+JOIN space_types st ON st.space_type_id = rst.space_type_id
+JOIN host_room_types hrt ON hrt.studio_id = r.studio_id AND hrt.name = st.name
+SET r.room_type_id = hrt.room_type_id
+WHERE r.room_type_id IS NULL;
 
 -- 8. Room Amenities
 INSERT INTO room_amenities (room_id, amenity_id) VALUES

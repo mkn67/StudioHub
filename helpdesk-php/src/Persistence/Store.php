@@ -42,14 +42,23 @@ final class Store
         $dsn = $this->resolveDsn();
 
         try {
+            $options = [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,  // Lỗi SQL ném ra exception
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,        // Mặc định trả về mảng kết hợp
+            ];
+            if (str_starts_with($dsn, 'mysql:')) {
+                $sslCa = $config->get('HELPDESK_DB_SSL_CA');
+                if ($sslCa === '' || !is_file($sslCa) || !is_readable($sslCa)) {
+                    throw new Failure('invalid_storage_configuration', 503);
+                }
+                $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+            }
             $this->db = new PDO(
                 $dsn,
                 $config->get('HELPDESK_DB_USER'),
                 $config->get('HELPDESK_DB_PASSWORD'),
-                [
-                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,  // Lỗi SQL ném ra exception
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,        // Mặc định trả về mảng kết hợp
-                ]
+                $options
             );
 
             if ($this->driver() === 'sqlite') {
@@ -72,7 +81,26 @@ final class Store
      */
     private function resolveDsn(): string
     {
-        $dsn = $this->config->get('HELPDESK_DATABASE_URL', 'sqlite:var/helpdesk.sqlite');
+        $dsn = $this->config->get('HELPDESK_DATABASE_URL');
+        if ($dsn === '') {
+            $host = $this->config->get('HELPDESK_DB_HOST');
+            if ($host !== '') {
+                $port = $this->config->get('HELPDESK_DB_PORT', '3306');
+                $database = $this->config->get('HELPDESK_DB_NAME');
+                if (!preg_match('/^[A-Za-z0-9.-]+$/D', $host)
+                    || !ctype_digit($port)
+                    || (int) $port < 1
+                    || (int) $port > 65535
+                    || !preg_match('/^[A-Za-z0-9_$-]+$/D', $database)
+                ) {
+                    throw new Failure('invalid_storage_configuration', 503);
+                }
+
+                $dsn = "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4";
+            } else {
+                $dsn = 'sqlite:var/helpdesk.sqlite';
+            }
+        }
 
         if (str_starts_with($dsn, 'sqlite:')) {
             $target = substr($dsn, 7);
@@ -102,9 +130,22 @@ final class Store
     /** Chạy file migration SQL tương ứng với driver hiện tại. */
     public function migrate(): void
     {
-        $this->db->exec(
-            file_get_contents($this->config->path('database/migrations/' . $this->driver() . '.sql'))
-        );
+        $isMysql = $this->driver() === 'mysql';
+        if ($isMysql && (int) $this->db->query("SELECT GET_LOCK('studiohub_helpdesk_migrations', 10)")->fetchColumn() !== 1) {
+            throw new Failure('storage_unavailable', 503);
+        }
+
+        try {
+            $migration = file_get_contents($this->config->path('database/migrations/' . $this->driver() . '.sql'));
+            if ($migration === false || trim($migration) === '') {
+                throw new Failure('invalid_storage_configuration', 503);
+            }
+            $this->db->exec($migration);
+        } finally {
+            if ($isMysql) {
+                $this->db->query("SELECT RELEASE_LOCK('studiohub_helpdesk_migrations')");
+            }
+        }
     }
 
     /**

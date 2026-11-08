@@ -29,8 +29,8 @@ class StudioRepository
                    COUNT(DISTINCT r.room_id) as total_rooms,
                    COUNT(DISTINCT e.equipment_id) as total_equipments
             FROM studios s
-            LEFT JOIN rooms r ON s.studio_id = r.studio_id AND r.status <> "inactive"
-            LEFT JOIN equipments e ON s.studio_id = e.studio_id AND e.status <> "inactive"
+            LEFT JOIN rooms r ON s.studio_id = r.studio_id AND r.status <> \'inactive\'
+            LEFT JOIN equipments e ON s.studio_id = e.studio_id AND e.status <> \'inactive\'
             WHERE s.host_id = ?
             GROUP BY s.studio_id
             ORDER BY s.studio_id ASC

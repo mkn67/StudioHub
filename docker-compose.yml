@@ -11,14 +11,17 @@ x-api: &api
     TZ: Asia/Ho_Chi_Minh
     DB_HOST: db
     DB_PORT: "3306"
-    DB_NAME: ${DB_NAME:-studio_dev}
-    DB_USER: ${DB_USER:-studio_user}
-    DB_PASSWORD: ${DB_PASSWORD:-studio_password}
-    DB_PASS: ${DB_PASSWORD:-studio_password}
-    JWT_SECRET: ${JWT_SECRET:?Run node scripts/setup-docker.mjs first}
-    ALLOWED_ORIGINS: http://localhost:${CLIENT_PORT:-3000},http://127.0.0.1:${CLIENT_PORT:-3000}
+    DB_NAME: ${LOCAL_DB_NAME:-studio_dev}
+    DB_USER: ${LOCAL_DB_USER:-studio_user}
+    DB_PASSWORD: ${LOCAL_DB_PASSWORD:-studio_password}
+    DB_PASS: ${LOCAL_DB_PASSWORD:-studio_password}
+    # Local Compose uses its private MySQL service without TLS. The mounted
+    # server/.env is also used by Render and may contain an Aiven CA path.
+    DB_SSL_CA: ""
+    JWT_SECRET: ${LOCAL_JWT_SECRET:?Run node scripts/setup-docker.mjs first}
+    ALLOWED_ORIGINS: http://localhost:${LOCAL_CLIENT_PORT:-3000},http://127.0.0.1:${LOCAL_CLIENT_PORT:-3000}
   volumes:
-    - ./server:/var/www/html:ro
+    - ./server:/var/www/html:ro,z
     - api_vendor:/var/www/html/vendor
     - api_uploads:/var/www/html/public/uploads
     - api_private:/var/www/html/storage
@@ -33,11 +36,12 @@ x-helpdesk: &helpdesk
       required: false
   environment:
     TZ: Asia/Ho_Chi_Minh
-    HELPDESK_BRIDGE_SECRET: ${HELPDESK_BRIDGE_SECRET:?Run node scripts/setup-docker.mjs first}
-    HELPDESK_FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:${CLIENT_PORT:-3000}}
+    PORT: "80"
+    HELPDESK_BRIDGE_SECRET: ${LOCAL_HELPDESK_BRIDGE_SECRET:?Run node scripts/setup-docker.mjs first}
+    HELPDESK_FRONTEND_ORIGIN: ${LOCAL_FRONTEND_ORIGIN:-http://localhost:${LOCAL_CLIENT_PORT:-3000}}
     HELPDESK_DATABASE_URL: sqlite:var/helpdesk.sqlite
     STUDIOHUB_API_BASE_URL: http://api/api
-    NINEROUTER_BASE_URL: ${NINEROUTER_BASE_URL:-http://host.docker.internal:20128/v1}
+    NINEROUTER_BASE_URL: ${LOCAL_NINEROUTER_BASE_URL:-http://host.docker.internal:20128/v1}
   extra_hosts:
     - host.docker.internal:host-gateway
   volumes:
@@ -53,12 +57,12 @@ services:
       - --default-time-zone=+07:00
       - --log-bin-trust-function-creators=1
     environment:
-      MYSQL_DATABASE: ${DB_NAME:-studio_dev}
-      MYSQL_USER: ${DB_USER:-studio_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-studio_password}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${LOCAL_DB_NAME:-studio_dev}
+      MYSQL_USER: ${LOCAL_DB_USER:-studio_user}
+      MYSQL_PASSWORD: ${LOCAL_DB_PASSWORD:-studio_password}
+      MYSQL_ROOT_PASSWORD: ${LOCAL_DB_ROOT_PASSWORD:-root_password}
     ports:
-      - "127.0.0.1:${DB_PORT:-3307}:3306"
+      - "127.0.0.1:${LOCAL_DB_PORT:-3307}:3306"
     volumes:
       - mysqldata:/var/lib/mysql
     healthcheck:
@@ -68,10 +72,9 @@ services:
       retries: 24
       start_period: 20s
 
-  # Install Linux dependencies into a named volume; host source stays read-only.
-  api-deps:
+  api:
     <<: *api
-    restart: "no"
+    restart: unless-stopped
     command:
       - sh
       - -ec
@@ -79,39 +82,16 @@ services:
         composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
         mkdir -p public/uploads storage
         chown -R www-data:www-data public/uploads storage
-
-  # Bootstrap only an empty database; never reset or reseed existing tables.
-  db-init:
-    <<: *api
-    restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
-      api-deps:
-        condition: service_completed_successfully
-    command: [php, bin/init-db.php]
-
-  # Apply additive SQL migrations to an existing database only when requested.
-  db-upgrade:
-    <<: *api
-    profiles: [maintenance]
-    restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
-      api-deps:
-        condition: service_completed_successfully
-    command: [php, bin/migrate-sql.php, --apply]
-
-  api:
-    <<: *api
-    restart: unless-stopped
-    command: [apache2-foreground, -c, "ServerName localhost"]
+        php bin/init.php --apply --seed
+        php bin/migrate.php --apply
+        php bin/migrate-sql.php --apply
+        php bin/seed-booking-examples.php
+        exec apache2-foreground -c "ServerName localhost"
     ports:
-      - "127.0.0.1:${API_PORT:-8000}:80"
+      - "127.0.0.1:${LOCAL_API_PORT:-8000}:80"
     depends_on:
-      db-init:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     healthcheck:
       test: [CMD, php, -r, 'exit(@file_get_contents("http://127.0.0.1/api/health") === false ? 1 : 0);']
       interval: 10s
@@ -136,23 +116,13 @@ services:
           sleep 60 & wait $$!
         done
 
-  helpdesk-init:
-    <<: *helpdesk
-    restart: "no"
-    user: www-data
-    command: [php, bin/migrate.php, --apply]
-    healthcheck:
-      disable: true
-
   helpdesk-php:
     <<: *helpdesk
     restart: unless-stopped
-    command: [apache2-foreground, -c, "ServerName localhost"]
+    command: [sh, -ec, php bin/migrate.php --apply && exec apache2-foreground -c "ServerName localhost"]
     ports:
       - "127.0.0.1:${HELPDESK_PORT:-8010}:80"
     depends_on:
-      helpdesk-init:
-        condition: service_completed_successfully
       api:
         condition: service_healthy
     healthcheck:
@@ -169,19 +139,21 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_PORT:-8000}}
+        NEXT_PUBLIC_API_URL: ${LOCAL_NEXT_PUBLIC_API_URL:-http://localhost:${LOCAL_API_PORT:-8000}}
         NEXT_PUBLIC_DEMO_MODE: "false"
+        NEXT_PUBLIC_APP_MODE: rest
         NEXT_PUBLIC_HELPDESK_MODE: connected
     init: true
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${CLIENT_PORT:-3000}:3000"
+      - "127.0.0.1:${LOCAL_CLIENT_PORT:-3000}:3000"
     environment:
       API_INTERNAL_URL: http://api
+      APP_ORIGIN: http://localhost:${LOCAL_CLIENT_PORT:-3000},http://127.0.0.1:${LOCAL_CLIENT_PORT:-3000}
       HELPDESK_API_URL: http://helpdesk-php
       HELPDESK_HTTP_HOSTS: helpdesk-php
-      HELPDESK_BRIDGE_SECRET: ${HELPDESK_BRIDGE_SECRET:?Run node scripts/setup-docker.mjs first}
-      HELPDESK_FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:${CLIENT_PORT:-3000}}
+      HELPDESK_BRIDGE_SECRET: ${LOCAL_HELPDESK_BRIDGE_SECRET:?Run node scripts/setup-docker.mjs first}
+      HELPDESK_FRONTEND_ORIGIN: ${LOCAL_FRONTEND_ORIGIN:-http://localhost:${LOCAL_CLIENT_PORT:-3000}}
     # The browser-facing app can start independently; API requests occur after
     # page load. Avoid Podman Compose restarting completed init jobs transitively.
 

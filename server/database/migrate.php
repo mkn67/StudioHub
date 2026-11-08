@@ -17,12 +17,16 @@ if (class_exists('Dotenv\Dotenv') && file_exists($rootDir . '/.env')) {
     $dotenv->safeLoad();
 }
 
-$appEnv = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'dev';
-$dbHost = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'db';
-$dbPort = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: '3306';
-$dbName = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?: 'studio_dev';
-$dbUser = $_ENV['DB_USER'] ?? getenv('DB_USER') ?: 'studio_user';
-$dbPass = $_ENV['DB_PASS'] ?? $_ENV['DB_PASSWORD'] ?? getenv('DB_PASS') ?: getenv('DB_PASSWORD') ?: '';
+$envValue = static function (string $key, string $default = ''): string {
+    $value = getenv($key);
+    return $value !== false ? $value : (string) ($_ENV[$key] ?? $default);
+};
+$appEnv = $envValue('APP_ENV', 'dev');
+$dbHost = $envValue('DB_HOST', 'db');
+$dbPort = $envValue('DB_PORT', '3306');
+$dbName = $envValue('DB_NAME', 'studio_dev');
+$dbUser = $envValue('DB_USER', 'studio_user');
+$dbPass = $envValue('DB_PASS', $envValue('DB_PASSWORD'));
 if ($dbPass === '') {
     fwrite(STDERR, "DB_PASS must be configured\n");
     exit(1);
@@ -50,9 +54,7 @@ if ($isFresh) {
 
 try {
     $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
-    $pdo = new PDO($dsn, $dbUser, $dbPass, [
-        ...App\Config\PdoOptions::mysql(),
-    ]);
+    $pdo = new PDO($dsn, $dbUser, $dbPass, App\Config\PdoOptions::mysql());
     $pdo->exec("SET time_zone = '+07:00'");
     $pdo->exec("SET NAMES utf8mb4");
 
@@ -82,6 +84,11 @@ try {
         echo "Cleaned existing schema successfully.\n";
     }
 
+    // schema.sql contains DROP TABLE statements, so it is safe only on an
+    // empty database or after an explicit dev/test-only --fresh reset.
+    $existingTables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+    $initializeBaseSchema = $isFresh || count($existingTables) === 0;
+    if ($initializeBaseSchema) {
     // 1. Run schema.sql
     $schemaFile = __DIR__ . '/schema.sql';
     if (!file_exists($schemaFile)) {
@@ -138,12 +145,16 @@ try {
             if ($stmt === '') {
                 continue;
             }
-            $pdo->exec($stmt);
+            App\Config\SqlMigrationStatement::execute($pdo, $stmt);
             $seedCount++;
         }
         echo "-> Seed applied ({$seedCount} statements executed).\n";
     } elseif (file_exists($seedFile)) {
         echo "Skipping development seed data for environment '{$appEnv}'.\n";
+    }
+
+    } else {
+        echo "Existing schema detected; preserving data and skipping schema.sql and seed.sql.\n";
     }
 
     if (!in_array($appEnv, ['dev', 'test'], true)) {
@@ -177,7 +188,7 @@ try {
         foreach (preg_split('/;\s*$/m', (string) $migrationSql) ?: [] as $migrationStatement) {
             $migrationStatement = trim($migrationStatement);
             if ($migrationStatement !== '') {
-                $pdo->exec($migrationStatement);
+                App\Config\SqlMigrationStatement::execute($pdo, $migrationStatement);
             }
         }
         $migrationRecord = $pdo->prepare('INSERT INTO schema_migrations (migration) VALUES (?)');
