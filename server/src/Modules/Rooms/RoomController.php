@@ -36,6 +36,11 @@ class RoomController
         ApiResponse::success($room, 'Lấy chi tiết phòng thành công', 200);
     }
 
+    public function helpdeskFacts(Request $request, array $vars): void
+    {
+        ApiResponse::success((new RoomHelpdeskService())->get((int)($vars['id'] ?? 0)), 'Thông tin phòng từ dữ liệu hiện tại', 200);
+    }
+
     /**
      * GET /api/rooms/{id}/calendar?from=&to=
      */

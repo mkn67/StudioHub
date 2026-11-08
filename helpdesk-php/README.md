@@ -53,7 +53,7 @@ Optional commands, ONLY when you choose to test a configured gateway:
 .\bin\php.cmd bin/gateway-smoke.php
 ~~~
 
-The second command performs an actual chat and tool-result roundtrip. Its report is diagnostic, not a prerequisite for startup; no invented model IDs are used. See [9Router setup](../docs/helpdesk/NINEROUTER_SETUP.md). Public business catalog tools have a separate verified-endpoint gate; see that guide.
+The second command performs an actual chat and tool-result roundtrip. Its report is diagnostic, not a prerequisite for startup; no invented model IDs are used. See [9Router setup](../docs/helpdesk/NINEROUTER_SETUP.md). Public catalog tools require explicit `STUDIOHUB_PUBLIC_TOOLS=true`; every response is validated at request time, without a transient CLI marker. See [MySQL-backed answers](../docs/helpdesk/MYSQL_CATALOG.md).
 
 ## Tests and demos
 

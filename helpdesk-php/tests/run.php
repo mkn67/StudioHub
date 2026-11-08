@@ -261,6 +261,73 @@ test('provider rejection diagnostics never log key, message or failed generation
         check(!str_contains($log,'PRIVATE')&&!str_contains($log,'test-only-key'));
     }finally{ini_set('error_log',$old);unlink($file);}
 });
+test('booking navigation works with an unpublished production corpus',function()use($guest){
+    $m=new ScriptedModel([['content'=>Util::json(['kind'=>'booking_guide'])]]);
+    [$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Làm sao để đặt Studio?','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['state']==='answered');check($r['answerKind']==='booking_guide');
+    check(str_contains($r['response']['text'],'Khám phá Studio'));
+    check(str_contains($r['response']['text'],'Đơn của tôi'));
+    check($r['response']['sources']===[]);check(count($s->history($id,$guest)['messages'])===2);
+});
+test('unpublished cancellation policy explains missing terms without fabricating refunds',function()use($guest){
+    $m=new ScriptedModel([call('search_knowledge',['query'=>'chính sách hủy hoàn cọc']),['content'=>Util::json(['kind'=>'policy_unavailable'])]]);
+    [$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Chính sách hủy và hoàn cọc?','clientMessageId'=>Util::id()],$guest);
+    check($r['reasonCode']==='policy_not_published');check($r['response']['state']==='unavailable');
+    check(str_contains($r['response']['text'],'liên hệ Studio'));check(!str_contains($r['response']['text'],'%'));
+    check($r['response']['sources']===[]);
+});
+test('policy unavailable response requires an actual successful knowledge search',function()use($guest){
+    $m=new ScriptedModel([['content'=>Util::json(['kind'=>'policy_unavailable'])]]);
+    [$s]=service($m,false);$id=$s->create([],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Chính sách hủy và hoàn cọc?','clientMessageId'=>Util::id()],$guest);
+    check($r['reasonCode']==='unsupported_question');
+});
+test('public catalog opt-in no longer depends on an ephemeral verification file',function(){
+    check((new PublicCatalog(config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']),new FakeTransport([])))->enabled());
+    check(!(new PublicCatalog(config(['STUDIOHUB_PUBLIC_TOOLS'=>'true','STUDIOHUB_API_BASE_URL'=>'file:///etc/passwd']),new FakeTransport([])))->enabled());
+});
+test('catalog filters reach the MySQL-backed API before pagination',function(){
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['items'=>[]]]]]);
+    (new PublicCatalog(config(),$http))->search(['people'=>10,'district'=>'Quận 1','max_price'=>500000,'rate_unit'=>'hour']);
+    parse_str(parse_url($http->requests[0]['url'],PHP_URL_QUERY),$q);
+    check($q['min_capacity']==='10');check($q['district']==='Quận 1');check($q['max_price']==='500000');
+});
+test('live room facts are projected, grounded, and do not permit arbitrary SQL or endpoints',function()use($guest){
+    $facts=['roomId'=>'7','text'=>'Phòng Demo; cọc cấu hình 30%.','missingFields'=>['refund_tiers'],'checkedAt'=>date(DATE_ATOM),'host_email'=>'private@example.test'];
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>$facts]]]);
+    $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$catalog=new PublicCatalog($cfg,$http);
+    fails(fn()=>$catalog->get('/users'),'tool_unavailable');fails(fn()=>$catalog->get('/rooms/7/../../users'),'tool_unavailable');
+    $store=new Store($cfg);$store->migrate();global $corpus,$manifest;
+    $m=new ScriptedModel([call('get_room_facts',['roomId'=>7]),['content'=>Util::json(['kind'=>'room_facts','roomId'=>7,'text'=>'invented free refund'])]]);
+    $s=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m,$catalog);
+    $id=$s->create([],$guest)['conversation']['id'];$r=$s->send($id,['text'=>'Chính sách phòng 7?','clientMessageId'=>Util::id()],$guest);
+    check($r['response']['text']===$facts['text']);check(!str_contains(Util::json($r),'private@example.test'));
+    check(count($http->requests)===1);check($http->requests[0]['method']==='GET');
+    $m2=new ScriptedModel([['content'=>Util::json(['kind'=>'room_facts','roomId'=>8])]]);
+    $s2=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m2,$catalog);
+    $id2=$s2->create([],$guest)['conversation']['id'];$r2=$s2->send($id2,['text'=>'Phòng 8?','clientMessageId'=>Util::id()],$guest);
+    check($r2['response']['state']==='unavailable','unretrieved room must not be answered');
+});
+test('MySQL facts projection exposes missing data, not private columns or invented policy defaults',function(){
+    require_once dirname(__DIR__,2).'/server/src/Modules/Rooms/RoomHelpdeskService.php';
+    $room=['room_id'=>7,'name'=>'Demo','capacity'=>10,'area'=>30,'studio'=>['name'=>'Studio','host_email'=>'private@example.test'],'rates'=>[]];
+    $facts=\App\Modules\Rooms\RoomHelpdeskService::project($room,null,[]);
+    check(in_array('studio_policy',$facts['missingFields'],true));check(in_array('active_rates',$facts['missingFields'],true));
+    check(!str_contains($facts['text'],'30%'));check(!str_contains(Util::json($facts),'private@example.test'));
+    $p=['deposit_percent'=>30,'payment_minutes'=>15,'cancel_hours'=>24,'change_hours'=>24,'open_hour'=>8,'close_hour'=>22,'refund_tiers'=>'[{"hours":48,"percent":100},{"hours":24,"percent":50}]'];
+    $facts=\App\Modules\Rooms\RoomHelpdeskService::project($room,$p,[]);
+    check(str_contains($facts['text'],'48 giờ → 100%'));check(str_contains($facts['text'],'đơn đã đặt')||str_contains($facts['text'],'Đơn đã đặt'));
+    check(!in_array('refund_tiers',$facts['missingFields'],true));
+    $p['refund_tiers']='[{"hours":48,"percent":150}]';
+    $bad=\App\Modules\Rooms\RoomHelpdeskService::project($room,$p,[]);
+    check(in_array('refund_tiers',$bad['missingFields'],true));check(!str_contains($bad['text'],'150%'));
+    $room['description']=str_repeat('d',10000);$room['rules']=str_repeat('r',10000);
+    $room['amenities']=array_fill(0,20,['name'=>str_repeat('a',100)]);
+    $facts=\App\Modules\Rooms\RoomHelpdeskService::project($room,$p,array_fill(0,10,['name'=>str_repeat('e',150),'unit_price'=>100,'pricing_unit'=>'hour']));
+    check(mb_strlen($facts['text'])<=4000,'must fit browser response validation');
+});
 $failed=0;
 foreach($tests as$name=>$fn){try{$fn();echo "PASS $name\n";}catch(Throwable $e){$failed++;echo "FAIL $name: ".$e->getMessage()."\n";}}
 echo Util::json(['tests'=>count($tests),'passed'=>count($tests)-$failed,'failed'=>$failed,'assertions'=>$assertions,'provider'=>'scripted/mocked, no live gateway claim'])."\n";

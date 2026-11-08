@@ -73,7 +73,7 @@ final class AgentOrchestrator
     /** Câu hỏi làm rõ theo từng trường thông tin còn thiếu. */
     private const CLARIFICATION_QUESTIONS = [
         'description' => 'Bạn mô tả ngắn sự cố cần hỗ trợ được không? Không gửi mật khẩu hoặc thông tin thanh toán.',
-        'studio'      => 'Sự cố xảy ra tại Studio nào? Thông tin bạn cung cấp chưa được xác minh.',
+        'studio'      => 'Bạn đang hỏi Studio hoặc phòng nào? Cho mình tên hoặc mã phòng để tra đúng thông tin.',
         'category'    => 'Bạn cần hỗ trợ tài khoản, lỗi nền tảng, điều kiện phòng hay tranh chấp cọc?',
     ];
 
@@ -269,12 +269,48 @@ final class AgentOrchestrator
             return self::handoffPendingResponse();
         }
 
+        if ($kind === 'room_facts' && is_int($final['roomId'] ?? null)
+            && isset($evidence['roomFacts'][(string)$final['roomId']])) {
+            $facts=$evidence['roomFacts'][(string)$final['roomId']];
+            // Render the exact API projection; model-authored prices or refund claims are never used.
+            return array_replace(self::base($facts['text'], 'answered'),[
+                'answerKind'=>'catalog','reasonCode'=>null,
+            ]);
+        }
+
         // Chào hỏi.
         if ($kind === 'greeting') {
             return array_replace(
                 self::base(self::MSG_GREETING, 'answered'),
                 ['answerKind' => 'greeting', 'reasonCode' => null],
             );
+        }
+
+        if ($kind === 'booking_guide') {
+            // Reviewed against the customer booking UI, independent of unapproved business policies.
+            return array_replace(self::base(
+                "Bạn đặt Studio trên website theo các bước:\n"
+                . "1. Vào Khám phá Studio, chọn phòng rồi mở trang chi tiết.\n"
+                . "2. Chọn lịch thuê và vào trang đặt phòng.\n"
+                . "3. Chọn gói thuê, ngày giờ, số người và thiết bị thuê thêm nếu cần.\n"
+                . "4. Đăng nhập tài khoản khách hàng, điền thông tin liên hệ, kiểm tra giá và nội quy rồi tạo đơn.\n"
+                . "5. Vào Đơn của tôi để xem chi tiết và các bước tiếp theo.\n"
+                . "Giá và lịch được máy chủ kiểm tra khi đặt; mình chưa tạo đơn hoặc giữ chỗ cho bạn.",
+                'answered',
+            ), ['answerKind' => 'booking_guide', 'reasonCode' => null]);
+        }
+
+        if ($kind === 'policy_unavailable') {
+            foreach ($evidence['trace'] ?? [] as $tool) {
+                if (($tool['tool'] ?? '') === 'search_knowledge' && ($tool['outcome'] ?? '') === 'success'
+                    && empty($evidence['chunks'])) {
+                    return array_replace(self::base(
+                        'Mình chưa có chính sách hủy và hoàn cọc được xác nhận để trả lời. '
+                        . 'Bạn hãy liên hệ Studio để xác nhận điều kiện hủy, thời hạn và khoản được hoàn trước khi đặt. '
+                        . 'Nếu đã có đơn, hãy mở Đơn của tôi để xem chi tiết; bạn cũng có thể yêu cầu gặp nhân viên hỗ trợ.',
+                    ), ['reasonCode' => 'policy_not_published']);
+                }
+            }
         }
 
         // Câu hỏi về chính sách: trả lời kèm trích dẫn từ các đoạn tài liệu đã truy xuất (RAG).
