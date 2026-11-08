@@ -5,7 +5,7 @@ export const suggestedQuestions = [
   "Tôi cần hỗ trợ đơn thuê",
 ] as const;
 
-export const welcomeMessage = "Xin chào! Mình là trợ lý hỗ trợ StudioHub. Bạn cần tìm hiểu về đặt phòng, thanh toán, chính sách hay yêu cầu hỗ trợ?";
+export const welcomeMessage = "Chào bạn! Mình giúp tìm phòng theo nhu cầu và giải thích thông tin, giá, tiện ích của phòng. Bạn muốn tìm không gian như thế nào?";
 
 // Public guidance manually mapped to approved policy; no retrieval or LLM is run.
 export const demoFaq = {

@@ -7,6 +7,28 @@ import { POST as helpdeskRoutePost } from "../../../app/api/helpdesk/[...path]/r
 
 const ok = (data: unknown) => Response.json({ status: "success", code: 200, message: "OK", data });
 const response = { text: "Đây là nội dung từ PHP.", mode: "connected", state: "unavailable", sources: [] };
+test("navigation reset prevents a late previous-page conversation from contaminating the next room", async () => {
+  let release!: (response: Response) => void;
+  const late = new Promise<Response>(resolve => { release = resolve; });
+  const bodies: Record<string, unknown>[] = [];
+  let calls = 0;
+  const fake: typeof fetch = async (url, options) => {
+    bodies.push(JSON.parse(String(options?.body)));
+    calls++;
+    if (calls === 1) return late;
+    if (calls === 2) return ok({ conversation: { id: "22222222-2222-4222-8222-222222222222" } });
+    assert.match(String(url), /22222222-2222-4222-8222-222222222222\/messages$/);
+    return ok({ response });
+  };
+  const adapter = createPhpHelpdeskAdapter(fake);
+  const old = adapter.sendMessage("Phòng này?", { surface: "public", scope: "catalog", roomId: 1 });
+  adapter.reset?.();
+  release(ok({ conversation: { id: "11111111-1111-4111-8111-111111111111" } }));
+  await assert.rejects(old, /đổi trang/);
+  await adapter.sendMessage("Phòng này?", { surface: "public", scope: "catalog", roomId: 2 });
+  assert.deepEqual(bodies.at(-1)?.context, { surface: "public", scope: "catalog", roomId: 2 });
+  assert.equal(calls, 3);
+});
 test("connected response strips URLs and rejects invented payload kinds", () => {
   assert.equal(validateHelpdeskResponse({ ...response, links: [{ href: "javascript:alert(1)" }] }).links, undefined);
   assert.equal(validateHelpdeskResponse({ ...response, operatorMessage: true }).operatorMessage, true);

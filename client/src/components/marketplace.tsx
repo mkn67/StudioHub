@@ -30,6 +30,7 @@ import { ApiImage } from "@/features/marketplace/backend-pages";
 import { ApiMessage } from "./api-ui";
 import { RoomListingCard, RoomListingSkeleton } from "@/features/marketplace/RoomListingCard";
 import { discoveryPurposes, typesForPurpose } from "@/features/marketplace/discovery-purposes";
+import { RoomSearchAutocomplete } from "@/features/marketplace/RoomSearchAutocomplete";
 import {
   roomRate,
   studioFor,
@@ -103,7 +104,7 @@ export function Home() {
           >
             <label>
               <span>{backendEnabled ? "Studio / phòng" : "Địa điểm"}</span>
-              {backendEnabled ? <input aria-label="Tên Studio hoặc phòng" placeholder="Tên Studio hoặc phòng" value={location} onChange={e => setLocation(e.target.value)} /> : <select
+              {backendEnabled ? <RoomSearchAutocomplete value={location} onChange={setLocation} types={catalog.data ?? []}/> : <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               >

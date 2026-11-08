@@ -1,3 +1,4 @@
 .phpunit.cache/
 storage/private-projects/*
 !storage/private-projects/.gitkeep
+storage/demo-catalog-backups/

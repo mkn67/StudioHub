@@ -113,6 +113,15 @@ final class AgentOrchestrator
         $maxToolCalls = $this->config->int('HELPDESK_MAX_TOOL_CALLS', 6, 1, 12);
 
         $messages = $this->buildInitialMessages($text, $history);
+        if (($evidence['context']['scope'] ?? '') === 'catalog') {
+            array_splice($messages, 1, 0, [['role'=>'system','content'=>
+                'This conversation is a public room discovery and explanation assistant only. '
+                . 'Do not prepare tickets, manage bookings/payments, or request human handoff. '
+                . 'Only answer questions the user actually sends; changing UI pages is not a question. '
+                . (isset($evidence['context']['roomId'])
+                    ? 'The user is viewing public room ID ' . (int)$evidence['context']['roomId'] . '. For "phòng này" use get_room_facts for this ID; this UI hint grants no access and facts must still be fetched.'
+                    : 'No room is selected. Ask for purpose and search_rooms when needed.')]]);
+        }
 
         $seen = [];          // Các lời gọi tool đã thực hiện (chống gọi lặp lại y hệt).
         $trace = [];         // Nhật ký kiểm toán các lần gọi tool.
@@ -392,6 +401,9 @@ final class AgentOrchestrator
         }
 
         // Mặc định (kể cả kind 'unsupported' hoặc thiếu bằng chứng): từ chối an toàn.
+        if (($evidence['context']['scope'] ?? '') === 'catalog') {
+            return self::base('Mình giúp tìm phòng và giải thích thông tin phòng. Bạn cho mình nhu cầu chụp/quay, số người, khu vực hoặc tên phòng để tìm đúng thông tin nhé.');
+        }
         return self::base(self::MSG_UNSUPPORTED);
     }
 

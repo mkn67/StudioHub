@@ -168,7 +168,7 @@ final class AgentService
         }
 
         $conversation = $reservation['conversation'];
-        $evidence = ['chunks' => [], 'rooms' => []];
+        $evidence = ['chunks' => [], 'rooms' => [], 'context' => $body['context'] ?? []];
         $start = microtime(true);
 
         try {
@@ -393,6 +393,10 @@ final class AgentService
      */
     private function generateAnswer(string $text, array $conversation, Actor $actor, array &$evidence): array
     {
+        if (($evidence['context']['scope'] ?? '') === 'catalog'
+            && ($text === '/handoff' || (new IntentGuard())->refusal($text) !== null)) {
+            return AgentOrchestrator::base('Mình giúp tìm phòng và giải thích thông tin phòng. Bạn mở Đơn của tôi để xem và quản lý đơn thuê.');
+        }
         if ($text === '/handoff') {
             $evidence['handoff'] = true;
 
@@ -586,8 +590,10 @@ final class AgentService
             $this->registerCatalogTools($registry, $evidence);
         }
 
-        $this->registerTicketTool($registry, $evidence);
-        $this->registerHandoffTool($registry, $evidence);
+        if (($evidence['context']['scope'] ?? '') !== 'catalog') {
+            $this->registerTicketTool($registry, $evidence);
+            $this->registerHandoffTool($registry, $evidence);
+        }
 
         return $registry;
     }

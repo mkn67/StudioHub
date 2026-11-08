@@ -357,6 +357,26 @@ test('empty search returns a useful refinement prompt',function()use($guest){
     $id=$s->create([],$guest)['conversation']['id'];$r=$s->send($id,['text'=>'Phòng chưa có','clientMessageId'=>Util::id()],$guest);
     check($r['response']['state']==='answered');check(str_contains($r['response']['text'],'từ khóa khác'));
 });
+test('catalog page context guides room lookup and excludes support mutations',function()use($guest){
+    $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$store=new Store($cfg);$store->migrate();global $corpus,$manifest;
+    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['roomId'=>'12','text'=>'Thông tin phòng 12 từ API.','missingFields'=>[],'checkedAt'=>date(DATE_ATOM)]]]]);
+    $m=new ScriptedModel([function($messages,$tools){
+        check(str_contains(Util::json($messages),'viewing public room ID 12'));
+        $names=array_column(array_column($tools,'function'),'name');
+        check(in_array('get_room_facts',$names,true));
+        check(!in_array('prepare_support_ticket',$names,true));check(!in_array('request_human_handoff',$names,true));
+        return call('get_room_facts',['roomId'=>12]);
+    },['content'=>Util::json(['kind'=>'room_facts','roomId'=>12])]]);
+    $s=new AgentService($cfg,$store,new Repository($corpus,$manifest),$m,new PublicCatalog($cfg,$http));
+    $context=['surface'=>'public','scope'=>'catalog','roomId'=>12];
+    $id=$s->create(['context'=>$context],$guest)['conversation']['id'];
+    $r=$s->send($id,['text'=>'Giải thích phòng này','context'=>$context,'clientMessageId'=>Util::id()],$guest);
+    check($r['response']['text']==='Thông tin phòng 12 từ API.');
+    $r=$s->send($id,['text'=>'/handoff','context'=>$context,'clientMessageId'=>Util::id()],$guest);
+    check($r['response']['state']!=='human_handoff');check($m->calls===2);
+    fails(fn()=>Util::context(['surface'=>'public','scope'=>'catalog','roomId'=>'12']),'invalid_context');
+    fails(fn()=>Util::context(['surface'=>'public','scope'=>'catalog','roomId'=>-1]),'invalid_context');
+});
 $failed=0;
 foreach($tests as$name=>$fn){try{$fn();echo "PASS $name\n";}catch(Throwable $e){$failed++;echo "FAIL $name: ".$e->getMessage()."\n";}}
 echo Util::json(['tests'=>count($tests),'passed'=>count($tests)-$failed,'failed'=>$failed,'assertions'=>$assertions,'provider'=>'scripted/mocked, no live gateway claim'])."\n";

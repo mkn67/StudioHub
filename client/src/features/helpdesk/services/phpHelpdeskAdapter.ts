@@ -52,6 +52,7 @@ export function validateHelpdeskResponse(value: unknown): HelpdeskResponse {
 
 export function createPhpHelpdeskAdapter(fetcher: typeof fetch = fetch): HelpdeskTransport {
   let conversationId: string | undefined;
+  let generation = 0;
   let retry: { text: string; key: string } | undefined;
   async function call(path: string, method: "GET" | "POST", body?: unknown, signal?: AbortSignal): Promise<Json> {
     const result = await fetcher("/api/helpdesk/" + path, {
@@ -67,17 +68,23 @@ export function createPhpHelpdeskAdapter(fetcher: typeof fetch = fetch): Helpdes
   }
   return {
     mode: "connected", timeoutMs: 32000,
-    reset() { conversationId = undefined; retry = undefined; },
+    reset() { generation++; conversationId = undefined; retry = undefined; },
     async sendMessage(text: string, context?: HelpdeskContext, options?) {
+      const currentGeneration = generation;
+      const assertCurrent = () => {
+        if (currentGeneration !== generation || options?.signal?.aborted) throw new HelpdeskApiError("request_cancelled", "Cuộc trò chuyện đã đổi trang.");
+      };
       if (!conversationId) {
         options?.onStatus?.("connecting");
         const data = await call("conversations", "POST", { locale: "vi-VN", context }, options?.signal);
+        assertCurrent();
         if (!record(data.conversation) || !string(data.conversation.id, 36)) throw new HelpdeskApiError("invalid_response", "Mã cuộc trò chuyện không hợp lệ.");
         conversationId = data.conversation.id;
       }
       if (!retry || retry.text !== text) retry = { text, key: crypto.randomUUID() };
       options?.onStatus?.("processing");
       const data = await call("conversations/" + conversationId + "/messages", "POST", { text, context, clientMessageId: retry.key }, options?.signal);
+      assertCurrent();
       const response = validateHelpdeskResponse(data.response);
       retry = undefined;
       return response;

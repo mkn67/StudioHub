@@ -1,4 +1,4 @@
-export type HelpdeskContext = { surface: "public" | "customer" | "host" | "admin" };
+export type HelpdeskContext = { surface: "public" | "customer" | "host" | "admin"; scope?: "catalog"; roomId?: number };
 export type HelpdeskReference = { title: string; reference?: string; href?: string };
 // Only a verified server transport may supply these read-only result cards.
 export type HelpdeskCard =

@@ -1,0 +1,930 @@
+{
+  "version": 2,
+  "notice": "Fictional demonstration inventory. Photos illustrate room types and may show different locations; not verified photos of the listed room. Reference videos are not room tours. Replace with owner media for real listings.",
+  "studios": [
+    {
+      "owner_email": "host1@studio.local",
+      "cover_url": "/images/demo-rooms/6693138.jpg",
+      "avatar_url": "/images/demo-rooms/220453.jpg",
+      "bio": "Hồ sơ minh họa của đội ngũ Artemis: không gian cho nhiếp ảnh thương mại, thời trang và workshop.",
+      "media_sources": [
+        {
+          "url": "/images/demo-rooms/6693138.jpg",
+          "source": "https://www.pexels.com/photo/6693138/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "url": "/images/demo-rooms/220453.jpg",
+          "source": "https://www.pexels.com/photo/220453/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "owner_email": "host2@studio.local",
+      "cover_url": "/images/demo-rooms/25677019.jpg",
+      "avatar_url": "/images/demo-rooms/614810.jpg",
+      "bio": "Hồ sơ minh họa của đội ngũ Zenith: không gian thu âm, podcast và sản xuất video.",
+      "media_sources": [
+        {
+          "url": "/images/demo-rooms/25677019.jpg",
+          "source": "https://www.pexels.com/photo/25677019/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "url": "/images/demo-rooms/614810.jpg",
+          "source": "https://www.pexels.com/photo/614810/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    }
+  ],
+  "rooms": [
+    {
+      "seed_id": 1,
+      "studio": 1,
+      "name": "Artemis Phòng Cyclorama Trắng",
+      "description": "Không gian chụp với phông trắng liền nền và hệ đèn studio, phù hợp ảnh sản phẩm, chân dung và catalog cần nền sạch.",
+      "area": 75.0,
+      "capacity": 15,
+      "ceiling_height": 4.5,
+      "rules": "Bắt buộc dán băng dính đế giày trước khi vào sàn vô cực",
+      "status": "active",
+      "owner_email": "host1@studio.local",
+      "type_name": "Cyclorama Studio",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 134469,
+          "url": "/images/demo-rooms/134469.jpg",
+          "alt": "Cyclorama Studio — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/134469/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 1932666,
+          "url": "/images/demo-rooms/1932666.jpg",
+          "alt": "Cyclorama Studio — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/1932666/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 12767729,
+          "url": "/images/demo-rooms/12767729.jpg",
+          "alt": "Cyclorama Studio — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/12767729/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 2,
+      "studio": 1,
+      "name": "Artemis Warm Vintage Concept",
+      "description": "Không gian concept tông ấm với bề mặt gỗ, ánh sáng cửa sổ và góc phông trung tính cho ảnh lifestyle.",
+      "area": 50.0,
+      "capacity": 10,
+      "ceiling_height": 3.8,
+      "rules": "Không tự ý di chuyển các đồ vật trang trí nặng",
+      "status": "active",
+      "owner_email": "host1@studio.local",
+      "type_name": "Concept & Set Design",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 30173137,
+          "url": "/images/demo-rooms/30173137.jpg",
+          "alt": "Concept & Set Design — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/30173137/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 19685615,
+          "url": "/images/demo-rooms/19685615.jpg",
+          "alt": "Concept & Set Design — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/19685615/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 13699196,
+          "url": "/images/demo-rooms/13699196.jpg",
+          "alt": "Concept & Set Design — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/13699196/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 3,
+      "studio": 1,
+      "name": "Artemis Phòng Sửa Chữa (Maintenance)",
+      "description": "Phòng đang bảo trì định kỳ hệ thống điều hòa",
+      "area": 40.0,
+      "capacity": 8,
+      "ceiling_height": 3.5,
+      "rules": "Tạm ngưng phục vụ",
+      "status": "maintenance",
+      "owner_email": "host1@studio.local",
+      "type_name": "Lookbook & Fashion",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 15128321,
+          "url": "/images/demo-rooms/15128321.jpg",
+          "alt": "Lookbook & Fashion — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/15128321/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 33365000,
+          "url": "/images/demo-rooms/33365000.jpg",
+          "alt": "Lookbook & Fashion — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/33365000/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 7098166,
+          "url": "/images/demo-rooms/7098166.jpg",
+          "alt": "Lookbook & Fashion — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/7098166/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 4,
+      "studio": 2,
+      "name": "Zenith Podcast & Livestream Pro",
+      "description": "Không gian ghi podcast với bàn micro, tai nghe và các mảng tiêu âm; phù hợp trò chuyện, phỏng vấn và ghi nội dung thoại.",
+      "area": 45.0,
+      "capacity": 6,
+      "ceiling_height": 3.5,
+      "rules": "Vui lòng đeo tai nghe khi kiểm tra âm thanh",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Podcast & Livestream Hub",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 7383469,
+          "url": "/images/demo-rooms/7383469.jpg",
+          "alt": "Podcast & Livestream Hub — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/7383469/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 11449473,
+          "url": "/images/demo-rooms/11449473.jpg",
+          "alt": "Podcast & Livestream Hub — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/11449473/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 11884525,
+          "url": "/images/demo-rooms/11884525.jpg",
+          "alt": "Podcast & Livestream Hub — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/11884525/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 5,
+      "studio": 2,
+      "name": "Zenith Black Box Theatre",
+      "description": "Không gian quay nền tối, bố trí ánh sáng tương phản và khoảng trống cho ê-kíp sản xuất hình ảnh. Không phải phòng workshop bàn ghế.",
+      "area": 90.0,
+      "capacity": 25,
+      "ceiling_height": 5.0,
+      "rules": "Tắt thiết bị sau khi sử dụng",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Acoustic Soundstage",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 18899950,
+          "url": "/images/demo-rooms/18899950.jpg",
+          "alt": "Acoustic Soundstage — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/18899950/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 30332804,
+          "url": "/images/demo-rooms/30332804.jpg",
+          "alt": "Acoustic Soundstage — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/30332804/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 27874888,
+          "url": "/images/demo-rooms/27874888.jpg",
+          "alt": "Acoustic Soundstage — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/27874888/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 6,
+      "studio": 2,
+      "name": "Zenith Live Commerce",
+      "description": "Set sản xuất nội dung với phông trung tính, đèn tản sáng và khoảng bố trí máy quay, phù hợp quay sản phẩm hoặc livestream.",
+      "area": 32.0,
+      "capacity": 8,
+      "ceiling_height": 3.2,
+      "rules": "Không ngắt mạng LAN khi đang phát trực tiếp",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Livestream & E-commerce",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 37468393,
+          "url": "/images/demo-rooms/37468393.jpg",
+          "alt": "Livestream & E-commerce — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/37468393/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 37468396,
+          "url": "/images/demo-rooms/37468396.jpg",
+          "alt": "Livestream & E-commerce — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/37468396/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 19598821,
+          "url": "/images/demo-rooms/19598821.jpg",
+          "alt": "Livestream & E-commerce — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/19598821/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 7,
+      "studio": 2,
+      "name": "Zenith Music Recording",
+      "description": "Không gian sản xuất âm nhạc với bàn trộn, loa kiểm âm và thiết bị xử lý tín hiệu; phù hợp thu và phối âm.",
+      "area": 28.0,
+      "capacity": 5,
+      "ceiling_height": 3.0,
+      "rules": "Giữ mức âm lượng theo hướng dẫn của kỹ thuật viên",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Music Recording Studio",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 8198055,
+          "url": "/images/demo-rooms/8198055.jpg",
+          "alt": "Music Recording Studio — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/8198055/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 8197345,
+          "url": "/images/demo-rooms/8197345.jpg",
+          "alt": "Music Recording Studio — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/8197345/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 8198135,
+          "url": "/images/demo-rooms/8198135.jpg",
+          "alt": "Music Recording Studio — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/8198135/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "video_reference": {
+        "url": "https://www.pexels.com/video/interior-of-a-recording-studio-7586167/",
+        "label": "Video tham khảo bố trí phòng thu",
+        "kind": "reference-not-room-tour"
+      }
+    },
+    {
+      "seed_id": 8,
+      "studio": 2,
+      "name": "Zenith Green Screen Stage",
+      "description": "Phim trường phông xanh liền sàn, phù hợp quay quảng cáo và hậu kỳ kỹ xảo",
+      "area": 65.0,
+      "capacity": 12,
+      "ceiling_height": 4.5,
+      "rules": "Không để vật sắc nhọn làm xước phông xanh",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Green Screen & VFX",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 7865064,
+          "url": "/images/demo-rooms/7865064.jpg",
+          "alt": "Green Screen & VFX — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/7865064/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 7773095,
+          "url": "/images/demo-rooms/7773095.jpg",
+          "alt": "Green Screen & VFX — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/7773095/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 34342636,
+          "url": "/images/demo-rooms/34342636.jpg",
+          "alt": "Green Screen & VFX — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/34342636/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "video_reference": {
+        "url": "https://www.pexels.com/video/video-recording-in-a-studio-during-pandemic-5499091/",
+        "label": "Video tham khảo phim trường phông xanh",
+        "kind": "reference-not-room-tour"
+      }
+    },
+    {
+      "seed_id": 9,
+      "studio": 2,
+      "name": "Zenith Acoustic Soundstage",
+      "description": "Phim trường ghi hình cách âm, phù hợp thu lời thoại và quay cảnh trong nhà",
+      "area": 72.0,
+      "capacity": 18,
+      "ceiling_height": 5.0,
+      "rules": "Đóng kín cửa cách âm trong thời gian ghi hình",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Acoustic Soundstage",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 7383644,
+          "url": "/images/demo-rooms/7383644.jpg",
+          "alt": "Acoustic Soundstage — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/7383644/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 7383647,
+          "url": "/images/demo-rooms/7383647.jpg",
+          "alt": "Acoustic Soundstage — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/7383647/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 7383648,
+          "url": "/images/demo-rooms/7383648.jpg",
+          "alt": "Acoustic Soundstage — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/7383648/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 10,
+      "studio": 1,
+      "name": "Artemis Daylight Lookbook Loft",
+      "description": "Phòng chụp lookbook thời trang với cửa sổ lớn, phông di động và khu thay đồ riêng",
+      "area": 58.0,
+      "capacity": 10,
+      "ceiling_height": 3.8,
+      "rules": "Hoàn trả trang phục và đạo cụ vào khu vực quy định",
+      "status": "active",
+      "owner_email": "host1@studio.local",
+      "type_name": "Lookbook & Fashion",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 9396404,
+          "url": "/images/demo-rooms/9396404.jpg",
+          "alt": "Lookbook & Fashion — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/9396404/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 9396400,
+          "url": "/images/demo-rooms/9396400.jpg",
+          "alt": "Lookbook & Fashion — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/9396400/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 9396401,
+          "url": "/images/demo-rooms/9396401.jpg",
+          "alt": "Lookbook & Fashion — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/9396401/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 11,
+      "studio": 1,
+      "name": "Artemis Seoul Concept Suite",
+      "description": "Set chụp thương mại tông sáng với vải phông, ánh sáng mềm và đạo cụ gọn; có thể bố trí cho sản phẩm và chân dung.",
+      "area": 46.0,
+      "capacity": 8,
+      "ceiling_height": 3.4,
+      "rules": "Không dán vật liệu trực tiếp lên tường bối cảnh",
+      "status": "active",
+      "owner_email": "host1@studio.local",
+      "type_name": "Concept & Set Design",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 32054999,
+          "url": "/images/demo-rooms/32054999.jpg",
+          "alt": "Concept & Set Design — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/32054999/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 16495457,
+          "url": "/images/demo-rooms/16495457.jpg",
+          "alt": "Concept & Set Design — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/16495457/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 16495459,
+          "url": "/images/demo-rooms/16495459.jpg",
+          "alt": "Concept & Set Design — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/16495459/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 12,
+      "studio": 1,
+      "name": "Artemis Product Cyclorama",
+      "description": "Cyclorama trắng riêng cho chụp sản phẩm, mỹ phẩm và catalog thương mại",
+      "area": 42.0,
+      "capacity": 6,
+      "ceiling_height": 4.0,
+      "rules": "Dùng tấm bảo vệ sàn khi đặt vật nặng hoặc có bánh xe",
+      "status": "active",
+      "owner_email": "host1@studio.local",
+      "type_name": "Cyclorama Studio",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 27756302,
+          "url": "/images/demo-rooms/27756302.jpg",
+          "alt": "Cyclorama Studio — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/27756302/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 29877910,
+          "url": "/images/demo-rooms/29877910.jpg",
+          "alt": "Cyclorama Studio — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/29877910/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 19663735,
+          "url": "/images/demo-rooms/19663735.jpg",
+          "alt": "Cyclorama Studio — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/19663735/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 13,
+      "studio": 2,
+      "name": "Zenith Talkshow Podcast Room",
+      "description": "Không gian podcast phong cách lounge với ghế ngồi, bàn nhỏ và micro; phù hợp talkshow và nội dung trò chuyện.",
+      "area": 38.0,
+      "capacity": 6,
+      "ceiling_height": 3.2,
+      "rules": "Tắt chuông thiết bị cá nhân trong buổi ghi hình",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Podcast & Livestream Hub",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 30183164,
+          "url": "/images/demo-rooms/30183164.jpg",
+          "alt": "Podcast & Livestream Hub — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/30183164/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 30161488,
+          "url": "/images/demo-rooms/30161488.jpg",
+          "alt": "Podcast & Livestream Hub — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/30161488/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 31213674,
+          "url": "/images/demo-rooms/31213674.jpg",
+          "alt": "Podcast & Livestream Hub — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/31213674/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 14,
+      "studio": 2,
+      "name": "Zenith Creator Commerce Set",
+      "description": "Set nội dung thương mại với bàn làm việc, camera và đèn studio; bố trí linh hoạt cho sản phẩm và video ngắn.",
+      "area": 36.0,
+      "capacity": 8,
+      "ceiling_height": 3.3,
+      "rules": "Không ngắt nguồn mạng khi đang phát trực tiếp",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Livestream & E-commerce",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 25526521,
+          "url": "/images/demo-rooms/25526521.jpg",
+          "alt": "Livestream & E-commerce — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/25526521/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 11234300,
+          "url": "/images/demo-rooms/11234300.jpg",
+          "alt": "Livestream & E-commerce — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/11234300/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 18880006,
+          "url": "/images/demo-rooms/18880006.jpg",
+          "alt": "Livestream & E-commerce — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/18880006/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 15,
+      "studio": 1,
+      "name": "Artemis Open Workshop Hall",
+      "description": "Không gian mở có bàn ghế xếp linh hoạt cho lớp học, workshop và ra mắt sản phẩm",
+      "area": 110.0,
+      "capacity": 40,
+      "ceiling_height": 4.2,
+      "rules": "Thu dọn khu vực và phân loại rác sau sự kiện",
+      "status": "active",
+      "owner_email": "host1@studio.local",
+      "type_name": "Workshop & Event Studio",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 31107439,
+          "url": "/images/demo-rooms/31107439.jpg",
+          "alt": "Workshop & Event Studio — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/31107439/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 29397977,
+          "url": "/images/demo-rooms/29397977.jpg",
+          "alt": "Workshop & Event Studio — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/29397977/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 20390771,
+          "url": "/images/demo-rooms/20390771.jpg",
+          "alt": "Workshop & Event Studio — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/20390771/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ]
+    },
+    {
+      "seed_id": 16,
+      "studio": 2,
+      "name": "Zenith Vocal Recording Booth",
+      "description": "Không gian thu giọng với micro, pop filter và góc làm việc kiểm âm; phù hợp vocal, voice-over và nội dung thoại.",
+      "area": 24.0,
+      "capacity": 4,
+      "ceiling_height": 3.0,
+      "rules": "Không tự thay đổi vị trí thiết bị thu âm",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Music Recording Studio",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 9422906,
+          "url": "/images/demo-rooms/9422906.jpg",
+          "alt": "Music Recording Studio — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/9422906/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 10854607,
+          "url": "/images/demo-rooms/10854607.jpg",
+          "alt": "Music Recording Studio — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/10854607/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 36936571,
+          "url": "/images/demo-rooms/36936571.jpg",
+          "alt": "Music Recording Studio — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/36936571/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "video_reference": {
+        "url": "https://www.pexels.com/video/interior-of-a-recording-studio-7586167/",
+        "label": "Video tham khảo bố trí phòng thu",
+        "kind": "reference-not-room-tour"
+      }
+    },
+    {
+      "seed_id": 17,
+      "studio": 2,
+      "name": "Zenith Compact Green Screen",
+      "description": "Phòng phông xanh gọn cho video quảng cáo, nội dung mạng xã hội và kỹ xảo tách nền",
+      "area": 40.0,
+      "capacity": 7,
+      "ceiling_height": 3.6,
+      "rules": "Giữ phông xanh sạch, không chạm giày trực tiếp",
+      "status": "active",
+      "owner_email": "host2@studio.local",
+      "type_name": "Green Screen & VFX",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 6794933,
+          "url": "/images/demo-rooms/6794933.jpg",
+          "alt": "Green Screen & VFX — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/6794933/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 6794963,
+          "url": "/images/demo-rooms/6794963.jpg",
+          "alt": "Green Screen & VFX — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/6794963/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 29139236,
+          "url": "/images/demo-rooms/29139236.jpg",
+          "alt": "Green Screen & VFX — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/29139236/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "video_reference": {
+        "url": "https://www.pexels.com/video/video-recording-in-a-studio-during-pandemic-5499091/",
+        "label": "Video tham khảo phim trường phông xanh",
+        "kind": "reference-not-room-tour"
+      }
+    },
+    {
+      "seed_id": 18,
+      "studio": 1,
+      "name": "Artemis Editorial Fashion Stage",
+      "description": "Không gian chụp lookbook và editorial với phông vải trung tính, đèn tản sáng và khoảng lùi máy rộng.",
+      "area": 62,
+      "capacity": 12,
+      "ceiling_height": 3.5,
+      "rules": "Sắp xếp lại bàn ghế và thiết bị sau buổi thuê. Không hút thuốc trong phòng.",
+      "status": "active",
+      "new": true,
+      "hourly_rate": 420000,
+      "owner_email": "host1@studio.local",
+      "type_name": "Lookbook & Fashion",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 39714847,
+          "url": "/images/demo-rooms/39714847.jpg",
+          "alt": "Lookbook & Fashion — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/39714847/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 39714849,
+          "url": "/images/demo-rooms/39714849.jpg",
+          "alt": "Lookbook & Fashion — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/39714849/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 39714844,
+          "url": "/images/demo-rooms/39714844.jpg",
+          "alt": "Lookbook & Fashion — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/39714844/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "amenity_names": [
+        "Wifi 1Gbps Dedicated",
+        "Điều hòa âm trần 4HP",
+        "Phòng thay đồ & Makeup riêng"
+      ]
+    },
+    {
+      "seed_id": 19,
+      "studio": 1,
+      "name": "Artemis Window Light Atelier",
+      "description": "Phòng daylight có cửa sổ lớn và bố trí tối giản cho chụp chân dung, thời trang và sản phẩm lifestyle.",
+      "area": 48,
+      "capacity": 8,
+      "ceiling_height": 3.5,
+      "rules": "Sắp xếp lại bàn ghế và thiết bị sau buổi thuê. Không hút thuốc trong phòng.",
+      "status": "active",
+      "new": true,
+      "hourly_rate": 380000,
+      "owner_email": "host1@studio.local",
+      "type_name": "Lookbook & Fashion",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 8143699,
+          "url": "/images/demo-rooms/8143699.jpg",
+          "alt": "Lookbook & Fashion — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/8143699/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 6045331,
+          "url": "/images/demo-rooms/6045331.jpg",
+          "alt": "Lookbook & Fashion — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/6045331/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 6044617,
+          "url": "/images/demo-rooms/6044617.jpg",
+          "alt": "Lookbook & Fashion — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/6044617/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "amenity_names": [
+        "Wifi 1Gbps Dedicated",
+        "Điều hòa âm trần 4HP",
+        "Phòng thay đồ & Makeup riêng"
+      ]
+    },
+    {
+      "seed_id": 20,
+      "studio": 2,
+      "name": "Zenith Creator Podcast Desk",
+      "description": "Góc podcast nhỏ với micro, tai nghe và bàn làm việc; phù hợp ghi nội dung một đến hai người.",
+      "area": 22,
+      "capacity": 3,
+      "ceiling_height": 3.5,
+      "rules": "Sắp xếp lại bàn ghế và thiết bị sau buổi thuê. Không hút thuốc trong phòng.",
+      "status": "active",
+      "new": true,
+      "hourly_rate": 280000,
+      "owner_email": "host2@studio.local",
+      "type_name": "Podcast & Livestream Hub",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 5083605,
+          "url": "/images/demo-rooms/5083605.jpg",
+          "alt": "Podcast & Livestream Hub — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/5083605/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 5083606,
+          "url": "/images/demo-rooms/5083606.jpg",
+          "alt": "Podcast & Livestream Hub — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/5083606/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 5083610,
+          "url": "/images/demo-rooms/5083610.jpg",
+          "alt": "Podcast & Livestream Hub — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/5083610/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "amenity_names": [
+        "Wifi 1Gbps Dedicated",
+        "Điều hòa âm trần 4HP"
+      ]
+    },
+    {
+      "seed_id": 21,
+      "studio": 2,
+      "name": "Zenith Analog Control Room",
+      "description": "Phòng điều khiển thu âm với bàn trộn, loa kiểm âm và thiết bị xử lý tín hiệu; dành cho sản xuất và phối âm.",
+      "area": 34,
+      "capacity": 5,
+      "ceiling_height": 3.5,
+      "rules": "Sắp xếp lại bàn ghế và thiết bị sau buổi thuê. Không hút thuốc trong phòng.",
+      "status": "active",
+      "new": true,
+      "hourly_rate": 520000,
+      "owner_email": "host2@studio.local",
+      "type_name": "Music Recording Studio",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 12622097,
+          "url": "/images/demo-rooms/12622097.jpg",
+          "alt": "Music Recording Studio — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/12622097/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 8197364,
+          "url": "/images/demo-rooms/8197364.jpg",
+          "alt": "Music Recording Studio — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/8197364/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 33071233,
+          "url": "/images/demo-rooms/33071233.jpg",
+          "alt": "Music Recording Studio — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/33071233/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "video_reference": {
+        "url": "https://www.pexels.com/video/interior-of-a-recording-studio-7586167/",
+        "label": "Video tham khảo bố trí phòng thu",
+        "kind": "reference-not-room-tour"
+      },
+      "amenity_names": [
+        "Wifi 1Gbps Dedicated",
+        "Điều hòa âm trần 4HP"
+      ]
+    },
+    {
+      "seed_id": 22,
+      "studio": 1,
+      "name": "Artemis Workshop Meeting Loft",
+      "description": "Phòng workshop nhóm nhỏ với bàn họp, ghế rời và màn hình trình chiếu; bố trí cho thảo luận hoặc lớp học.",
+      "area": 64,
+      "capacity": 18,
+      "ceiling_height": 3.5,
+      "rules": "Sắp xếp lại bàn ghế và thiết bị sau buổi thuê. Không hút thuốc trong phòng.",
+      "status": "active",
+      "new": true,
+      "hourly_rate": 460000,
+      "owner_email": "host1@studio.local",
+      "type_name": "Workshop & Event Studio",
+      "media_kind": "illustrative",
+      "photos": [
+        {
+          "id": 7195543,
+          "url": "/images/demo-rooms/7195543.jpg",
+          "alt": "Workshop & Event Studio — không gian và bố trí tham khảo",
+          "source": "https://www.pexels.com/photo/7195543/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 8102299,
+          "url": "/images/demo-rooms/8102299.jpg",
+          "alt": "Workshop & Event Studio — góc bố trí và ánh sáng tham khảo",
+          "source": "https://www.pexels.com/photo/8102299/",
+          "license": "https://www.pexels.com/license/"
+        },
+        {
+          "id": 236730,
+          "url": "/images/demo-rooms/236730.jpg",
+          "alt": "Workshop & Event Studio — thiết bị hoặc bối cảnh tham khảo",
+          "source": "https://www.pexels.com/photo/236730/",
+          "license": "https://www.pexels.com/license/"
+        }
+      ],
+      "amenity_names": [
+        "Wifi 1Gbps Dedicated",
+        "Điều hòa âm trần 4HP",
+        "Chỗ đậu ô tô & xe máy"
+      ]
+    }
+  ],
+  "legacy_image_paths": [
+    "https://images.unsplash.com/photo-1485846234645-a62644f84728",
+    "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85",
+    "https://images.unsplash.com/photo-1511379938547-c1f69419868d",
+    "https://images.unsplash.com/photo-1514306191717-452ec28c7814",
+    "https://images.unsplash.com/photo-1516035069371-29a1b244cc32",
+    "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7",
+    "https://images.unsplash.com/photo-1527011046414-4781f1f94f8c",
+    "https://images.unsplash.com/photo-1529139574466-a303027c1d8b",
+    "https://images.unsplash.com/photo-1536240478700-b869070f9279",
+    "https://images.unsplash.com/photo-1586023492125-27b2c045efd7",
+    "https://images.unsplash.com/photo-1590602847861-f357a9332bbc",
+    "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"
+  ]
+}

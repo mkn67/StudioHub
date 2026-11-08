@@ -151,7 +151,9 @@ final class Util
             throw new Failure('invalid_context');
         }
 
-        self::fields($context, ['surface']);
+        self::fields($context, ['surface', 'scope', 'roomId']);
+        if (isset($context['scope']) && $context['scope'] !== 'catalog') throw new Failure('invalid_context');
+        if (isset($context['roomId']) && (!is_int($context['roomId']) || $context['roomId'] < 1 || $context['roomId'] > 2147483647)) throw new Failure('invalid_context');
 
         if (!in_array($context['surface'] ?? null, ['public', 'customer', 'host', 'admin'], true)) {
             throw new Failure('invalid_context');

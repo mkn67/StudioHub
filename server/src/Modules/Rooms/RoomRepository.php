@@ -56,10 +56,10 @@ class RoomRepository
             $matches = [];
             foreach ($terms as $i=>$term) {
                 $kw = '%' . strtr($term, ['\\'=>'\\\\', '%'=>'\\%', '_'=>'\\_']) . '%';
-                $matches[] = "(r.name LIKE :kw_room_{$i} OR s.name LIKE :kw_studio_{$i} OR r.description LIKE :kw_description_{$i} OR EXISTS (
+                $matches[] = "(r.name LIKE :kw_room_{$i} OR s.name LIKE :kw_studio_{$i} OR s.district LIKE :kw_district_{$i} OR s.city LIKE :kw_city_{$i} OR r.description LIKE :kw_description_{$i} OR EXISTS (
                     SELECT 1 FROM room_space_types krst JOIN space_types kst ON kst.space_type_id=krst.space_type_id
                     WHERE krst.room_id=r.room_id AND kst.name LIKE :kw_type_{$i}))";
-                foreach (['room','studio','description','type'] as $field) $params["kw_{$field}_{$i}"] = $kw;
+                foreach (['room','studio','district','city','description','type'] as $field) $params["kw_{$field}_{$i}"] = $kw;
             }
             if ($matches) $where[] = '(' . implode(' OR ', $matches) . ')';
         }
@@ -156,8 +156,19 @@ class RoomRepository
             'area_desc' => 'r.area DESC, r.room_id ASC',
             'capacity_desc' => 'r.capacity DESC, r.room_id ASC',
             'newest' => 'r.created_at DESC, r.room_id DESC',
-            default => 'r.room_id ASC',
+            default => "(CASE WHEN EXISTS(SELECT 1 FROM room_images ri_rank WHERE ri_rank.room_id=r.room_id) THEN 10 ELSE 0 END
+                + COALESCE((SELECT AVG(rv_rank.rating) FROM room_reviews rv_rank WHERE rv_rank.room_id=r.room_id AND rv_rank.status='published'),0) * 2) DESC, r.room_id ASC",
         };
+        if (($filters['sort'] ?? 'recommended') === 'recommended' && !empty($filters['keyword'])) {
+            $orderBy = "(CASE WHEN r.name = :rank_exact THEN 100 WHEN r.name LIKE :rank_prefix THEN 75
+                WHEN r.name LIKE :rank_name THEN 50 WHEN r.description LIKE :rank_description THEN 20 ELSE 0 END) DESC, " . $orderBy;
+            $keyword = trim((string)$filters['keyword']);
+            $params['rank_exact'] = $keyword;
+            $literal = strtr($keyword, ['\\'=>'\\\\','%'=>'\\%','_'=>'\\_']);
+            $params['rank_prefix'] = $literal.'%';
+            $params['rank_name'] = '%'.$literal.'%';
+            $params['rank_description'] = '%'.$literal.'%';
+        }
         if (str_contains($orderBy, ':sort_rate_unit')) {
             $params['sort_rate_unit'] = $rateUnit;
         }
@@ -341,9 +352,11 @@ class RoomRepository
                    s.district as studio_district,
                    s.city as studio_city,
                    s.phone as studio_phone,
+                   s.cover_url as studio_cover_url,
                    u.full_name as host_name,
                    u.email as host_email,
                    u.phone as host_phone,
+                   u.avatar_url as host_avatar_url,
                    s.status as studio_status
             FROM rooms r
             JOIN studios s ON r.studio_id = s.studio_id
@@ -409,6 +422,18 @@ class RoomRepository
         // Active Rates
         $rates = $this->getActiveRatesByRoomId($roomId);
 
+        $demo = DemoCatalog::room($room['name'], $room['host_email']);
+        $profile = $demo ? DemoCatalog::studio($room['host_email']) : null;
+        $useDemo = $demo && $images && !array_filter($images, static fn(array $img): bool => !str_starts_with($img['image_url'], '/images/demo-rooms/'));
+        // URL, image ID, primary flag and order always come from MySQL.
+        // The manifest only supplies optional attribution for recognised demo assets.
+        if ($useDemo) foreach ($images as &$image) {
+            foreach ($demo['photos'] as $photo) if ($photo['url'] === $image['image_url']) {
+                $image['alt'] = $photo['alt']; $image['source_url'] = $photo['source']; break;
+            }
+        }
+        unset($image);
+
         return [
             'room_id'          => (int) $room['room_id'],
             'studio_id'        => (int) $room['studio_id'],
@@ -434,11 +459,17 @@ class RoomRepository
                 'host_name'   => $room['host_name'],
                 'host_email'  => $room['host_email'],
                 'host_phone'  => $room['host_phone'] ?: $room['studio_phone'],
+                'host_avatar_url' => $room['host_avatar_url'],
+                'cover_url' => $room['studio_cover_url'],
+                'host_bio' => $profile['bio'] ?? null,
+                'is_demo_profile' => $profile !== null,
             ],
             'space_types'      => $spaceTypes,
             'amenities'        => $amenities,
             'images'           => $images,
             'rates'            => $rates,
+            'media_notice' => $useDemo ? 'Không gian mẫu · ảnh minh họa loại phòng, không phải ảnh xác minh tại địa chỉ này.' : null,
+            'video_reference' => $useDemo ? ($demo['video_reference'] ?? null) : null,
         ];
     }
 

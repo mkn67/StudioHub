@@ -93,4 +93,6 @@ Open `http://localhost:8081`. The API simulates payment records; it does not con
 
 ## Deployment notes
 
+For the reviewed demo gallery update, deploy Vercel assets first, then opt in on the main Render API with `DEMO_CATALOG_UPDATE=v2` and `DEMO_CATALOG_DATABASE` equal to the exact existing `DB_NAME`. The startup step writes image URLs to `room_images` once and stores a durable MySQL backup/history entry. It does not require paid Render Shell. Keep `SEED_EXAMPLE_CATALOG=false` on an existing production DB. See [catalog rollout and rollback](../docs/demo-room-catalog-v2.md) before enabling it.
+
 Use HTTPS, a non-root MySQL account with access only to the application database, a strong server-side `JWT_SECRET`, and an exact CORS allowlist. Do not expose MySQL's port publicly. The database server must support MySQL 8.0.16 or later. Keep PHP errors in server logs; API 500 responses intentionally use a generic message.

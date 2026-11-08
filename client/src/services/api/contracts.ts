@@ -30,6 +30,7 @@ export type ApiRoom = {
     thumbnail_url: string | null;
     studio: {
         name: string;
+        description?: string | null;
         address: string;
         district: string;
         city: string;
@@ -37,10 +38,18 @@ export type ApiRoom = {
         host_name?: string | null;
         host_email?: string | null;
         host_phone?: string | null;
+        host_avatar_url?: string | null;
+        cover_url?: string | null;
+        host_bio?: string | null;
+        is_demo_profile?: boolean;
     };
     images?: {
         image_url: string;
+        alt?: string;
+        source_url?: string;
     }[];
+    media_notice?: string | null;
+    video_reference?: { url: string; label: string; kind: "reference-not-room-tour" } | null;
     rates?: Rate[];
     amenities?: { amenity_id: number; name: string }[];
     soundproof_level?: string | null;

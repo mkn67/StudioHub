@@ -2,7 +2,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { apiBaseUrl } from "@/services/api/client";
 import { useResource } from "@/services/api/use-resource";
 import type { ApiRoom, CalendarData } from "@/services/api/contracts";
 import { formatApiTime, unitLabels } from "@/services/api/contracts";
@@ -12,26 +11,9 @@ import { Modal } from "@/components/ui";
 import { RoomListingCard, RoomListingSkeleton } from "./RoomListingCard";
 import { discoveryPurposes, typesForPurpose } from "./discovery-purposes";
 import { MIN_PRICE, MAX_PRICE, PRICE_STEP, SEARCH_RATE_UNITS, readRoomSearch, roomSearchRequest, roomSearchUrl, formatSearchPrice, type RoomSearch } from "@/services/api/room-search";
-export function ApiImage({ src, alt }: {
-    src?: string | null;
-    alt: string;
-}) {
-    const [failed, setFailed] = useState(false);
-    if (!src || failed)
-        return <div className="image-fallback" role="img" aria-label={`${alt} – ảnh không khả dụng`}>Ảnh StudioHub</div>;
-    let url: URL;
-    try {
-        url = new URL(src, apiBaseUrl || "http://localhost");
-    }
-    catch {
-        return null;
-    }
-    if (!["https:", "http:"].includes(url.protocol))
-        return null;
-    // Backend uploads can be served from any configured API origin.
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url.href} alt={alt} loading="lazy" onError={() => setFailed(true)}/>;
-}
+import { ApiImage } from "./ApiImage";
+export { ApiImage } from "./ApiImage";
+import { RoomEditorialDetails } from "./RoomEditorialDetails";
 type SpaceType = { space_type_id: number; name: string; category?: string | null; description?: string | null };
 
 const roomSpecLabels: Record<string, { key: "ceiling_height" | "soundproof_level" | "power_specs"; label: string }[]> = {
@@ -198,21 +180,11 @@ export function BackendRoomDetail({ id }: { id: string }) {
                 <span className="room-availability-state">Nhận đặt thuê · cần kiểm tra lịch theo ngày giờ</span>
             </header>
             <nav className="room-detail-anchor" aria-label="Đi tới nội dung phòng"><a href="#room-description">Không gian</a><a href="#room-amenities">Tiện ích</a><a href="#room-rates">Giá thuê</a><a href="#room-policies">Quy định</a><a href="#room-reviews-title">Đánh giá</a></nav>
-            <div className="api-gallery" data-count={Math.min(r.images?.length || 1, 3)}>{r.images?.length ? r.images.map((img, index) => <button type="button" className="api-gallery-item" key={index} onClick={() => setLightboxIndex(index)} aria-label={`Mở ảnh ${index + 1} của ${r.name}`}><ApiImage src={img.image_url} alt={`${r.name} – ${index + 1}`}/></button>) : <button type="button" className="api-gallery-item" onClick={() => setLightboxIndex(0)} aria-label={`Mở ảnh ${r.name}`}><ApiImage src={r.thumbnail_url} alt={r.name}/></button>}<button className="api-gallery-all" type="button" onClick={() => setLightboxIndex(0)}>▦　Xem tất cả ảnh</button></div>
+            <div className="api-gallery" data-count={Math.min(r.images?.length || 1, 3)}>{r.images?.length ? r.images.map((img, index) => <button type="button" className="api-gallery-item" key={index} onClick={() => setLightboxIndex(index)} aria-label={`Mở ảnh ${index + 1} của ${r.name}`}><ApiImage src={img.image_url} alt={img.alt || `${r.name} – ${index + 1}`}/></button>) : <button type="button" className="api-gallery-item" onClick={() => setLightboxIndex(0)} aria-label={`Mở ảnh ${r.name}`}><ApiImage src={r.thumbnail_url} alt={r.name}/></button>}<button className="api-gallery-all" type="button" onClick={() => setLightboxIndex(0)}>▦　Xem tất cả ảnh</button></div>
+            {r.media_notice && <p className="room-media-caption">{r.media_notice}</p>}
             <div className="room-detail-layout">
                 <section className="surface room-information">
-                    <h2 id="room-description">Thông tin & điều kiện thuê</h2>
-                    <div className="room-info-table-wrap"><table className="room-info-table"><tbody>
-                        <tr><th>Loại không gian</th><td>{r.space_types?.map(type => <div className="room-space-type" key={type.space_type_id}><strong>{type.name}</strong>{type.description && <><small>Mục đích thường dùng</small><p>{type.description}</p></>}</div>) || "Studio sáng tạo"}</td></tr>
-                        <tr><th>Diện tích & sức chứa</th><td>{r.area} m² · tối đa {r.capacity} người{r.ceiling_height ? ` · trần cao ${r.ceiling_height} m` : ""}</td></tr>
-                        <tr><th>Mô tả</th><td>{r.description || "Studio chưa bổ sung mô tả."}</td></tr>
-                        <tr id="room-policies"><th>Quy định</th><td>{r.rules || "Liên hệ Studio để biết thêm quy định."}</td></tr>
-                        <tr id="room-amenities"><th>Tiện ích</th><td>{r.amenities?.map(item => item.name).join(" · ") || "Studio chưa cung cấp danh sách tiện ích."}</td></tr>
-                        <tr id="room-rates"><th>Giá thuê</th><td>{r.rates?.length ? <ul className="room-rate-table-list">{r.rates.map(rate => <li key={rate.rate_id}><span>{unitLabels[rate.rate_unit] ?? rate.rate_unit} · {rate.unit_minutes >= 1440 ? `${rate.unit_minutes / 1440} ngày` : `${rate.unit_minutes / 60} giờ`} mỗi đơn vị</span><strong>{money(rate.unit_price)}</strong></li>)}</ul> : "Liên hệ Studio để hỏi giá."}</td></tr>
-                        <tr><th>Lịch đã bận</th><td><ApiMessage loading={calendar.loading} error={calendar.error}/>{calendar.data && (calendar.data.busy_slots.length ? <ul className="room-busy-list">{calendar.data.busy_slots.map((slot, index) => <li key={index}>{formatApiTime(slot.busy_start)} – {formatApiTime(slot.busy_end)}</li>)}</ul> : "Chưa có khung bận trong 30 ngày tới. Lịch được xác nhận lại khi đặt thuê.")}</td></tr>
-                        <tr><th>Địa chỉ Studio</th><td>{r.studio.address}, {r.studio.district}, {r.studio.city}</td></tr>
-                        <tr><th>Người cho thuê</th><td><strong>{r.studio.host_name || r.studio.name}</strong><div className="room-contact-links">{(r.studio.host_phone || r.studio.phone) && <a href={`tel:${r.studio.host_phone || r.studio.phone}`}>Điện thoại: {r.studio.host_phone || r.studio.phone}</a>}{r.studio.host_email && <a href={`mailto:${r.studio.host_email}`}>Email: {r.studio.host_email}</a>}</div></td></tr>
-                    </tbody></table></div>
+                    <RoomEditorialDetails room={r} calendar={calendar}/>
                     <RoomSpecGroup room={r}/>
                 </section>
                 <aside className="surface room-booking-card"><h2>Đặt thuê phòng</h2><p>Chọn ngày và gói thuê để máy chủ kiểm tra lịch, giá và tiền cọc.</p><Link className="btn" href={`/rooms/${id}/book`}>Kiểm tra giá & đặt thuê</Link><small>Lịch được xác nhận lại khi tạo đơn.</small></aside>

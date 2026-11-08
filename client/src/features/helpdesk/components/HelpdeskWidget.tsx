@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { MessageCircle, X, Trash2 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { suggestedQuestions } from "../data/demoFaq";
 import { useHelpdeskChat } from "../hooks/useHelpdeskChat";
 import { helpdeskClient } from "../services/helpdeskClient";
 import type { HelpdeskContext, HelpdeskTransport } from "../types/helpdesk.types";
@@ -12,7 +11,7 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatComposer } from "./ChatComposer";
 import { TypingIndicatorBubble } from "./TypingIndicatorBubble";
 import styles from "../styles/helpdesk.module.css";
-import { shouldShowHelpdesk } from "./widgetVisibility";
+import { shouldShowHelpdesk, helpdeskRoomId } from "./widgetVisibility";
 
 gsap.registerPlugin(useGSAP);
 
@@ -23,7 +22,7 @@ export function HelpdeskWidget({ transport = helpdeskClient }: { transport?: Hel
     return null;
   }
 
-  return <HelpdeskWidgetContent path={path} transport={transport} />;
+  return <HelpdeskWidgetContent key={path} path={path} transport={transport} />;
 }
 
 function HelpdeskWidgetContent({ path, transport }: { path: string; transport: HelpdeskTransport }) {
@@ -34,8 +33,10 @@ function HelpdeskWidgetContent({ path, transport }: { path: string; transport: H
   const launcher = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const followLatest = useRef(true);
-  const surface: HelpdeskContext["surface"] = /^\/(my-bookings|payment|profile)(\/|$)/.test(path) ? "customer" : "public";
-  const chat = useHelpdeskChat(transport, { surface });
+  const roomId = helpdeskRoomId(path);
+  const context: HelpdeskContext = { surface: "public", scope: "catalog", ...(roomId ? { roomId } : {}) };
+  const chat = useHelpdeskChat(transport, context);
+  useEffect(() => { transport.reset?.(); return () => transport.reset?.(); }, [transport]);
   function send(text: string) {
     const accepted = chat.send(text);
     if (accepted) setDraft("");
@@ -43,7 +44,15 @@ function HelpdeskWidgetContent({ path, transport }: { path: string; transport: H
   }
   const last = chat.messages.at(-1);
   const roomDetail = /^\/rooms\/[^/]+\/?$/.test(path);
-  const suggestionLabels = ["Cách đặt phòng", "Hủy & hoàn cọc", "Tìm phòng"];
+  const suggestions = roomId ? [
+    { label: "Thông tin phòng", question: "Giải thích thông tin phòng này giúp tôi" },
+    { label: "Giá & tiện ích", question: "Giá thuê, tiện ích và thiết bị của phòng này thế nào?" },
+    { label: "Tìm phòng khác", question: "Tôi muốn tìm phòng phù hợp" },
+  ] : [
+    { label: "Tìm phòng", question: "Tôi muốn tìm phòng phù hợp" },
+    { label: "Chụp lookbook", question: "Tôi cần phòng chụp lookbook và thời trang" },
+    { label: "Cách đặt phòng", question: "Làm sao để đặt Studio?" },
+  ];
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -129,13 +138,13 @@ function HelpdeskWidgetContent({ path, transport }: { path: string; transport: H
       <div className={styles.panelBody}>
         <header className={styles.header}>
           <span className={styles.brandIcon}><MessageCircle size={17} aria-hidden="true" /></span>
-          <div className={styles.heading}><h2 id="helpdesk-title">StudioHub AI</h2><p>Trợ lý hỗ trợ</p></div>
+          <div className={styles.heading}><h2 id="helpdesk-title">StudioHub AI</h2><p>Trợ lý tìm và tìm hiểu phòng</p></div>
           <button type="button" disabled={chat.pending || chat.handoff} onClick={chat.clear} aria-label="Xóa cuộc trò chuyện" title="Xóa cuộc trò chuyện" className={`${styles.iconButton} ${styles.secondaryAction}`}><Trash2 size={15} aria-hidden="true" /></button>
           <button type="button" aria-label="Đóng trò chuyện" title="Đóng trò chuyện" className={styles.iconButton} onClick={() => setOpen(false)}><X size={18} aria-hidden="true" /></button>
         </header>
         <div id="helpdesk-mode" className={styles.mode}>
-          <span>{transport.mode === "demo" ? "Chế độ demo" : chat.status === "connecting" ? "Đang kết nối" : chat.status === "unavailable" ? "Chưa sẵn sàng" : chat.status === "received" ? "PHP Helpdesk" : "Kênh PHP Helpdesk"}</span>
-          <small title={transport.mode === "demo" ? "FAQ định sẵn · Chưa kết nối AI / API" : chat.handoff ? undefined : "Dữ liệu riêng cần xác thực · Chính sách cần duyệt"}>{transport.mode === "demo" ? "FAQ định sẵn · Chưa kết nối AI / API" : chat.handoff ? chat.handoffState === "human_active" ? "Nhân viên đang phụ trách · Trợ lý tự động đã dừng" : chat.handoffState === "resolved" ? "Nhân viên đã đánh dấu xử lý xong" : "Chờ tiếp nhận · Chưa có nhân viên kết nối" : "Cần xác thực · Chính sách chờ duyệt"}</small>
+          <span>{chat.status === "connecting" ? "Đang kết nối" : chat.status === "unavailable" ? "Chưa sẵn sàng" : "Khám phá Studio"}</span>
+          <small>{roomId ? "Hỏi về phòng đang xem" : "Tìm phòng theo nhu cầu của bạn"}</small>
         </div>
         <div ref={list} className={styles.transcript} role="log" aria-label="Nội dung trò chuyện" aria-live="off" tabIndex={0} onScroll={event => {
           const node = event.currentTarget;
@@ -145,7 +154,7 @@ function HelpdeskWidgetContent({ path, transport }: { path: string; transport: H
           {chat.pending && <TypingIndicatorBubble />}
         </div>
         <div className={styles.suggestions} aria-label="Câu hỏi gợi ý">
-          {suggestedQuestions.slice(0, 3).map((question, index) => <button type="button" key={question} aria-label={question} title={question} disabled={chat.pending || chat.handoff} onClick={() => send(question)}>{suggestionLabels[index]}</button>)}
+          {suggestions.map(({ question, label }) => <button type="button" key={question} aria-label={question} title={question} disabled={chat.pending || chat.handoff} onClick={() => send(question)}>{label}</button>)}
         </div>
         {chat.error && <p className={styles.error} role="alert">{chat.error}{chat.failedMessage && <button type="button" className={styles.retry} disabled={chat.pending} onClick={chat.retry}>Thử lại tin nhắn</button>}</p>}
         <ChatComposer pending={chat.pending} handoff={chat.handoff} connected={transport.mode === "connected"} send={send} draft={draft} setDraft={setDraft} />
