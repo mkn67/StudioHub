@@ -148,6 +148,7 @@ services:
     ports:
       - "127.0.0.1:${LOCAL_CLIENT_PORT:-3000}:3000"
     environment:
+      APP_ENV: dev
       API_INTERNAL_URL: http://api
       APP_ORIGIN: http://localhost:${LOCAL_CLIENT_PORT:-3000},http://127.0.0.1:${LOCAL_CLIENT_PORT:-3000}
       HELPDESK_API_URL: http://helpdesk-php

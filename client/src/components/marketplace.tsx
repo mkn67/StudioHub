@@ -181,18 +181,22 @@ export function Home() {
             return <section className="space-category-group" data-tone={Math.max(0, preferredGroups.indexOf(group)) % 4} key={group}>
             <h3><span>{group}</span><small>{types.length.toString().padStart(2, "0")} loại không gian</small></h3>
             <div className="categories home-category-grid">
-              {types.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${type.id}` : `/rooms?category=${encodeURIComponent(type.category)}`}>
-                <Image
-                  className="category-photo"
-                  src={categoryPhoto(type.category)}
-                  alt=""
-                  width={640}
-                  height={420}
-                  loading="lazy"
-                  sizes="(max-width: 640px) 50vw, (max-width: 1000px) 33vw, 25vw"
-                />
-                <span>{type.category}</span><ArrowUpRight size={22}/>
-                <small>{type.description}</small>
+              {types.map(type => <Link className="home-category-card" key={type.id} href={backendEnabled ? `/rooms?space_type_id=${type.id}` : `/rooms?category=${encodeURIComponent(type.category)}`}>
+                <span className="home-category-image-wrap">
+                  <Image
+                    className="category-photo"
+                    src={categoryPhoto(type.category)}
+                    alt=""
+                    width={640}
+                    height={420}
+                    loading="lazy"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1000px) 33vw, 25vw"
+                  />
+                </span>
+                <span className="home-category-copy">
+                  <span className="home-category-title">{type.category}<ArrowUpRight size={18}/></span>
+                  <small>{type.description}</small>
+                </span>
               </Link>)}
             </div>
           </section>;

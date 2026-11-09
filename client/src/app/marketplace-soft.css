@@ -83,3 +83,36 @@ body:has(.room-detail-page) .room-review-list article,body:has(.room-detail-page
 @media(max-width:900px){.purpose-discovery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.purpose-discovery-heading{align-items:start;flex-direction:column;gap:8px}}
 @media(max-width:767px){.explore-results .room-listing-card{grid-template-columns:minmax(0,1fr)}.explore-results .room-listing-image{aspect-ratio:16/10;min-height:0}.explore-results .room-listing-copy{padding:16px}.room-listing-skeleton{grid-template-columns:1fr;min-height:0}.room-listing-skeleton>span{aspect-ratio:16/10}.room-listing-skeleton>div{padding:16px}.room-listing-skeleton.compact{min-height:270px}.room-listing-skeleton.compact>span{height:auto;aspect-ratio:16/10}.purpose-discovery{margin-top:34px;padding:18px 14px}.purpose-discovery-heading h3{font-size:22px}.purpose-discovery-grid{grid-template-columns:1fr;gap:8px}.quick-filter-chips{margin-inline:-4px;padding-inline:4px}.quick-filter-chips>span{position:sticky;left:0;background:var(--paper)}}
 @media(prefers-reduced-motion:reduce){.room-listing-skeleton>span,.room-listing-skeleton i,.room-listing-skeleton b{animation:none}}
+
+/* Softer homepage category cards with explicit content groups to prevent text/image overlap. */
+body:has(.hero) .home-category-grid{align-items:stretch;gap:18px}
+body:has(.hero) .home-category-grid .home-category-card{min-width:0;min-height:0;display:flex;flex-direction:column;gap:0;padding:0;border:1px solid #e5ebe7;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 5px 20px rgba(38,58,65,.06);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+body:has(.hero) .home-category-grid .home-category-card:first-child{padding:0}
+body:has(.hero) .home-category-grid .home-category-card:last-child{border-right:1px solid #e5ebe7}
+body:has(.hero) .home-category-grid .home-category-card:hover{transform:translateY(-4px);border-color:#cddfd9;background:#fff;box-shadow:0 14px 30px rgba(38,58,65,.12)}
+body:has(.hero) .home-category-image-wrap{display:block;width:100%;height:clamp(125px,15vw,190px);padding:0;overflow:hidden;background:#edf3f1}
+body:has(.hero) .home-category-image-wrap .category-photo{display:block;width:100%;height:100%;padding:0;object-fit:cover;transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+body:has(.hero) .home-category-card:hover .category-photo{transform:scale(1.045)}
+body:has(.hero) .home-category-copy{display:flex;flex:1;flex-direction:column;gap:9px;padding:17px 18px 19px}
+body:has(.hero) .home-category-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:0;font-size:clamp(16px,1.35vw,19px);font-weight:700;line-height:1.3;letter-spacing:-.025em;color:#263943}
+body:has(.hero) .home-category-title svg{flex:none;margin:1px 0 0;color:#71848a;transition:transform .2s ease,color .2s ease}
+body:has(.hero) .home-category-card:hover .home-category-title svg{transform:translate(2px,-2px);color:var(--brand-text)}
+body:has(.hero) .home-category-copy small{display:block;padding:0;color:#64757b;font-size:13px;font-weight:400;line-height:1.6;letter-spacing:0}
+body:has(.hero) .space-category-group>h3{justify-content:flex-start;gap:14px;margin:34px 0 16px;padding:0 0 12px;border-bottom:1px solid #e5ebe7}
+body:has(.hero) .space-category-group>h3 span{font-size:16px;letter-spacing:-.02em}
+body:has(.hero) .space-category-group>h3 small{font-size:11px;color:#849196}
+body:has(.hero) .purpose-discovery{border:1px solid #e3eae5;border-radius:22px;background:linear-gradient(145deg,#f5f8f5,#edf5f3);box-shadow:0 8px 26px rgba(38,58,65,.045)}
+body:has(.hero) .purpose-card{border-color:#e3eae5;border-radius:15px;background:rgba(255,255,255,.92);box-shadow:0 3px 12px rgba(38,58,65,.035);transition:transform .2s ease,box-shadow .2s ease}
+body:has(.hero) .purpose-card:hover{transform:translateY(-2px);box-shadow:0 9px 20px rgba(38,58,65,.08)}
+body:has(.hero) .purpose-card-photo{border-radius:11px}
+body:has(.hero) .purpose-card-copy h4{font-size:16px;line-height:1.35;letter-spacing:-.015em}
+body:has(.hero) .purpose-card-copy p{font-size:13px;line-height:1.55}
+@media(max-width:900px){body:has(.hero) .home-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}body:has(.hero) .home-category-image-wrap{height:clamp(130px,22vw,180px)}}
+@media(max-width:640px){body:has(.hero) .home-category-grid{grid-template-columns:1fr;gap:12px}body:has(.hero) .home-category-grid .home-category-card{display:grid;grid-template-columns:112px minmax(0,1fr);min-height:124px;border-radius:15px}body:has(.hero) .home-category-image-wrap{width:112px;height:100%;min-height:124px}body:has(.hero) .home-category-copy{justify-content:center;gap:7px;padding:12px 13px}body:has(.hero) .home-category-title{font-size:15px}body:has(.hero) .home-category-copy small{font-size:12px;line-height:1.45}body:has(.hero) .space-category-group>h3{margin-top:26px}body:has(.hero) .purpose-discovery{border-radius:18px}}
+/* Override the older direct-child card grid rules retained for the legacy markup. */
+body:has(.hero) .space-category-group .home-category-grid>a.home-category-card{display:flex!important;flex-direction:column;align-items:stretch;min-width:0;width:100%;padding:0!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto 1fr!important;gap:0;border:1px solid #e5ebe7!important;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(32,50,62,.09)!important;box-sizing:border-box}
+body:has(.hero) .space-category-group .home-category-grid>a.home-category-card>span{min-width:0;padding:0!important;font-size:inherit;font-weight:inherit;box-sizing:border-box}
+body:has(.hero) .space-category-group .home-category-grid>a.home-category-card>.home-category-image-wrap{flex:none;width:100%;height:clamp(125px,15vw,190px)}
+body:has(.hero) .space-category-group .home-category-grid>a.home-category-card>.home-category-copy{flex:1;width:100%;padding:17px 18px 19px!important}
+body:has(.hero) .space-category-group .home-category-grid>a.home-category-card .home-category-title{font-size:clamp(16px,1.35vw,19px);font-weight:700}
+@media(max-width:640px){body:has(.hero) .space-category-group .home-category-grid>a.home-category-card{display:grid!important;grid-template-columns:112px minmax(0,1fr)!important;grid-template-rows:minmax(124px,auto)!important;flex-direction:initial;border-radius:15px}body:has(.hero) .space-category-group .home-category-grid>a.home-category-card>.home-category-image-wrap{width:112px;height:100%;min-height:124px}body:has(.hero) .space-category-group .home-category-grid>a.home-category-card>.home-category-copy{width:auto;padding:12px 13px!important}body:has(.hero) .space-category-group .home-category-grid>a.home-category-card .home-category-title{font-size:15px}}

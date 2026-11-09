@@ -5,6 +5,13 @@ export const dynamic = "force-dynamic";
 
 const allowedMethods = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 const maxRequestBytes = 10 * 1024 * 1024;
+function isProductionRuntime(): boolean {
+  if (process.env.VERCEL === "1") return true;
+  return process.env.APP_ENV
+    ? process.env.APP_ENV === "production"
+    : process.env.NODE_ENV === "production";
+}
+
 const fail = (status: number, message: string) => NextResponse.json(
   { status: "error", code: status, message },
   { status, headers: { "Cache-Control": "no-store" } },
@@ -34,10 +41,11 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   const origin = request.headers.get("origin");
   if (request.method !== "GET") {
     const configuredOrigins = (process.env.APP_ORIGIN || "").split(",").map(value => value.trim().replace(/\/+$/, "")).filter(Boolean);
-    if (process.env.NODE_ENV === "production" && configuredOrigins.length === 0) {
+    const production = isProductionRuntime();
+    if (production && configuredOrigins.length === 0) {
       return fail(503, "Origin cho API chưa được cấu hình.");
     }
-    if (process.env.NODE_ENV === "production" && configuredOrigins.some(value => {
+    if (production && configuredOrigins.some(value => {
       try { return new URL(value).protocol !== "https:"; } catch { return true; }
     })) return fail(503, "Origin production phải dùng HTTPS.");
     const originAllowed = configuredOrigins.length > 0
@@ -113,7 +121,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     response = new NextResponse(result.body, { status: result.status, headers: responseHeaders });
   }
 
-  const secure = request.nextUrl.protocol === "https:" || process.env.NODE_ENV === "production";
+  const secure = request.nextUrl.protocol === "https:" || isProductionRuntime();
   if (issued) response.cookies.set("studiohub_auth", issued, { httpOnly: true, secure, sameSite: "lax", path: "/api", maxAge: 7200 });
   if (result.status === 401 || accountLocked || endpoint === "auth/logout") clearAuthCookie(response, request);
   return response;
@@ -122,7 +130,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
 function clearAuthCookie(response: NextResponse, request: NextRequest): void {
   response.cookies.set("studiohub_auth", "", {
     httpOnly: true,
-    secure: request.nextUrl.protocol === "https:" || process.env.NODE_ENV === "production",
+    secure: request.nextUrl.protocol === "https:" || isProductionRuntime(),
     sameSite: "lax",
     path: "/api",
     maxAge: 0,
