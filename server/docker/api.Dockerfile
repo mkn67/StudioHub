@@ -40,6 +40,11 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
 
 WORKDIR /var/www/html
 
+# Bake the application into the image. The local Podman bind mount of the
+# whole server directory can deny Apache traversal into public/ under rootless
+# containers. Sensitive/local files are excluded by server/.dockerignore.
+COPY . /var/www/html
+
 EXPOSE 80
 
 CMD ["apache2-foreground"]

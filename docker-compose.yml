@@ -21,7 +21,6 @@ x-api: &api
     JWT_SECRET: ${LOCAL_JWT_SECRET:?Run node scripts/setup-docker.mjs first}
     ALLOWED_ORIGINS: http://localhost:${LOCAL_CLIENT_PORT:-3000},http://127.0.0.1:${LOCAL_CLIENT_PORT:-3000}
   volumes:
-    - ./server:/var/www/html:ro,z
     - api_vendor:/var/www/html/vendor
     - api_uploads:/var/www/html/public/uploads
     - api_private:/var/www/html/storage
