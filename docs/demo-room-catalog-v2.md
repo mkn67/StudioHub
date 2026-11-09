@@ -18,6 +18,8 @@ Recommended search results prioritize exact room-name matches, name prefixes and
 
 ## Apply sample data
 
+Local Compose imports this dataset once after the base seed. If a local database already imported v2 before the seed stopped adding the old stock photos, repair its existing demo galleries with `podman-compose --env-file .env.compose exec -T api php bin/sync-demo-catalog.php --apply`. The repair captures a backup before replacing or removing known demo image rows and skips rooms with custom media.
+
 The CLI command is explicit. Render startup can invoke it once only when `DEMO_CATALOG_UPDATE=v2` and the exact `DEMO_CATALOG_DATABASE` are configured; both are blank/disabled by default. It is not an unconditional seed or schema migration. It repairs only identifiable demo records and adds the five new demo rooms with a real active hourly rate and basic amenity associations. It skips rooms with custom media. Existing booking, payment, user credential and real Host inventory rows are not changed.
 
 1. Keep an Aiven/database backup and verify the demo accounts and exact `DB_NAME`. Keep `SEED_EXAMPLE_CATALOG=false` on the existing production database.

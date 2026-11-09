@@ -86,6 +86,7 @@ services:
         php bin/migrate.php --apply
         php bin/migrate-sql.php --apply
         php bin/seed-booking-examples.php
+        php bin/sync-demo-catalog.php --apply --once --skip-if-empty
         exec apache2-foreground -c "ServerName localhost"
     ports:
       - "127.0.0.1:${LOCAL_API_PORT:-8000}:80"

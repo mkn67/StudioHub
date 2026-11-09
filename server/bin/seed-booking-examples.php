@@ -310,16 +310,15 @@ try {
         );
         $attachType = $pdo->prepare('UPDATE rooms SET room_type_id = ? WHERE room_id = ? AND room_type_id IS NULL');
         $attachType->execute([$hostRoomTypeIds[$studioId][$room['type']], $roomId]);
-        $link = $pdo->prepare('INSERT IGNORE INTO room_space_types (room_id, space_type_id, is_primary) VALUES (?, ?, 1)');
-        $link->execute([$roomId, $room['type']]);
+        // The curated catalog and Hosts can choose a different primary category.
+        $link = $pdo->prepare('INSERT IGNORE INTO room_space_types (room_id, space_type_id, is_primary)
+            SELECT ?, ?, 1 WHERE NOT EXISTS (SELECT 1 FROM room_space_types WHERE room_id = ? AND is_primary = 1)');
+        $link->execute([$roomId, $room['type'], $roomId]);
         $link = $pdo->prepare('INSERT IGNORE INTO room_amenities (room_id, amenity_id) VALUES (?, ?)');
         $link->execute([$roomId, $room['amenity']]);
-        $image = $pdo->prepare('SELECT image_id FROM room_images WHERE room_id = ? AND image_url = ?');
-        $image->execute([$roomId, $room['image']]);
-        if (!$image->fetchColumn()) {
-            $image = $pdo->prepare('INSERT INTO room_images (room_id, image_url, is_primary, sort_order) VALUES (?, ?, 1, 1)');
-            $image->execute([$roomId, $room['image']]);
-        }
+        $image = $pdo->prepare('INSERT INTO room_images (room_id, image_url, is_primary, sort_order)
+            SELECT ?, ?, 1, 0 WHERE NOT EXISTS (SELECT 1 FROM room_images WHERE room_id = ?)');
+        $image->execute([$roomId, $room['image'], $roomId]);
         foreach ($room['rates'] as [$unit, $minutes, $price, $minimum, $maximum]) {
             ensureRow(
                 $pdo,

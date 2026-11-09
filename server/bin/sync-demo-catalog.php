@@ -51,6 +51,13 @@ try {
         if($row=$q->fetch(PDO::FETCH_ASSOC))$backup['studios'][]=['existing'=>$row,'definition'=>$profile];
     }
     if(!$apply){echo json_encode(['dryRun'=>true,'database'=>$database,'plan'=>$plan],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE)."\n";exit;}
+    if (!$backup['rooms']) {
+        if (in_array('--skip-if-empty', $argv, true) && preg_match('/_(dev|test)$/D', $database)) {
+            echo json_encode(['skipped'=>true,'reason'=>'no_demo_rooms'])."\n";
+            exit;
+        }
+        throw new RuntimeException('No recognised demo rooms matched; dataset was not marked applied. Check the existing demo accounts before enabling the update.');
+    }
     $dir=dirname(__DIR__).'/storage/demo-catalog-backups';if(!is_dir($dir)&&!mkdir($dir,0700,true))throw new RuntimeException('Cannot create backup directory');
     $file=$dir.'/'.gmdate('Ymd-His').'-'.bin2hex(random_bytes(4)).'.json';
     $handle=fopen($file,'x');if(!$handle)throw new RuntimeException('Cannot create backup');chmod($file,0600);
@@ -58,7 +65,7 @@ try {
     if(fwrite($handle,$payload)!==strlen($payload)){fclose($handle);throw new RuntimeException('Backup write failed; database was not modified.');}
     fflush($handle);fclose($handle);
     $db->beginTransaction();
-    $runId=bin2hex(random_bytes(16));$createdRoomIds=[];$createdImageIds=[];
+    $runId=bin2hex(random_bytes(16));$createdRoomIds=[];$createdImageIds=[];$removedImageIds=[];
     $db->prepare('INSERT INTO demo_catalog_update_runs(run_id,dataset_version,backup_json,summary_json) VALUES(?,?,?,?)')
         ->execute([$runId,'demo-room-catalog-v2',$payload,'{}']);
     foreach($backup['rooms'] as $entry){
@@ -91,6 +98,13 @@ try {
                 $createdImageIds[]=(int)$db->lastInsertId();
             }
         }
+        // Older Compose runs could add surplus stock photos to an imported gallery.
+        // Every row here was verified as demo media and captured in the backup.
+        $removeImage = $db->prepare('DELETE FROM room_images WHERE room_id=? AND image_id=?');
+        foreach (array_slice($entry['images'], count($r['photos'])) as $image) {
+            $removeImage->execute([$roomId, $image['image_id']]);
+            $removedImageIds[] = (int) $image['image_id'];
+        }
         if(!empty($r['new']))foreach($r['amenity_names']??[] as $name){
             $db->prepare('INSERT IGNORE INTO room_amenities(room_id,amenity_id) SELECT ?,amenity_id FROM amenities WHERE name=?')->execute([$roomId,$name]);
         }
@@ -102,8 +116,7 @@ try {
         if(DemoCatalog::demoImage($old['cover_url']))$db->prepare('UPDATE studios SET cover_url=? WHERE studio_id=?')->execute([$p['cover_url'],$old['studio_id']]);
         if(DemoCatalog::demoImage($old['avatar_url']))$db->prepare('UPDATE users SET avatar_url=? WHERE user_id=?')->execute([$p['avatar_url'],$old['user_id']]);
     }
-    if(!$backup['rooms']) throw new RuntimeException('No recognised demo rooms matched; dataset was not marked applied. Check the existing demo accounts before enabling the update.');
-    $summary=['rooms'=>count($backup['rooms']),'createdRoomIds'=>$createdRoomIds,'createdImageIds'=>$createdImageIds];
+    $summary=['rooms'=>count($backup['rooms']),'createdRoomIds'=>$createdRoomIds,'createdImageIds'=>$createdImageIds,'removedImageIds'=>$removedImageIds];
     $db->prepare('UPDATE demo_catalog_update_runs SET summary_json=? WHERE run_id=?')->execute([json_encode($summary,JSON_THROW_ON_ERROR),$runId]);
     $db->commit();echo json_encode(['applied'=>true,'rooms'=>count($backup['rooms']),'backup'=>$file,'databaseBackupRunId'=>$runId],JSON_UNESCAPED_UNICODE)."\n";
 } catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}

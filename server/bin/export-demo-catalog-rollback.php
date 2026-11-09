@@ -17,6 +17,11 @@ foreach($backup['rooms'] as $entry){
     $old=$entry['existing'];$id=(int)$old['room_id'];$new=$entry['definition'];
     $sql[]='UPDATE rooms SET description='.$value($old['description']).' WHERE room_id='.$id.' AND description <=> '.$value($new['description']).';';
     foreach($entry['images'] as $image){
+        if (in_array((int) $image['image_id'], $summary['removedImageIds'] ?? [], true)) {
+            $sql[] = 'INSERT IGNORE INTO room_images (image_id,room_id,image_url,is_primary,sort_order,created_at) VALUES ('
+                .implode(',', array_map($value, [$image['image_id'], $id, $image['image_url'], $image['is_primary'], $image['sort_order'], $image['created_at']])).');';
+            continue;
+        }
         $urls=implode(',',array_map(static fn($p)=>$value($p['url']),$new['photos']));
         $sql[]='UPDATE room_images SET image_url='.$value($image['image_url']).',is_primary='.(int)$image['is_primary'].',sort_order='.(int)$image['sort_order'].' WHERE image_id='.(int)$image['image_id'].' AND room_id='.$id.' AND image_url IN('.$urls.');';
     }

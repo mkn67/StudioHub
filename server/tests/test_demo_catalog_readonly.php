@@ -12,8 +12,9 @@ foreach($manifest['rooms'] as $definition){
     if($definition['status']!=='active')continue;
     $q=$db->prepare('SELECT r.room_id FROM rooms r JOIN studios s ON s.studio_id=r.studio_id JOIN users u ON u.user_id=s.host_id WHERE r.name=? AND u.email=?');
     $q->execute([$definition['name'],$definition['owner_email']]);$id=$q->fetchColumn();verify($id!==false,'Missing demo room '.$definition['name']);
-    $r=$repo->findActiveRoomById((int)$id);verify($r!==null,'Missing active room');verify(count($r['images'])>=3,'Missing gallery');
-    verify(count(array_unique(array_column($r['images'],'image_url')))===count($r['images']),'Duplicate gallery URLs');
+    $r=$repo->findActiveRoomById((int)$id);verify($r!==null,'Missing active room');
+    verify(array_column($r['images'],'image_url')===array_column($definition['photos'],'url'),'Unexpected gallery URLs or order for '.$definition['name']);
+    verify(array_column($r['images'],'is_primary')===[true,false,false],'Incorrect primary photo for '.$definition['name']);
     verify(!empty($r['studio']['host_avatar_url']),'Missing host avatar');$checked++;
 }
 $q=$db->query("SELECT space_type_id FROM space_types WHERE name='Workshop & Event Studio'");$typeId=(int)$q->fetchColumn();

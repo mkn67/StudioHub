@@ -19,7 +19,6 @@ import { useStore } from "./store";
 import { RoomCard, Modal, PageHeading, Empty, PrintArtwork } from "./ui";
 import { BookingWizard } from "./wizard";
 import { effectivePricingPlans } from "@/domain/featured-pricing";
-import { StudioCategoryIllustration } from "./studio-category-illustration";
 import { RoomEditorialContent } from "@/features/pricing/components/RoomEditorialContent";
 import { money, localDate, atDate } from "@/domain/models";
 import { backendEnabled } from "@/services/api/client";
@@ -38,6 +37,23 @@ import {
   activeStatuses,
   overlaps,
 } from "@/domain/engine";
+
+const categoryPhotos: Record<string, string> = {
+  "Cyclorama Studio": "/images/cyclorama-2.jpg",
+  "Lookbook & Fashion": "/images/daylight-2.jpg",
+  "Concept & Set Design": "/images/loft-2.jpg",
+  "Green Screen & VFX": "/images/cyclorama.jpg",
+  "Acoustic Soundstage": "/images/sound-2.jpg",
+  "Podcast & Livestream Hub": "/images/sound.jpg",
+  "Livestream & E-commerce": "/images/daylight.jpg",
+  "Music Recording Studio": "/images/sound-2.jpg",
+  "Workshop & Event Studio": "/images/loft.jpg",
+};
+
+function categoryPhoto(category: string): string {
+  return categoryPhotos[category] ?? "/images/daylight-2.jpg";
+}
+
 export function Home() {
   const catalog = useResource<{ space_type_id: number; name: string; description?: string | null; category?: string | null }[]>(backendEnabled ? "/api/space-types" : null);
   const featured = useResource<{ items: ApiRoom[] }>(backendEnabled ? "/api/rooms?limit=3" : null);
@@ -166,7 +182,15 @@ export function Home() {
             <h3><span>{group}</span><small>{types.length.toString().padStart(2, "0")} loại không gian</small></h3>
             <div className="categories home-category-grid">
               {types.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${type.id}` : `/rooms?category=${encodeURIComponent(type.category)}`}>
-                <StudioCategoryIllustration category={type.category}/>
+                <Image
+                  className="category-photo"
+                  src={categoryPhoto(type.category)}
+                  alt=""
+                  width={640}
+                  height={420}
+                  loading="lazy"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1000px) 33vw, 25vw"
+                />
                 <span>{type.category}</span><ArrowUpRight size={22}/>
                 <small>{type.description}</small>
               </Link>)}
@@ -180,7 +204,7 @@ export function Home() {
             {discoveryPurposes.map(purpose => {
               const matches = typesForPurpose(categories.map(type => ({ id: type.id, name: type.category })), purpose.typeNames);
               if (!matches.length) return null;
-              return <article className="purpose-card" key={purpose.id}><span className="purpose-card-icon" aria-hidden="true"><StudioCategoryIllustration category={matches[0].name}/></span><div><h4>{purpose.label}</h4><p>{purpose.detail}</p></div><div className="purpose-card-links" aria-label={`Chọn loại phòng cho ${purpose.label}`}>{matches.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${encodeURIComponent(type.id)}` : `/rooms?category=${encodeURIComponent(type.name)}`}>{matches.length > 1 ? type.name : "Xem phòng phù hợp"} <ArrowUpRight size={14}/></Link>)}</div></article>;
+              return <article className="purpose-card" key={purpose.id}><Image className="purpose-card-photo" src={categoryPhoto(matches[0].name)} alt="" width={720} height={440} loading="lazy"/><div className="purpose-card-copy"><h4>{purpose.label}</h4><p>{purpose.detail}</p><div className="purpose-card-links" aria-label={`Chọn loại phòng cho ${purpose.label}`}>{matches.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${encodeURIComponent(type.id)}` : `/rooms?category=${encodeURIComponent(type.name)}`}>{matches.length > 1 ? type.name : "Xem phòng phù hợp"} <ArrowUpRight size={14}/></Link>)}</div></div></article>;
             })}
           </div>
         </section>

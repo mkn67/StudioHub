@@ -132,7 +132,7 @@ Xác nhận `db`, `api`, `helpdesk-php`, `client` ở trạng thái healthy/runn
 | **Xem log riêng PHP API** | `podman-compose --env-file .env.compose logs -f api` | `docker compose --env-file .env.compose logs -f api` |
 | **Khởi động lại 1 service** | `podman-compose --env-file .env.compose restart api` | `docker compose --env-file .env.compose restart api` |
 | **Tắt toàn bộ hệ thống** | `podman-compose --env-file .env.compose down` | `docker compose --env-file .env.compose down` |
-| **Build lại frontend** | `podman-compose --env-file .env.compose up -d --build client` | `docker compose --env-file .env.compose up -d --build client` |
+| **Build lại frontend** | `podman-compose --env-file .env.compose up -d --build --force-recreate client` | `docker compose --env-file .env.compose up -d --build client` |
 
 ---
 
@@ -144,7 +144,7 @@ Frontend production container không chứa mã nguồn phát triển hoặc npm
 cd client
 npm install <package>
 cd ..
-podman-compose --env-file .env.compose up -d --build client
+podman-compose --env-file .env.compose up -d --build --force-recreate client
 ```
 
 Không chép `node_modules` từ container production vào source. Với VS Code, cài Node.js và chạy `npm ci` trong `client/` để TypeScript/IntelliSense dùng đúng dependency của frontend.
