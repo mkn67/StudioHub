@@ -225,7 +225,7 @@ export function Home() {
             Khám phá tất cả <ArrowRight size={18} />
           </Link>
         </div>
-        <div className="featured-grid">
+        <div className="featured-grid home-featured-grid">
           {backendEnabled ? <>
             {featured.loading && Array.from({ length: 3 }, (_, index) => <RoomListingSkeleton compact key={index}/>)}
             {featured.error && <div className="room-listing-error"><ApiMessage error={featured.error || catalog.error}/><button className="btn secondary" type="button" onClick={featured.reload}>Thử tải lại</button></div>}
