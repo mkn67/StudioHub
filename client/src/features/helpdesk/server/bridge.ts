@@ -11,10 +11,17 @@ const failure = (status: number, code: string) => Response.json({
   errors: [{ field: "", code, message: "Vui lòng thử lại sau." }],
 }, { status, headers: { "Cache-Control": "no-store" } });
 
+// The local Compose image runs Next.js in production mode for parity with deployment,
+// while APP_ENV=dev marks its HTTP localhost origin as a trusted local origin.
+const isProduction = () => process.env.APP_ENV
+  ? process.env.APP_ENV === "production"
+  : process.env.NODE_ENV === "production";
+
 export async function proxyHelpdesk(request: Request, segments: string[], session: string, fetcher: typeof fetch = fetch): Promise<Response> {
   const path = segments.join("/");
   if (!routes.some(rule => rule.test(path)) || segments.some(s => s.includes("..") || s.includes("%"))) return failure(404, "resource_not_found");
-  const configuredOrigins = (process.env.HELPDESK_FRONTEND_ORIGIN || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000"))
+  const production = isProduction();
+  const configuredOrigins = (process.env.HELPDESK_FRONTEND_ORIGIN || (production ? "" : "http://localhost:3000"))
     .split(",").map(origin => origin.trim()).filter(Boolean);
   let allowedOrigins: URL[];
   try {
@@ -22,7 +29,7 @@ export async function proxyHelpdesk(request: Request, segments: string[], sessio
       const url = new URL(origin);
       if (!["http:", "https:"].includes(url.protocol) || url.username || url.password ||
         url.pathname !== "/" || url.search || url.hash ||
-        (process.env.NODE_ENV === "production" && url.protocol !== "https:")) throw new Error("Invalid frontend origin");
+        (production && url.protocol !== "https:")) throw new Error("Invalid frontend origin");
       return url;
     });
   } catch { return failure(503, "invalid_frontend_origin_configuration"); }
@@ -49,7 +56,7 @@ export async function proxyHelpdesk(request: Request, segments: string[], sessio
     const httpHosts = ["localhost", "127.0.0.1", "[::1]", ...(process.env.HELPDESK_HTTP_HOSTS || "").split(",").map(host => host.trim().toLowerCase()).filter(Boolean)];
     if (upstream.username || upstream.password || upstream.search || upstream.hash || upstream.pathname !== "/" ||
       !["https:", "http:"].includes(upstream.protocol) ||
-      (process.env.NODE_ENV === "production" && upstream.protocol !== "https:") ||
+      (production && upstream.protocol !== "https:") ||
       (upstream.protocol === "http:" && !httpHosts.includes(upstream.hostname))) return failure(503, "invalid_bridge_configuration");
   } catch { return failure(503, "invalid_bridge_configuration"); }
   const query = new URL(request.url).search;

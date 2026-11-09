@@ -9,7 +9,7 @@ final class PublicCatalog
     public function enabled(): bool
     {
         if (!$this->config->bool('STUDIOHUB_PUBLIC_TOOLS')) return false;
-        try { CurlTransport::base($this->config->get('STUDIOHUB_API_BASE_URL')); }
+        try { CurlTransport::base($this->config->get('STUDIOHUB_API_BASE_URL'), explode(',', $this->config->get('STUDIOHUB_API_HTTP_HOSTS'))); }
         catch (Failure) { return false; }
         // Each fixed read-only endpoint validates its response at call time.
         // Do not require a transient CLI-created file on production containers.
@@ -18,7 +18,7 @@ final class PublicCatalog
     public function get(string $path,array $query=[]): array
     {
         if(!preg_match('~^/rooms(?:/[1-9][0-9]*(?:/(?:rates|helpdesk-facts))?)?$~',$path))throw new Failure('tool_unavailable',503);
-        $r=$this->http->request('GET',CurlTransport::base($this->config->get('STUDIOHUB_API_BASE_URL')).$path.($query?'?'.http_build_query($query):''),['Accept: application/json'],null,4);
+        $r=$this->http->request('GET',CurlTransport::base($this->config->get('STUDIOHUB_API_BASE_URL'),explode(',', $this->config->get('STUDIOHUB_API_HTTP_HOSTS'))).$path.($query?'?'.http_build_query($query):''),['Accept: application/json'],null,4);
         if($r['status']!==200||($r['body']['status']??'')!=='success'||!is_array($r['body']['data']??null))throw new Failure('catalog_unavailable',503);
         return $r['body']['data'];
     }

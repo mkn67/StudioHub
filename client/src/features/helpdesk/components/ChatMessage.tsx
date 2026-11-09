@@ -19,13 +19,18 @@ export function ChatMessage({ message, confirmTicket, pending = false }: { messa
         {source.reference && <small>{source.reference}</small>}
       </li>)}
     </ul> : null}
-    {response?.cards?.map((card, index) => <div className={styles.card} key={index}>
-      <strong>{card.title}</strong>
-      {card.kind === "room" && <p>{card.description} · Phòng {card.roomId}</p>}
-      {card.kind === "availability" && <p>{card.description}<br />Kiểm tra lúc: {card.checkedAt}</p>}
-      {card.kind === "booking" && <dl><dt>Đơn thuê</dt><dd>{card.bookingStatus}</dd><dt>Thanh toán</dt><dd>{card.paymentStatus}</dd><dt>Hoàn cọc</dt><dd>{card.refundStatus}</dd></dl>}
-      {card.kind === "ticket" && <p>{card.ticketId} · {card.status}</p>}
-    </div>)}
+    {response?.cards?.map((card, index) => card.kind === "room" && /^[1-9]\d*$/.test(card.roomId)
+      ? <Link className={`${styles.card} ${styles.roomCard}`} href={`/rooms/${card.roomId}`} key={index}>
+        <strong>{card.title}</strong>
+        <p>{card.description} · Phòng {card.roomId}</p>
+        <span className={styles.roomCardAction}>Mở trang chi tiết phòng <span aria-hidden="true">→</span></span>
+      </Link>
+      : <div className={styles.card} key={index}>
+        <strong>{card.title}</strong>
+        {card.kind === "availability" && <p>{card.description}<br />Kiểm tra lúc: {card.checkedAt}</p>}
+        {card.kind === "booking" && <dl><dt>Đơn thuê</dt><dd>{card.bookingStatus}</dd><dt>Thanh toán</dt><dd>{card.paymentStatus}</dd><dt>Hoàn cọc</dt><dd>{card.refundStatus}</dd></dl>}
+        {card.kind === "ticket" && <p>{card.ticketId} · {card.status}</p>}
+      </div>)}
     {response?.links?.map((link, index) => {
       const href = safeHelpdeskHref(link.href);
       return href ? <Link className={styles.actionLink} key={index} href={href}>{link.label} <span aria-hidden="true">↗</span></Link> : null;

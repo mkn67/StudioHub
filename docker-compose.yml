@@ -40,6 +40,7 @@ x-helpdesk: &helpdesk
     HELPDESK_FRONTEND_ORIGIN: ${LOCAL_FRONTEND_ORIGIN:-http://localhost:${LOCAL_CLIENT_PORT:-3000}}
     HELPDESK_DATABASE_URL: sqlite:var/helpdesk.sqlite
     STUDIOHUB_API_BASE_URL: http://api/api
+    STUDIOHUB_API_HTTP_HOSTS: api
     NINEROUTER_BASE_URL: ${LOCAL_NINEROUTER_BASE_URL:-http://host.docker.internal:20128/v1}
   extra_hosts:
     - host.docker.internal:host-gateway

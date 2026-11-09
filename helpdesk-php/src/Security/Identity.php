@@ -65,7 +65,10 @@ final class Identity
         }
 
         // Gọi API hồ sơ để biết token này thuộc về ai
-        $base     = CurlTransport::base($this->config->get('STUDIOHUB_API_BASE_URL'));
+        $base     = CurlTransport::base(
+            $this->config->get('STUDIOHUB_API_BASE_URL'),
+            explode(',', $this->config->get('STUDIOHUB_API_HTTP_HOSTS'))
+        );
         $response = $this->http->request(
             'GET',
             $base . '/auth/profile',

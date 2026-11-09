@@ -132,13 +132,13 @@ final class CurlTransport implements Transport
      * Quy tắc:
      * - Phải có scheme và host.
      * - Không được chứa user/pass, query hoặc fragment.
-     * - Chỉ chấp nhận `https`; `http` chỉ được phép với máy cục bộ (127.0.0.1, localhost, [::1]).
+     * - Chỉ chấp nhận `https`; `http` chỉ được phép với máy cục bộ hoặc host nội bộ được cấu hình tường minh.
      *
      * @return string URL đã được cắt bỏ dấu `/` ở cuối.
      *
      * @throws Failure `invalid_upstream_configuration` (503) nếu URL không hợp lệ.
      */
-    public static function base(string $url): string
+    public static function base(string $url, array $allowedHttpHosts = []): string
     {
         $parts = parse_url($url);
 
@@ -156,9 +156,15 @@ final class CurlTransport implements Transport
         $host   = $parts['host'];
 
         $isSupportedScheme = in_array($scheme, ['https', 'http'], true);
-        // HTTP thường (không mã hoá) chỉ được dùng khi gọi tới máy cục bộ
-        $isInsecureRemote  = $scheme === 'http'
-            && !in_array($host, ['127.0.0.1', 'localhost', '[::1]'], true);
+        // HTTP thường chỉ được dùng tới loopback hoặc host nội bộ do cấu hình tin cậy cho phép.
+        $normalizedHost = strtolower(rtrim($host, '.'));
+        $localHosts = ['127.0.0.1', 'localhost', '::1', '[::1]'];
+        $allowedHosts = array_map(
+            static fn (string $allowedHost): string => strtolower(rtrim(trim($allowedHost), '.')),
+            $allowedHttpHosts
+        );
+        $isInsecureRemote = $scheme === 'http'
+            && !in_array($normalizedHost, [...$localHosts, ...$allowedHosts], true);
 
         if ($hasForbiddenParts || !$isSupportedScheme || $isInsecureRemote) {
             throw new Failure('invalid_upstream_configuration', 503);
