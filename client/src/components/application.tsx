@@ -19,6 +19,7 @@ import { BackendBookingWizard, BackendBookings, BackendBookingDetail } from "@/f
 import { BackendOperations } from "@/features/host/backend-host";
 import { CustomerAccountMenu } from "@/features/customer/account-menu";
 import { demoMode } from "@/data/api";
+import { LegalPolicies } from "@/features/legal/policies";
 export default function Application() {
   const apiSession = useApiSession();
   const demoUser = useSession();
@@ -83,6 +84,7 @@ export default function Application() {
         </Link>
       </div>
     );
+  else if (segments[0] === "policies") content = <LegalPolicies slug={segments[1]} />;
   else
     content = (
       <Empty
@@ -100,6 +102,7 @@ export default function Application() {
     else if (ops) content = <BackendOperations key={user?.id ?? "guest"} role={segments[0] as "host" | "admin"} segments={segments.slice(1)} />;
     else if (["my-bookings", "payment"].includes(segments[0])) content = <div className="container account-page">{!apiSession.ready ? <ApiMessage loading /> : apiSession.user?.role !== "customer" ? <Empty title="Đơn thuê của khách hàng" text="Đăng nhập bằng tài khoản khách hàng để tiếp tục." href="/login" label="Đăng nhập" /> : segments[1] && segments[1] !== "history" ? <BackendBookingDetail key={`${user?.id}:${segments[1]}`} id={segments[1]} payment={segments[0] === "payment"} /> : <BackendBookings key={`${user?.id}:${segments[1] === "history" ? "history" : "current"}`} history={segments[1] === "history"} />}</div>;
     else if (segments[0] === "checkout") content = <div className="container account-page checkout-guide"><p className="booking-eyebrow">Đặt thuê studio</p><h1>Chọn phòng và lịch trước khi thanh toán</h1><p>StudioHub kiểm tra lịch và báo giá trong trang đặt thuê của từng phòng. Sau khi tạo đơn, bạn sẽ đến trang thanh toán sandbox.</p><div className="actions"><Link className="btn" href="/rooms">Khám phá phòng</Link>{apiSession.user?.role === "customer" && <Link className="btn secondary" href="/my-bookings">Xem đơn của tôi</Link>}</div></div>;
+    else if (segments[0] === "policies") content = <LegalPolicies slug={segments[1]} />;
     else content = <div className="container account-page"><Unavailable>Trang này chưa có luồng tương ứng trong API hiện tại. Vui lòng quay lại danh sách phòng hoặc đơn thuê.</Unavailable></div>;
   }
   return (
@@ -220,7 +223,15 @@ export default function Application() {
               chưa từng được tạo ra.
             </p>
             <address className="footer-agency-address">StudioHub · 123 Đường Lê Văn Việt<br/>Quận 9, TP. Hồ Chí Minh · Địa chỉ minh họa</address>
-            <div>
+            <nav className="footer-policy-links" aria-label="Chính sách và điều khoản">
+              <strong>Chính sách</strong>
+              <Link href="/policies/privacy">Bảo mật</Link>
+              <Link href="/policies/terms">Điều khoản sử dụng</Link>
+              <Link href="/policies/cookies">Cookie</Link>
+              <Link href="/policies/personal-data">Dữ liệu cá nhân</Link>
+              <Link href="/policies/disclaimer">Miễn trừ trách nhiệm</Link>
+            </nav>
+            <div className="footer-explore-links">
               <Link href="/rooms">
                 Khám phá Studio
                 <ArrowRight size={14} />
