@@ -1,11 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ImageIcon } from "lucide-react";
 import { apiBaseUrl } from "@/services/api/client";
 
 export function ApiImage({ src, alt }: { src?: string | null; alt: string }) {
+  return <ApiImageContent key={src} src={src} alt={alt}/>;
+}
+
+function ApiImageContent({ src, alt }: { src?: string | null; alt: string }) {
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [src]);
   let href: string | undefined;
   if (src?.startsWith("/images/")) href = src;
   else if (src) {
