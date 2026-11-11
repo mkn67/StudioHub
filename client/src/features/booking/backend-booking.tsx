@@ -34,7 +34,7 @@ function suggestAvailableStarts(date: string, selectedTime: string, durationMinu
     return suggestions;
 }
 
-export function BackendBookingWizard({ id }: { id: string }) {
+export function BackendBookingWizard({ id, embedded = false }: { id: string; embedded?: boolean }) {
     const room = useResource<ApiRoom>(`/api/rooms/${encodeURIComponent(id)}`);
     const session = useApiSession();
     const router = useRouter();
@@ -150,10 +150,10 @@ export function BackendBookingWizard({ id }: { id: string }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectionKey, r, equipment.loading, equipment.error, draftReady]);
 
-    return <div className="container account-page booking-flow">
+    return <div className={embedded ? "booking-flow booking-flow-embedded" : "container account-page booking-flow"}>
         <header className="booking-flow-heading">
             <p className="booking-eyebrow">Đặt không gian · {r?.studio.name ?? "Studio"}</p>
-            <h1>{r?.name ?? "Đặt phòng Studio"}</h1>
+            {embedded ? <h3>{r?.name ?? "Đặt phòng Studio"}</h3> : <h1>{r?.name ?? "Đặt phòng Studio"}</h1>}
             <p>Chọn gói thuê và thiết bị. Lịch trống cùng tổng tiền sẽ được máy chủ kiểm tra tự động.</p>
         </header>
         <ApiMessage loading={room.loading || equipment.loading} error={room.error || equipment.error}/>

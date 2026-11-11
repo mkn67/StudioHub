@@ -1,0 +1,124 @@
+import { chromium, expect as baseExpect } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
+
+const expect = baseExpect.configure({ timeout: 20000 });
+const base = process.env.UI_QA_URL || "http://127.0.0.1:3003";
+const out = new URL("../.impeccable/public-motion/", import.meta.url);
+await mkdir(out, { recursive: true });
+const pathFor = name => new URL(name, out).pathname.replace(/^\/(\w:)/, "$1");
+const [roomEnvelope, typesEnvelope] = await Promise.all(["rooms/6", "space-types"].map(path => fetch(`http://127.0.0.1:8000/api/${path}`).then(r => { if (!r.ok) throw Error("Public API unavailable"); return r.json(); })));
+const room = roomEnvelope.data, types = typesEnvelope.data;
+const browser = await chromium.launch();
+const checks = [], errors = [], performance = [];
+try {
+ for (const reducedMotion of ["reduce", "no-preference"]) for (const width of [360, 390, 768, 1024, 1280, 1440]) {
+  const context = await browser.newContext({ reducedMotion, viewport: { width, height: 1000 } });
+  await context.addInitScript(() => {
+    window.__motionQA = { cls: 0 };
+    new PerformanceObserver(list => list.getEntries().forEach(entry => { if (!entry.hadRecentInput) window.__motionQA.cls += entry.value; })).observe({ type: "layout-shift", buffered: true });
+  });
+  await context.route("**/api/rest/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    const ok = data => route.fulfill({ json: { status: "success", data } });
+    if (path.endsWith("/auth/profile")) return route.fulfill({ status: 401, json: { status: "error", message: "Chưa đăng nhập" } });
+    if (path.endsWith("/space-types")) return ok(types);
+    if (path.endsWith("/rooms/6/calendar")) return ok({ busy_slots: [] });
+    if (path.endsWith("/rooms/6/reviews")) return ok({ summary: { review_count: 0, average_rating: 0 }, items: [] });
+    if (path.endsWith("/rooms/6")) return ok(room);
+    if (path.endsWith("/rooms")) return ok({ items: [room], pagination: { total_items: 1, total_pages: 1 } });
+    return ok([]);
+  });
+  await context.route("**/api/helpdesk/**", route => route.fulfill({ status: 401, json: { status: "error", message: "Chưa đăng nhập" } }));
+  const page = await context.newPage();
+  page.on("pageerror", e => errors.push(e.message));
+  const cdp = await context.newCDPSession(page); await cdp.send("Performance.enable");
+  await page.goto(base);
+  await expect(page.locator("#home-title")).toContainText("Không gian đúng.");
+  await expect(page.locator(".home-category-card").first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await expect.poll(() => page.locator(".hero-search").evaluate(node => getComputedStyle(node).opacity)).toBe("1");
+  await expect.poll(() => page.locator(".motion-line-text").first().evaluate(node => getComputedStyle(node).transform)).toBe("none");
+  const header = page.locator(".public-header"), slot = page.locator(".public-header-slot");
+  const initialSlot = await slot.evaluate(node => node.getBoundingClientRect().height);
+  const originalHeight = await header.evaluate(node => node.getBoundingClientRect().height);
+  const beforeHeaderCLS = await page.evaluate(() => window.__motionQA.cls);
+  await page.evaluate(() => window.scrollTo({ top: 240, behavior: "instant" }));
+  await expect(header).toHaveClass(/is-scrolled/);
+  await expect.poll(() => header.evaluate(node => node.getBoundingClientRect().height)).toBeLessThan(originalHeight);
+  expect(await slot.evaluate(node => node.getBoundingClientRect().height)).toBe(initialSlot);
+  await page.evaluate(() => window.scrollTo({ top: 60, behavior: "instant" }));
+  await expect(header).toHaveClass(/is-scrolled/); // Hysteresis, not direction jitter.
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await expect(header).not.toHaveClass(/is-scrolled/);
+  const headerCLSDelta = await page.evaluate(before => window.__motionQA.cls - before, beforeHeaderCLS);
+  const input = page.getByRole("combobox", { name: "Tên Studio, loại phòng hoặc nhu cầu" });
+  await input.focus();
+  await expect(page.locator(".hero-search")).toHaveCSS("border-top-color", "rgb(13, 116, 144)");
+  await input.press("Escape");
+  const searchButton = page.getByRole("button", { name: "Tìm Studio", exact: true });
+  await searchButton.hover();
+  if (reducedMotion === "no-preference") await expect.poll(() => searchButton.evaluate(node => getComputedStyle(node).transform)).not.toBe("none");
+  await page.mouse.down();
+  await expect.poll(() => searchButton.evaluate(node => getComputedStyle(node).boxShadow)).toContain("0px 0px 0px");
+  await page.mouse.move(1, 1); await page.mouse.up();
+  const category = page.locator(".home-category-card").first();
+  await category.scrollIntoViewIfNeeded(); await category.hover();
+  if (reducedMotion === "no-preference") await expect.poll(() => category.evaluate(node => getComputedStyle(node).transform)).toContain("-5");
+  const categoryHref = await category.getAttribute("href");
+  await category.click();
+  await page.waitForURL(base + categoryHref);
+  await expect(page.locator('.public-nav a[aria-current="page"]')).toHaveText("Khám phá Studio");
+  if (width >= 1024) {
+    const line = page.locator(".public-nav .motion-active-indicator");
+    await expect(line).toHaveCSS("opacity", "1");
+    const before = await line.evaluate(node => getComputedStyle(node).transform);
+    await page.locator('.public-nav a[href="/my-bookings"]').click(); await page.waitForURL("**/my-bookings");
+    await expect.poll(() => line.evaluate(node => getComputedStyle(node).transform)).not.toBe(before);
+    await page.locator('.public-header .brand').click(); await page.waitForURL(base + "/");
+  } else { await page.goto(base); }
+  const partner = page.locator(".host-cta"); await partner.scrollIntoViewIfNeeded();
+  await expect.poll(() => partner.locator(".partner-image-wipe").evaluate(node => getComputedStyle(node).transform)).toBe("matrix(0, 0, 0, 1, 0, 0)");
+  await expect(partner.getByRole("link", { name: "Trở thành đối tác" })).toHaveAttribute("href", "/register/host");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await partner.screenshot({ path: pathFor(`partner-${width}-${reducedMotion}.png`) });
+  await page.goto(base + "/rooms/6");
+  await expect(page.locator(".room-title-text")).toHaveText(room.name);
+  await expect.poll(() => page.locator(".room-title-text").evaluate(node => getComputedStyle(node).transform)).toBe("none");
+  await page.evaluate(() => document.fonts.ready);
+  const roomLoadCLS = await page.evaluate(() => window.__motionQA.cls);
+  const tabGeometry = await page.locator(".room-detail-anchor").evaluate(node => ({ bottom: node.getBoundingClientRect().bottom, next: document.querySelector(".room-key-specs").getBoundingClientRect().top }));
+  expect(tabGeometry.bottom).toBeLessThanOrEqual(tabGeometry.next);
+  await expect(page.locator(".room-package-list li")).toHaveCount(room.rates.length);
+  await page.locator('.room-detail-anchor a[href="#room-amenities"]').click();
+  await expect(page.locator('.room-detail-anchor a[href="#room-amenities"]')).toHaveAttribute("aria-current", "location");
+  await expect(page.locator(".room-detail-anchor .motion-active-indicator")).toHaveCSS("opacity", "1");
+  await page.locator("#room-policies").evaluate(node => window.scrollTo({ top: node.getBoundingClientRect().top + window.scrollY - 100, behavior: "instant" }));
+  await expect(page.locator('.room-detail-anchor a[href="#room-policies"]')).toHaveAttribute("aria-current", "location");
+  await expect(page.locator(".room-booking-card")).toHaveCSS("position", width > 900 ? "sticky" : "static");
+  await page.locator("footer").scrollIntoViewIfNeeded();
+  const collision = await page.evaluate(() => document.querySelector(".room-booking-card").getBoundingClientRect().bottom > document.querySelector("footer").getBoundingClientRect().top);
+  expect(collision).toBe(false);
+  await page.getByRole("button", { name: `Mở ảnh 1 của ${room.name}`, exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+  await page.getByRole("button", { name: "Ảnh tiếp", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: `Mở ảnh 1 của ${room.name}`, exact: true })).toBeFocused();
+  const launcher = page.getByRole("button", { name: "Trò chuyện với StudioHub AI", exact: true });
+  await launcher.click(); await expect(page.locator("#studiohub-helpdesk")).toContainText("Đăng nhập để trò chuyện");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#studiohub-helpdesk")).toBeHidden();
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.screenshot({ path: pathFor(`room-${width}-${reducedMotion}.png`) });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const metrics = await cdp.send("Performance.getMetrics");
+  performance.push({ width, reducedMotion, roomLoadCLS, roomInteractionCLS: await page.evaluate(before => window.__motionQA.cls - before, roomLoadCLS), headerCLSDelta, metrics: metrics.metrics.filter(metric => ["TaskDuration", "LayoutCount", "RecalcStyleCount", "JSHeapUsedSize"].includes(metric.name)) });
+  checks.push(`${width}px ${reducedMotion}: header, hero, focus/press, categories, navigation, partner, room spy/gallery/sticky, launcher`);
+  await context.close();
+ }
+ expect(errors).toEqual([]);
+ await writeFile(new URL("results.json", out), JSON.stringify({ checks, errors, performance, provider: "none", api: "read-only real public data; session fixtures" }, null, 2));
+ console.log(JSON.stringify({ passed: checks.length, errors }, null, 2));
+} catch (e) { console.error(JSON.stringify({ checks, errors }, null, 2)); throw e; }
+finally { await browser.close(); }

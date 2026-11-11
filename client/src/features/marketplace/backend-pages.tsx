@@ -7,39 +7,25 @@ import type { ApiRoom, CalendarData } from "@/services/api/contracts";
 import { formatApiTime, unitLabels } from "@/services/api/contracts";
 import { money } from "@/domain/models";
 import { ApiMessage } from "@/components/api-ui";
-import { Modal } from "@/components/ui";
 import { RoomListingCard, RoomListingSkeleton } from "./RoomListingCard";
 import { discoveryPurposes, typesForPurpose } from "./discovery-purposes";
 import { MIN_PRICE, MAX_PRICE, PRICE_STEP, SEARCH_RATE_UNITS, readRoomSearch, roomSearchRequest, roomSearchUrl, formatSearchPrice, type RoomSearch } from "@/services/api/room-search";
 import { ApiImage } from "./ApiImage";
 export { ApiImage } from "./ApiImage";
 import { RoomEditorialDetails } from "./RoomEditorialDetails";
+import { RoomDetailGallery, RoomKeySpecs, RoomBookingPanel } from "./RoomDetailPresentation";
+import { useRoomDetailMotion } from "@/components/motion/public-interactions";
 type SpaceType = { space_type_id: number; name: string; category?: string | null; description?: string | null };
 
-const roomSpecLabels: Record<string, { key: "ceiling_height" | "soundproof_level" | "power_specs"; label: string }[]> = {
-    "Cyclorama Studio": [{ key: "ceiling_height", label: "Chiều cao trần" }, { key: "power_specs", label: "Nguồn điện" }],
-    "Lookbook & Fashion": [{ key: "ceiling_height", label: "Chiều cao trần" }],
-    "Podcast & Livestream Hub": [{ key: "soundproof_level", label: "Mức xử lý âm học" }, { key: "power_specs", label: "Nguồn điện" }],
-    "Concept & Set Design": [{ key: "ceiling_height", label: "Chiều cao trần" }],
-    "Green Screen & VFX": [{ key: "ceiling_height", label: "Chiều cao trần" }, { key: "power_specs", label: "Nguồn điện" }],
-    "Acoustic Soundstage": [{ key: "soundproof_level", label: "Mức cách âm được Studio khai báo" }, { key: "ceiling_height", label: "Chiều cao trần" }, { key: "power_specs", label: "Nguồn điện" }],
-    "Workshop & Event Studio": [{ key: "power_specs", label: "Nguồn điện" }],
-    "Livestream & E-commerce": [{ key: "power_specs", label: "Nguồn điện" }],
-    "Music Recording Studio": [{ key: "soundproof_level", label: "Mức cách âm được Studio khai báo" }, { key: "power_specs", label: "Nguồn điện" }],
-};
-
 function RoomSpecGroup({ room }: { room: ApiRoom }) {
-    const typeName = room.space_types?.[0]?.name;
-    const fields = typeName ? roomSpecLabels[typeName] ?? [] : [];
-    const specs = fields.flatMap(field => {
-        const value = room[field.key];
-        if (value === null || value === undefined || value === "") return [];
-        if (field.key === "soundproof_level" && value === "Chuẩn Studio") return [];
-        return [{ label: field.label, value: field.key === "ceiling_height" ? `${value} m` : value }];
-    });
-    return <section className="room-spec-group" aria-label="Thông số kỹ thuật theo loại phòng">
-        <h3>Thông số phù hợp với loại phòng</h3>
-        {specs.length ? <dl>{specs.map(spec => <div key={spec.label}><dt>{spec.label}</dt><dd>{spec.value}</dd></div>)}</dl> : <p>Studio chưa cung cấp thông số kỹ thuật chuyên biệt cho phòng này.</p>}
+    const specs = [
+        { label: "Nguồn điện", value: room.power_specs },
+        { label: "Xử lý âm học", value: room.soundproof_level },
+    ].filter(spec => typeof spec.value === "string" && spec.value.trim() && spec.value !== "Chuẩn Studio");
+    if (!specs.length) return null;
+    return <section className="room-spec-group" aria-label="Thông số kỹ thuật">
+        <h3>Thông số kỹ thuật</h3>
+        <dl>{specs.map(spec => <div key={spec.label}><dt>{spec.label}</dt><dd>{spec.value}</dd></div>)}</dl>
     </section>;
 }
 
@@ -163,36 +149,41 @@ export function BackendRoomDetail({ id }: { id: string }) {
     const calendar = useResource<CalendarData>(`/api/rooms/${encodeURIComponent(id)}/calendar`);
     const reviews = useResource<{ summary: { review_count: number; average_rating: number }; items: { review_id: number; rating: number; review_text: string; customer_name: string; created_at: string }[] }>(`/api/rooms/${encodeURIComponent(id)}/reviews`);
     const relatedRooms = useResource<{ items: ApiRoom[] }>(room.data ? "/api/rooms?limit=50" : null);
-    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
     const r = room.data;
+    const motionScope = useRoomDetailMotion(r?.room_id ?? null);
     const primaryType = r?.space_types?.[0]?.space_type_id;
     const related = (relatedRooms.data?.items ?? []).filter(item => item.room_id !== r?.room_id).sort((a, b) => {
         const aType = primaryType && a.primary_space_type?.space_type_id === primaryType ? 1 : 0;
         const bType = primaryType && b.primary_space_type?.space_type_id === primaryType ? 1 : 0;
         return bType - aType || Number(b.studio_id === r?.studio_id) - Number(a.studio_id === r?.studio_id);
     }).slice(0, 4);
-    return <div className="container account-page room-detail-page">
-        <Link href="/rooms">← Khám phá phòng</Link>
+    return <div ref={motionScope} className="container account-page room-detail-page">
+        <nav className="room-breadcrumb" aria-label="Đường dẫn"><Link href="/rooms">Khám phá Studio</Link>{r && <><span aria-hidden="true">/</span><span>{r.studio.name}</span><span aria-hidden="true">/</span><span aria-current="page">{r.name}</span></>}</nav>
         <ApiMessage loading={room.loading} error={room.error}/>
         {r && <>
             <header className="room-detail-heading">
-                <div><h1>{r.name}</h1><p>{r.studio.name} · {r.studio.address}, {r.studio.district}, {r.studio.city}</p></div>
-                <span className="room-availability-state">Nhận đặt thuê · cần kiểm tra lịch theo ngày giờ</span>
+                <div className="room-detail-identity">
+                    <h1 className="room-title-mask"><span className="room-title-text">{r.name}</span></h1>
+                    <p className="room-detail-metadata">
+                        {(r.space_types?.length ? r.space_types : r.primary_space_type ? [r.primary_space_type] : []).map(type => <span className="room-detail-category" key={type.space_type_id}>{type.name}</span>)}
+                        <strong>{r.studio.name}</strong>
+                        {[r.studio.address, r.studio.district, r.studio.city].filter(Boolean).length > 0 && <span className="room-detail-location">{[r.studio.address, r.studio.district, r.studio.city].filter(Boolean).join(", ")}</span>}
+                    </p>
+                </div>
             </header>
-            <nav className="room-detail-anchor" aria-label="Đi tới nội dung phòng"><a href="#room-description">Không gian</a><a href="#room-amenities">Tiện ích</a><a href="#room-rates">Giá thuê</a><a href="#room-policies">Quy định</a><a href="#room-reviews-title">Đánh giá</a></nav>
-            <div className="api-gallery" data-count={Math.min(r.images?.length || 1, 3)}>{r.images?.length ? r.images.map((img, index) => <button type="button" className="api-gallery-item" key={index} onClick={() => setLightboxIndex(index)} aria-label={`Mở ảnh ${index + 1} của ${r.name}`}><ApiImage src={img.image_url} alt={img.alt || `${r.name} – ${index + 1}`}/></button>) : <button type="button" className="api-gallery-item" onClick={() => setLightboxIndex(0)} aria-label={`Mở ảnh ${r.name}`}><ApiImage src={r.thumbnail_url} alt={r.name}/></button>}<button className="api-gallery-all" type="button" onClick={() => setLightboxIndex(0)}>▦　Xem tất cả ảnh</button></div>
-            {r.media_notice && <p className="room-media-caption">{r.media_notice}</p>}
+            <nav className="room-detail-anchor" aria-label="Đi tới nội dung phòng"><span className="motion-active-indicator" aria-hidden="true"/><a href="#room-description">Không gian</a><a href="#room-amenities">Tiện ích</a><a href="#room-rates">Giá thuê</a><a href="#room-policies">Quy định</a><a href="#room-reviews-title">Đánh giá</a></nav>
             <div className="room-detail-layout">
                 <section className="surface room-information">
-                    <RoomEditorialDetails room={r} calendar={calendar}/>
+                    <RoomKeySpecs room={r}/>
+                    <RoomDetailGallery room={r}/>
+                    <RoomEditorialDetails room={r}/>
                     <RoomSpecGroup room={r}/>
                 </section>
-                <aside className="surface room-booking-card"><h2>Đặt thuê phòng</h2><p>Chọn ngày và gói thuê để máy chủ kiểm tra lịch, giá và tiền cọc.</p><Link className="btn" href={`/rooms/${id}/book`}>Kiểm tra giá & đặt thuê</Link><small>Lịch được xác nhận lại khi tạo đơn.</small></aside>
+                <RoomBookingPanel room={r} calendar={calendar}/>
             </div>
             <section className="room-review-section surface" aria-labelledby="room-reviews-title"><div className="room-review-heading"><div><p className="booking-eyebrow">Khách đã thuê</p><h2 id="room-reviews-title">Đánh giá từ khách hàng</h2></div>{reviews.data && (reviews.data.summary.review_count > 0 ? <strong className="room-review-average" aria-label={`${reviews.data.summary.average_rating} trên 5 sao`}>★ {reviews.data.summary.average_rating.toFixed(1)} <small>({reviews.data.summary.review_count})</small></strong> : <small>Chưa có điểm đánh giá</small>)}</div><ApiMessage loading={reviews.loading} error={reviews.error}/>{reviews.data?.items.length ? <div className="room-review-list">{reviews.data.items.map(review => <article key={review.review_id}><div><strong>{review.customer_name}</strong><span aria-label={`${review.rating} trên 5 sao`} className="room-review-stars">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span></div>{review.review_text && <p>{review.review_text}</p>}<small>{formatApiTime(review.created_at)}</small></article>)}</div> : reviews.data && <p>Chưa có đánh giá. Khách có thể đánh giá sau khi đơn thuê hoàn tất.</p>}</section>
-            <section className="room-related-section"><div><h2>Phòng liên quan</h2><p>Gợi ý cùng loại không gian hoặc cùng Studio nếu khung bạn chọn không còn.</p></div><ApiMessage loading={relatedRooms.loading} error={relatedRooms.error}/>{related.length > 0 && <div className="room-related-grid">{related.map(item => <Link className="room-related-card" href={`/rooms/${item.room_id}`} key={item.room_id}><ApiImage src={item.thumbnail_url} alt={item.name}/><span>{item.primary_space_type?.name || item.studio.name}</span><strong>{item.name}</strong><small>{item.display_rate ? `${money(item.display_rate.unit_price)} / ${unitLabels[item.display_rate.rate_unit] ?? item.display_rate.rate_unit}` : "Xem bảng giá"}</small></Link>)}</div>}</section>
+            {(related.length > 0 || relatedRooms.loading || !!relatedRooms.error) && <section className="room-related-section"><div><h2>Phòng liên quan</h2><p>Gợi ý cùng loại không gian hoặc cùng Studio nếu khung bạn chọn không còn.</p></div><ApiMessage loading={relatedRooms.loading} error={relatedRooms.error}/>{related.length > 0 && <div className="room-related-grid">{related.map(item => <Link className="room-related-card" href={`/rooms/${item.room_id}`} key={item.room_id}><ApiImage src={item.thumbnail_url} alt={item.name}/><span>{item.primary_space_type?.name || item.studio.name}</span><strong>{item.name}</strong><small>{item.display_rate ? `${money(item.display_rate.unit_price)} / ${unitLabels[item.display_rate.rate_unit] ?? item.display_rate.rate_unit}` : "Xem bảng giá"}</small></Link>)}</div>}</section>}
             <div className="api-mobile-booking-bar"><div><strong>{r.display_rate ? `${money(r.display_rate.unit_price)}` : "Xem bảng giá"}</strong><small>{r.display_rate ? ` / ${unitLabels[r.display_rate.rate_unit] ?? r.display_rate.rate_unit}` : ""}</small></div><Link className="btn" href={`/rooms/${id}/book`}>Chọn lịch</Link></div>
-            {lightboxIndex !== null && <Modal wide title={`${r.name} · Ảnh ${lightboxIndex + 1}/${r.images?.length || 1}`} onClose={() => setLightboxIndex(null)}><div className="api-lightbox"><ApiImage src={r.images?.[lightboxIndex]?.image_url ?? r.thumbnail_url} alt={`${r.name} – ảnh ${lightboxIndex + 1}`}/><div><button className="btn secondary" disabled={(r.images?.length ?? 0) < 2} onClick={() => setLightboxIndex(index => ((index ?? 0) + (r.images?.length ?? 1) - 1) % (r.images?.length ?? 1))}>Ảnh trước</button><button className="btn secondary" disabled={(r.images?.length ?? 0) < 2} onClick={() => setLightboxIndex(index => ((index ?? 0) + 1) % (r.images?.length ?? 1))}>Ảnh tiếp</button></div></div></Modal>}
         </>}
     </div>;
 }

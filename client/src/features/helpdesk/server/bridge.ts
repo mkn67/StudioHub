@@ -1,6 +1,7 @@
 const UUID = "[a-f0-9-]{36}";
 const routes = [
   /^conversations$/,
+  /^conversations\/current$/,
   new RegExp(`^conversations/${UUID}$`, "i"),
   new RegExp(`^conversations/${UUID}/messages$`, "i"),
   /^tickets$/,
@@ -45,6 +46,8 @@ export async function proxyHelpdesk(request: Request, segments: string[], sessio
   const sameOriginGet = request.method === "GET" && !request.headers.get("origin") &&
     request.headers.get("sec-fetch-site") === "same-origin" && Boolean(matchedOrigin);
   if (!matchedOrigin || (requestOrigin !== matchedOrigin.origin && !sameOriginGet)) return failure(403, "origin_denied");
+  // The Next route supplies this only from the HttpOnly business session cookie.
+  if (!request.headers.get("authorization")) return failure(401, "authentication_required");
   const secret = process.env.HELPDESK_BRIDGE_SECRET || "";
   if (secret.length < 32) return failure(503, "bridge_not_configured");
   const base = process.env.HELPDESK_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:8010");

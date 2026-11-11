@@ -1,4 +1,5 @@
 # Image sources
+- uit-campus.png: UIT official website, https://www.uit.edu.vn/media/image_68800ba31d.png (campus entrance photograph, downloaded 2026-11-10 for the requested homepage campus section).
 Photographs illustrate fictional demo spaces and are not verified inventory or endorsements. Replace with licensed Studio-owned photography before production.
 - daylight.jpg: Studio 122 gallery, https://images.squarespace-cdn.com/content/v1/67214d08df6437668daa86ca/f37a3586-3db1-47c5-bd40-02b2039f845a/Studio%2B122_3232.jpg?format=1800w (natural-color warm backdrop, wood and sunlight; illustrative)
 - cyclorama.jpg: Daydream Studio, https://payload.cargocollective.com/1/18/591919/9398168/DaydreamAgency_Studio_Opt01_0034_V2_1250.jpg

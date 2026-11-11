@@ -10,7 +10,8 @@ const base = "http://127.0.0.1:18010";
 await mkdir(resolve(root, "tests/.tmp"), { recursive: true });
 const db = resolve(root, "tests/.tmp/http-" + randomUUID() + ".sqlite");
 const secret = randomBytes(32).toString("hex");
-const env = { ...process.env, HELPDESK_DATABASE_URL: "sqlite:" + db, HELPDESK_BRIDGE_SECRET: secret, HELPDESK_FRONTEND_ORIGIN: "http://localhost:3000" };
+const env = { ...process.env, HELPDESK_DATABASE_URL: "sqlite:" + db, HELPDESK_BRIDGE_SECRET: secret, HELPDESK_FRONTEND_ORIGIN: "http://localhost:3000",
+  NINEROUTER_API_KEY: "", NINEROUTER_MODEL: "", NINEROUTER_TOOL_CALLING_ENABLED: "true", STUDIOHUB_PUBLIC_TOOLS: "false", STUDIOHUB_CUSTOMER_READ_TOOLS: "false", STUDIOHUB_API_BASE_URL: "http://127.0.0.1:18013/api" };
 async function command(args) {
   return new Promise((accept, reject) => {
     const p = spawn(php, ["-c", ini, ...args], { cwd: root, env, windowsHide: true }); let output = "";
@@ -20,15 +21,18 @@ async function command(args) {
 }
 await command(["bin/migrate.php", "--apply"]);
 const server = spawn(php, ["-c", ini, "-S", "127.0.0.1:18010", "-t", "public", "public/index.php"], { cwd: root, env, windowsHide: true, stdio: "ignore" });
+const authServer = spawn(php, ["-c", ini, "-S", "127.0.0.1:18013", "tests/readonly-api-fixture.php"], { cwd: root, env, windowsHide: true, stdio: "ignore" });
 let tests = 0;
 try {
   for (let n = 0; n < 40; n++) { try { if ((await fetch(base + "/health")).ok) break; } catch {} await new Promise(r => setTimeout(r, 100)); }
+  for (let n = 0; n < 40; n++) { try { if ((await fetch("http://127.0.0.1:18013/health")).ok) break; } catch {} await new Promise(r => setTimeout(r, 100)); }
   const session = randomBytes(32).toString("hex");
-  const headers = { "Content-Type": "application/json", Origin: "http://localhost:3000", "X-Helpdesk-Bridge": secret, "X-Helpdesk-Session": session };
+  const headers = { "Content-Type": "application/json", Origin: "http://localhost:3000", "X-Helpdesk-Bridge": secret, "X-Helpdesk-Session": session, Authorization: "Bearer synthetic-http-customer" };
   async function request(path, body, custom = headers, method = "POST") {
     const r = await fetch(base + "/api/v1/helpdesk/" + path, { method, headers: custom, ...(body !== undefined ? { body: typeof body === "string" ? body : JSON.stringify(body) } : {}) });
     return { status: r.status, json: await r.json() };
   }
+  assert.equal((await request("conversations", {}, { ...headers, Authorization: "" })).status, 401); tests++;
   let r = await request("conversations", {}); assert.equal(r.status, 201); tests++;
   const id = r.json.data.conversation.id; assert.equal(r.json.data.conversation.capabilities.publicFaq, false); tests++;
   assert.equal((await request("conversations", {}, { ...headers, "X-Helpdesk-Bridge": "wrong" })).status, 401); tests++;
@@ -36,7 +40,9 @@ try {
   assert.equal((await request("conversations", "{")).status, 400); tests++;
   assert.equal((await request("conversations", { text: "x".repeat(9000) })).status, 413); tests++;
   assert.equal((await request("conversations", { ownerId: "admin" })).status, 400); tests++;
-  assert.equal((await request("conversations/" + id, undefined, { ...headers, "X-Helpdesk-Session": randomBytes(32).toString("hex") }, "GET")).status, 404); tests++;
+  assert.equal((await request("conversations/" + id, undefined, { ...headers, Authorization: "Bearer synthetic-http-other" }, "GET")).status, 404); tests++;
+  assert.equal((await request("conversations/current", undefined, headers, "GET")).json.data.conversation.id, id); tests++;
+  assert.equal((await request("conversations/current", undefined, { ...headers, Authorization: "Bearer synthetic-http-other" }, "GET")).json.data.conversation, null); tests++;
   r = await request("conversations/" + id + "/messages", { text: "Khoảng đệm có miễn phí không?", clientMessageId: randomUUID() });
   assert.equal(r.status, 503); assert.equal(r.json.errors[0].code, "provider_not_configured"); tests++;
   const key = randomUUID();
@@ -50,5 +56,6 @@ try {
   console.log(JSON.stringify({ http_checks: tests, failed: 0, provider: "No live/model request; unavailable provider and real handoff persistence tested." }));
 } finally {
   server.kill(); await new Promise(r => server.once("exit", r));
+  authServer.kill();
   await rm(db, { force: true });
 }

@@ -53,7 +53,8 @@ export function validateHelpdeskResponse(value: unknown): HelpdeskResponse {
 export function createPhpHelpdeskAdapter(fetcher: typeof fetch = fetch): HelpdeskTransport {
   let conversationId: string | undefined;
   let generation = 0;
-  let retry: { text: string; key: string } | undefined;
+  let retry: { text: string; contextKey: string; key: string } | undefined;
+  let restored = false;
   async function call(path: string, method: "GET" | "POST", body?: unknown, signal?: AbortSignal): Promise<Json> {
     const result = await fetcher("/api/helpdesk/" + path, {
       method, credentials: "same-origin", headers: { "Content-Type": "application/json" },
@@ -62,13 +63,22 @@ export function createPhpHelpdeskAdapter(fetcher: typeof fetch = fetch): Helpdes
     const json: unknown = await result.json().catch(() => null);
     if (!result.ok || !record(json) || json.status !== "success" || !record(json.data)) {
       const reason = record(json) && Array.isArray(json.errors) && record(json.errors[0]) && typeof json.errors[0].code === "string" ? json.errors[0].code : "backend_unavailable";
+      if ((result.status === 401 || result.status === 403) && reason === "authentication_required" && typeof window !== "undefined") window.dispatchEvent(new Event("studiohub:session-expired"));
       throw new HelpdeskApiError(reason, messages[reason] || "Yêu cầu Helpdesk chưa thành công. Vui lòng thử lại.");
     }
     return json.data;
   }
   return {
     mode: "connected", timeoutMs: 32000,
-    reset() { generation++; conversationId = undefined; retry = undefined; },
+    reset() { generation++; conversationId = undefined; retry = undefined; restored = false; },
+    async startNew() {
+      const currentGeneration = ++generation;
+      conversationId = undefined; retry = undefined; restored = true;
+      const data = await call("conversations", "POST", { locale: "vi-VN" });
+      if (generation !== currentGeneration) return;
+      if (!record(data.conversation) || !string(data.conversation.id, 36)) throw new HelpdeskApiError("invalid_response", "Mã cuộc trò chuyện không hợp lệ.");
+      conversationId = data.conversation.id;
+    },
     async sendMessage(text: string, context?: HelpdeskContext, options?) {
       const currentGeneration = generation;
       const assertCurrent = () => {
@@ -81,7 +91,8 @@ export function createPhpHelpdeskAdapter(fetcher: typeof fetch = fetch): Helpdes
         if (!record(data.conversation) || !string(data.conversation.id, 36)) throw new HelpdeskApiError("invalid_response", "Mã cuộc trò chuyện không hợp lệ.");
         conversationId = data.conversation.id;
       }
-      if (!retry || retry.text !== text) retry = { text, key: crypto.randomUUID() };
+      const contextKey = JSON.stringify([context?.surface, context?.scope, context?.roomId]);
+      if (!retry || retry.text !== text || retry.contextKey !== contextKey) retry = { text, contextKey, key: crypto.randomUUID() };
       options?.onStatus?.("processing");
       const data = await call("conversations/" + conversationId + "/messages", "POST", { text, context, clientMessageId: retry.key }, options?.signal);
       assertCurrent();
@@ -97,14 +108,20 @@ export function createPhpHelpdeskAdapter(fetcher: typeof fetch = fetch): Helpdes
       return { text: "Ticket đã được lưu trong hàng đợi chưa nhận. Chưa có Host hoặc nhân viên nào tiếp nhận.", mode: "connected", state: "answered", sources: [], cards: [{ kind: "ticket", title: "Phiếu hỗ trợ đã lưu", ticketId: t.id, status: t.status }] };
     },
     async loadHistory(signal?: AbortSignal) {
-      if (!conversationId) return { messages: [], state: "bot_active" };
-      const data = await call("conversations/" + conversationId + "?limit=60", "GET", undefined, signal);
+      const currentGeneration = generation;
+      if (!conversationId && restored) return { messages: [], state: "bot_active" };
+      const data = await call(conversationId ? "conversations/" + conversationId + "?limit=60" : "conversations/current", "GET", undefined, signal);
+      if (currentGeneration !== generation || signal?.aborted) throw new HelpdeskApiError("request_cancelled", "Phiên trò chuyện đã thay đổi.");
+      if (data.conversation === null) { restored = true; return { messages: [], state: "bot_active" }; }
       if (!record(data.conversation) || !string(data.conversation.state, 30) || !Array.isArray(data.messages) || data.messages.length > 60) throw new HelpdeskApiError("invalid_response", "Lịch sử trò chuyện không hợp lệ.");
+      if (!string(data.conversation.id, 36)) throw new HelpdeskApiError("invalid_response", "Mã cuộc trò chuyện không hợp lệ.");
+      conversationId = data.conversation.id;
       const messages = data.messages.map(message => {
         if (!record(message) || !string(message.id, 36) || !["user", "assistant"].includes(String(message.role)) || !string(message.text, 4000) || !string(message.createdAt, 50)) throw new HelpdeskApiError("invalid_response", "Lịch sử trò chuyện không hợp lệ.");
         return { id: message.id, role: message.role as "user" | "assistant", text: message.text, createdAt: message.createdAt,
           ...(message.response ? { response: validateHelpdeskResponse(message.response) } : {}) };
       });
+      restored = true;
       return { messages, state: data.conversation.state };
     },
   };

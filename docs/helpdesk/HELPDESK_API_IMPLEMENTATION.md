@@ -1,5 +1,7 @@
 # Implemented isolated Helpdesk API
 
+**Current harness update (10/11/2026):** chat now requires login, supports account-scoped current conversation/history, and verifies current-room context. See the update at the end and [HELPDESK_HARNESS.md](HELPDESK_HARNESS.md); older guest-mode descriptions are historical.
+
 Base: standalone PHP :8010/api/v1/helpdesk. Browser-facing bridge: /api/helpdesk. No existing server/public/index.php registration changed. Success/error envelopes follow H1; machine errors remain errors[0].code. This report describes implemented extensions to H1's proposed schema, which remains unchanged as preparation history.
 
 ## Endpoints
@@ -69,3 +71,11 @@ Ticket confirmation is duplicate-safe by immutable proposalId and conversation l
 Common errors: 400 invalid_json/unknown_field/invalid_id; 401 authentication_required/verified_contact_required; 403 origin_denied; 404 resource_not_found; 409 idempotency_conflict/conversation_busy/invalid transition; 413 payload_too_large; 415 unsupported_media_type; 422 validation/tool/step limit; 429 rate_limited; 502 invalid_provider_response/ungrounded_response; 503 provider_not_configured/model_not_configured/tool_calling_disabled/storage_unavailable; 504 generation_timeout. JSON errors never expose SQL, stack traces or provider credentials.
 
 Prompt injection cannot add tools/permissions; schema/allowlist checks execute server-side, live readers are absent, and final policy text must equal complete retrieved paragraphs. This bounds behavior but does not claim universal injection immunity. See [actual tests](AGENT_EVALUATION_REPORT.md).
+
+# Cập nhật harness 10/11/2026
+
+Chat HTTP hiện **bắt buộc đăng nhập** qua cookie HttpOnly ở Next bridge và Bearer được xác minh bằng backend profile tại PHP. Guest create/history/current/messages trả 401; các mô tả guest ở các phần trước được thay thế bởi yêu cầu này. `/health` vẫn public.
+
+Endpoint mới `GET /api/v1/helpdesk/conversations/current` (BFF `GET /api/helpdesk/conversations/current`) không nhận query/owner ID. Success envelope hiện có bọc data `{conversation: Conversation|null, messages: Message[], nextCursor: null}`. Actor chỉ nhận pointer hội thoại hiện tại của chính tài khoản, ownership/expiry tiếp tục được kiểm tra. Không có chat thì conversation=null và messages=[]; lỗi storage/auth không bị đổi thành empty.
+
+Create conversation chủ động cập nhật pointer trong Helpdesk-owned records. Message context `{surface,scope?:"catalog",roomId?:positive integer}` là UI hint, được đối chiếu public API trước khi model dùng. Hash idempotency gồm text và context. Không đổi payload booking hoặc API nghiệp vụ. Xem [harness](HELPDESK_HARNESS.md) cho state, resume và test.

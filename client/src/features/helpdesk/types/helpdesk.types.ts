@@ -28,6 +28,7 @@ export interface HelpdeskTransport {
   readonly mode: "demo" | "connected";
   readonly timeoutMs?: number;
   reset?(): void;
+  startNew?(): Promise<void>;
   confirmTicket?(proposalId: string, signal?: AbortSignal): Promise<HelpdeskResponse>;
   loadHistory?(signal?: AbortSignal): Promise<{ messages: HelpdeskMessage[]; state: string }>;
   sendMessage(message: string, context?: HelpdeskContext, options?: { signal?: AbortSignal; onStatus?: (status: "connecting" | "processing") => void }): Promise<HelpdeskResponse>;

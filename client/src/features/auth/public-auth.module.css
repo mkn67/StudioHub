@@ -1,0 +1,35 @@
+.page { min-height: calc(100svh - 85px); display: grid; place-items: center; padding: 56px 24px 72px; background: #f4f7f8; color: #20323e; font-family: "StudioHub Vietnam", sans-serif; }
+.panel { width: min(100%, 472px); }
+.eyebrow { margin: 0 0 18px; font-size: 11px; font-weight: 700; color: #0b657d; text-transform: uppercase; letter-spacing: .09em; }
+.panel h1 { font-family: inherit; font-size: clamp(29px, 3.3vw, 38px); line-height: 1.3; letter-spacing: -.045em; margin: 0 0 14px; }
+.intro { color: #526570; font-size: 15px; line-height: 1.75; margin: 0 0 30px; }
+.fields { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.fields > label { display: block; margin: 9px 0 0; font-size: 14px; font-weight: 700; }
+.fields input:not([type="checkbox"]) { display: block; width: 100%; margin-top: 9px; border: 1.5px solid #20323e; border-radius: 10px; box-shadow: none; background: #fff; color: #20323e; min-height: 52px; padding: 12px 14px; font-family: inherit; font-size: 16px; line-height: 1.5; }
+.fields input::placeholder { color: #687b86; opacity: 1; font-size: 14px; font-weight: 400; }
+.fields :is(input, button, a, summary):focus-visible, .switch a:focus-visible { outline: 3px solid #0b7e9d; outline-offset: 4px; }
+.fields input[aria-invalid="true"] { border-color: #a32938; }
+.fields:disabled { opacity: .72; }
+.password { position: relative; }
+.password input:not([type="checkbox"]) { margin-top: 0; padding-right: 54px; }
+.password button { position: absolute; right: 5px; top: 4px; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #40535e; cursor: pointer; box-shadow: none; }
+.password button:hover { background: #e4f3f7; }
+.hint { color: #526570; font-size: 12px; margin: 0; line-height: 1.6; }
+.optional { color: #526570; font-weight: 400; font-size: 12px; }
+.recovery { margin: 5px 0 8px; font-size: 13px; line-height: 1.7; }
+.recovery summary { width: fit-content; margin-left: auto; color: #0b657d; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.recovery p { padding: 12px 14px; background: #e6f2f6; border-left: 3px solid #0b657d; margin: 12px 0 0; }
+.consent { display: flex; align-items: flex-start; gap: 11px; margin: 15px 0 5px; font-size: 13px; line-height: 1.9; }
+.consent input { flex: 0 0 20px; width: 20px; height: 20px; margin: 3px 0 0; accent-color: #087c98; cursor: pointer; }
+.consent label { display: inline; font: inherit; cursor: pointer; margin: 0; }
+.consent a, .switch a { color: #086981; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+.submit { display: flex; align-items: center; justify-content: center; gap: 12px; width: calc(100% - 4px); min-height: 52px; margin-top: 14px; padding: 12px 18px; border: 2px solid #20323e; border-radius: 11px; background: #087d99; color: #fff; font: 700 15px "StudioHub Vietnam", sans-serif; box-shadow: 4px 4px 0 #20323e; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+.submit:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #20323e; background: #066c85; }
+.submit:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #20323e; }
+.fields:disabled .submit { cursor: wait; transform: none; box-shadow: none; }
+.switch { margin: 27px 0 0; text-align: center; color: #526570; font-size: 14px; line-height: 1.7; }
+.error { display: block; color: #a32938; font-size: 13px; line-height: 1.6; margin: 0; }
+.errorBox { padding: 12px 14px; background: #fff0f1; border: 1px solid #d9a1a9; border-radius: 8px; color: #8b2433; font-size: 13px; line-height: 1.6; margin: 6px 0 0; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 640px) { .page { min-height: calc(100svh - 72px); padding: 36px 22px 60px; } .intro { margin-bottom: 22px; } }
+@media (prefers-reduced-motion: reduce) { .submit { transition: none; } .submit:is(:hover, :active) { transform: none; } }

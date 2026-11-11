@@ -142,7 +142,10 @@ final class NineRouterClient implements LanguageModel
     private function call(string $method, string $path, ?array $body, float $deadline): array
     {
         $key = $this->config->get('NINEROUTER_API_KEY');
-        $base = CurlTransport::base($this->config->get('NINEROUTER_BASE_URL'));
+        $base = CurlTransport::base(
+            $this->config->get('NINEROUTER_BASE_URL'),
+            explode(',', $this->config->get('NINEROUTER_HTTP_HOSTS')),
+        );
 
         if ($key === '') {
             throw new Failure('provider_not_configured', 503);

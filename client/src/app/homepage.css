@@ -1,4 +1,7 @@
 /* Public discovery surfaces only; workspace typography and tokens stay isolated. */
+.home-campus { min-width: 0; align-self: center; }
+.home-campus > img { display: block; width: 100%; height: auto; border: 2px solid var(--ink); border-radius: 18px; }
+
 @font-face {
   font-family: "StudioHub Vietnam";
   src: url("/fonts/be-vietnam-pro/regular.ttf") format("truetype");
@@ -17,7 +20,8 @@
   background: #fff;
 }
 .public-header .public-nav { gap: 32px; font-size: 17px; font-weight: 700; }
-.public-header .public-nav a { border-bottom: 0; }
+.public-header .public-nav a { border-bottom: 0; text-decoration: none; }
+.public-header .public-nav a:is(.active, :hover) { text-decoration: none; }
 .public-header .public-nav a:hover { color: var(--brand); }
 .public-header .nav-login,
 .public-header .account-link,
@@ -27,30 +31,30 @@
 
 body:has(.hero) .hero.home-hero {
   height: auto;
-  min-height: 690px;
+  min-height: 660px;
   max-height: none;
   padding-bottom: 0;
   color: var(--ink);
   border-bottom: 2px solid var(--ink);
   background: #eef1f2;
-  overflow: clip;
+  overflow: visible;
   font-family: "StudioHub Vietnam", sans-serif;
 }
-body:has(.hero) .home-hero .hero-photo { object-position: center 54%; }
-body:has(.hero) .home-hero .hero-shade { background: none; }
+body:has(.hero) .home-hero .hero-photo { object-position: center 54%; animation: none; }
+body:has(.hero) .home-hero .hero-shade { background: linear-gradient(90deg, rgba(255,255,255,.35), transparent 65%); }
 body:has(.hero) .home-hero .hero-inner {
   width: min(100%, 1320px);
   margin-inline: auto;
-  padding: 72px 40px 100px;
+  padding: 70px 40px 90px;
 }
 body:has(.hero) .home-hero .hero-editorial {
-  width: 46%;
+  width: 100%;
   max-width: 880px;
-  padding: clamp(28px, 2.5vw, 36px);
-  background: #f7f1e3;
-  border: 3px solid var(--ink);
-  border-radius: 2px;
-  box-shadow: 9px 9px 0 var(--ink);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 .home-hero .hero-kicker {
   display: block;
@@ -66,10 +70,10 @@ body:has(.hero) .home-hero .riso-headline {
   margin-bottom: 24px;
   font-family: inherit;
   color: #152832;
-  font-size: clamp(42px, 4.2vw, 60px);
+  font-size: clamp(64px, 5.4vw, 82px);
   font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: -.055em;
+  line-height: 1.22;
+  letter-spacing: -.045em;
   text-shadow: none;
 }
 .home-hero .riso-headline > span { display: block; }
@@ -77,11 +81,14 @@ body:has(.hero) .home-hero .hero-emphasis { color: var(--brand); white-space: no
 body:has(.hero) .home-hero .hero-editorial > p { color: #40535e; font-size: 17px; line-height: 1.7; }
 body:has(.hero) .home-hero .hero-search {
   max-width: none;
-  margin-top: 34px;
+  margin-top: 38px;
   padding: 12px;
   gap: 0;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  position: relative;
+  z-index: 3;
   border: 2px solid var(--ink);
-  border-radius: 4px;
+  border-radius: 18px;
   background: #fff;
   box-shadow: 5px 5px 0 var(--ink);
 }
@@ -93,7 +100,7 @@ body:has(.hero) .home-hero .hero-search .btn {
   height: 56px;
   margin: 0 4px 4px 12px;
   border: 2px solid var(--ink);
-  border-radius: 6px;
+  border-radius: 12px;
   background: var(--brand);
   color: #fff;
   box-shadow: 3px 3px 0 var(--ink);
@@ -141,9 +148,9 @@ body:has(.hero) .home-categories .categories .category-illustration { height: 88
 .home-hero :is(button, input, select):focus-visible { outline: 3px solid var(--brand); outline-offset: 5px; }
 
 @media (max-width: 1150px) {
-  .public-header .public-nav { gap: 24px; font-size: 16px; }
-  body:has(.hero) .home-hero .hero-editorial { width: 58%; }
-  body:has(.hero) .home-hero .riso-headline { font-size: clamp(38px, 4.45vw, 52px); }
+  .public-header .public-nav { gap: 24px; font-size: 17px; }
+  body:has(.hero) .home-hero .hero-editorial { width: 100%; }
+  body:has(.hero) .home-hero .riso-headline { font-size: clamp(54px, 6vw, 68px); }
   body:has(.hero) .home-categories .categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
@@ -161,9 +168,9 @@ body:has(.hero) .home-categories .categories .category-illustration { height: 88
   .public-header .nav-login { white-space: nowrap; }
   body:has(.hero) .hero.home-hero { min-height: 0; }
   body:has(.hero) .home-hero .hero-inner { padding: 32px 20px 96px; }
-  body:has(.hero) .home-hero .hero-editorial { width: calc(100% - 6px); padding: 26px 20px; box-shadow: 6px 6px 0 var(--ink); }
+  body:has(.hero) .home-hero .hero-editorial { width: 100%; padding: 0; box-shadow: none; }
   .home-hero .hero-kicker { font-size: 9px; letter-spacing: .07em; margin-bottom: 20px; }
-  body:has(.hero) .home-hero .riso-headline { font-size: clamp(29px, 7.6vw, 46px); line-height: 1.3; letter-spacing: -.055em; margin-bottom: 18px; }
+  body:has(.hero) .home-hero .riso-headline { font-size: clamp(30px, 8.3vw, 46px); line-height: 1.3; letter-spacing: -.045em; margin-bottom: 18px; }
   body:has(.hero) .home-hero .hero-editorial > p { font-size: 15px; }
   body:has(.hero) .home-hero .hero-search { grid-template-columns: minmax(0, 1fr); margin-top: 28px; gap: 0; }
   body:has(.hero) .home-hero .hero-search label,
@@ -181,4 +188,17 @@ body:has(.hero) .home-categories .categories .category-illustration { height: 88
 @media (prefers-reduced-motion: reduce) {
   body:has(.hero) .home-categories .categories > a:is(:hover, :active),
   body:has(.hero) .home-hero .hero-search .btn:is(:hover, :active) { transform: none; }
+}
+
+/* One control surface; fields keep only their internal separators. */
+body:has(.hero) .home-hero .hero-search :is(input, select) { border: 0; border-radius: 0; box-shadow: none; padding: 0; width: 100%; background-color: transparent; }
+body:has(.hero) .home-hero .hero-search label > span:first-child { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 700; color: #40535e; }
+body:has(.hero) .home-hero .hero-search label { border-bottom: 0; }
+body:has(.hero) .home-hero .hero-search .room-search-autocomplete { min-width: 0; }
+body:has(.hero) .home-hero .hero-search .btn { font-family: inherit; white-space: nowrap; }
+body:has(.hero) .home-hero .hero-caption > span { background: rgba(255,255,255,.85); border-color: #cad3d8; }
+@media (max-width: 900px) { body:has(.hero) .home-hero .hero-search { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }
+@media (max-width: 640px) {
+ body:has(.hero) .home-hero .hero-search { grid-template-columns: minmax(0, 1fr); }
+ body:has(.hero) .home-hero .hero-search label { border-right: 0; border-bottom: 1px solid var(--line); }
 }

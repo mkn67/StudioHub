@@ -108,9 +108,23 @@ final class AgentService
             'inflight'  => null, // Yêu cầu đang được xử lý (chống gửi trùng/đồng thời).
         ];
 
-        $this->store->put(self::COLLECTION, $conversation['id'], $conversation, ['owner' => $actor->owner]);
+        $this->store->transaction(function() use ($conversation,$actor): void {
+            $this->store->put(self::COLLECTION, $conversation['id'], $conversation, ['owner' => $actor->owner]);
+            $this->store->put('helpdesk_records','active-conversation:'.hash('sha256',$actor->owner),['conversationId'=>$conversation['id']],['kind'=>'active_conversation']);
+        });
 
         return ['conversation' => $this->publicConversation($conversation, $actor)];
+    }
+
+    public function current(Actor $actor): array
+    {
+        $row=$this->store->get('helpdesk_records','active-conversation:'.hash('sha256',$actor->owner));
+        if($row && $row['expires']>=time()) {
+            $pointer=json_decode($row['payload'],true);
+            try {return $this->history($pointer['conversationId'],$actor,60);}
+            catch(Failure $e) {if($e->reason!=='resource_not_found')throw $e;}
+        }
+        return ['conversation'=>null,'messages'=>[],'nextCursor'=>null];
     }
 
     /**
@@ -158,7 +172,7 @@ final class AgentService
 
         $text = Util::text($body['text'] ?? null);
         $key = Util::uuid($body['clientMessageId'] ?? null);
-        $hash = hash('sha256', $text); // Dùng để phát hiện cùng clientMessageId nhưng khác nội dung.
+        $hash = hash('sha256', Util::canonicalJson(['text'=>$text,'context'=>$body['context']??[]]));
 
         $reservation = $this->reserveRequest($id, $actor, $key, $hash);
 
@@ -168,7 +182,7 @@ final class AgentService
         }
 
         $conversation = $reservation['conversation'];
-        $evidence = ['chunks' => [], 'rooms' => [], 'context' => $body['context'] ?? []];
+        $evidence = ['chunks' => [], 'rooms' => [], 'context' => $body['context'] ?? [],'agentState'=>$conversation['agentState']??[]];
         $start = microtime(true);
 
         try {
@@ -394,7 +408,7 @@ final class AgentService
     private function generateAnswer(string $text, array $conversation, Actor $actor, array &$evidence): array
     {
         if (($evidence['context']['scope'] ?? '') === 'catalog'
-            && ($text === '/handoff' || (new IntentGuard())->refusal($text) !== null)) {
+            && $text === '/handoff') {
             return AgentOrchestrator::base('Mình giúp tìm phòng và giải thích thông tin phòng. Bạn mở Đơn của tôi để xem và quản lý đơn thuê.');
         }
         if ($text === '/handoff') {
@@ -412,8 +426,26 @@ final class AgentService
         }
 
         $refusal = (new IntentGuard())->refusal($text);
+        if ($refusal !== null && $this->config->bool('STUDIOHUB_CUSTOMER_READ_TOOLS') && !$actor->authenticated() && str_starts_with($refusal,'Chức năng tra cứu riêng tư')) {
+            return AgentOrchestrator::base('Bạn cần đăng nhập tài khoản khách hàng để xem đơn của mình. Mã đơn trong tin nhắn không cấp quyền truy cập.','unauthorized');
+        }
+        $agentic=$this->config->get('NINEROUTER_TOOL_CALLING_ENABLED','true')==='true';
+        if ($agentic && $refusal !== null && $this->config->bool('STUDIOHUB_PUBLIC_TOOLS') && str_starts_with($refusal,'Chức năng kiểm tra khả dụng')) $refusal=null;
+        if ($agentic && $refusal !== null && $this->config->bool('STUDIOHUB_CUSTOMER_READ_TOOLS') && $actor->role==='customer' && $actor->authorization()!==null && str_starts_with($refusal,'Chức năng tra cứu riêng tư')) $refusal=null;
         if ($refusal !== null) {
             return AgentOrchestrator::base($refusal);
+        }
+
+        if ($this->config->get('NINEROUTER_TOOL_CALLING_ENABLED','true') !== 'true') {
+            $chunks=(new LexicalRetriever($this->knowledge))->search($text,$actor);
+            if (!$chunks) return AgentOrchestrator::base('Chế độ gọi công cụ đang tắt. Mình chưa tìm thấy thông tin đã được duyệt để trả lời.');
+            $claims=[];
+            foreach(array_slice($chunks,0,3) as $chunk) {
+                $evidence['chunks'][$chunk['chunk_id']]=$chunk;
+                $claims[]=['chunk_id'=>$chunk['chunk_id'],'text'=>$chunk['content']];
+            }
+            $a=\StudioHub\Helpdesk\Knowledge\CitationBuilder::answer($claims,$evidence['chunks'],$this->knowledge->version);
+            return array_replace(AgentOrchestrator::base($a['text'],'answered'),['sources'=>$a['sources'],'citations'=>$a['citations'],'answerKind'=>'rag','reasonCode'=>null]);
         }
 
         if (!$this->testMode) {
@@ -533,10 +565,14 @@ final class AgentService
                 'response'   => $response,
                 'citations'  => $data['citations'],
                 'reasonCode' => $data['reasonCode'],
+                'privateToolAnswer' => isset($evidence['bookingsResult']),
             ];
 
             // Lưu kết quả theo clientMessageId để lần gửi lại trả đúng kết quả này, rồi nhả khóa.
             $conversation['results'][$key] = ['hash' => $hash, 'data' => $data];
+            if(($evidence['resolvedRooms']['match']??'')==='ambiguous')$evidence['agentState']['pendingRequest']=Util::redact($text);
+            elseif(!empty($evidence['rates']) || !empty($evidence['roomFacts']))unset($evidence['agentState']['pendingRequest']);
+            $conversation['agentState']=$evidence['agentState']??[];
             $conversation['inflight'] = null;
             $this->store->put(self::COLLECTION, $id, $conversation, ['owner' => $actor->owner]);
 
@@ -588,7 +624,11 @@ final class AgentService
 
         if ($this->catalog->enabled()) {
             $this->registerCatalogTools($registry, $evidence);
+            $registry->alias('search_studios', 'search_rooms');
+            $registry->alias('get_room_pricing', 'get_room_rates');
         }
+        $registry->alias('explain_booking_policy', 'search_knowledge');
+        $this->catalog->readOnlyTools()->register($registry, $evidence);
 
         if (($evidence['context']['scope'] ?? '') !== 'catalog') {
             $this->registerTicketTool($registry, $evidence);
@@ -654,18 +694,23 @@ final class AgentService
                 'name'        => $s(150),
                 'capacity'    => ['type' => 'integer', 'minimum' => 0],
                 'description' => ['type' => 'string', 'maxLength' => 400],
+                'basePrice'=>['type'=>'integer','minimum'=>0],
+                'rateUnit'=>['type'=>'string','enum'=>['hour','session','half_day','day','week','month']],
             ],
             ['roomId', 'name', 'capacity', 'description'],
         );
 
         $registry->add(
             'search_rooms',
-            'Search active public physical rooms; capacity filter is applied to first five API results, '
-            . 'not a complete availability search.',
+            'Search active public physical rooms. Use only filters actually supplied by the user. '
+            . 'Omit unknown filters or pass null. Never invent district, people or budget; 0 budget means free rooms, not unspecified. '
+            . 'Use keyword recording for thu âm, podcast for podcast. Not an availability check.',
             $obj(
-                ['keyword' => $s(100), 'people' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100],
-                    'district'=>$s(100), 'max_price'=>['type'=>'integer','minimum'=>0,'maximum'=>1000000000],
-                    'rate_unit'=>['type'=>'string','enum'=>['hour','session','half_day','day','week','month']]],
+                ['keyword' => $s(100)+['description'=>'One concrete search keyword. For thu âm use recording; for podcast use podcast. Do not combine them with OR.'],
+                    'people' => ['type' => ['integer','null'], 'minimum' => 1, 'maximum' => 100,'description'=>'Requested attendee count only. Null if not supplied.'],
+                    'district'=>['type'=>['string','null'],'minLength'=>1,'maxLength'=>100,'description'=>'Requested area only. Null if not supplied. Never use x or whitespace as a placeholder.'],
+                    'max_price'=>['type'=>['integer','null'],'minimum'=>0,'maximum'=>1000000000,'description'=>'User-specified maximum VND price only. Null if unknown; never use 0 to mean no budget.'],
+                    'rate_unit'=>['type'=>['string','null'],'enum'=>['hour','session','half_day','day','week','month',null],'description'=>'Requested pricing unit, otherwise null.']],
                 [],
             ),
             $obj(
@@ -679,15 +724,42 @@ final class AgentService
             function ($args) use (&$evidence) {
                 $result = $this->catalog->search($args);
                 $evidence['roomSearchCompleted'] = true;
+                $evidence['rooms']=[];
+                $evidence['agentState']['candidates']=[];
 
                 foreach ($result['items'] as $item) {
                     $evidence['rooms'][$item['roomId']] = self::roomCard($item);
+                    self::rememberRoom($evidence,$item);
+                    $evidence['agentState']['candidates'][]=['roomId'=>$item['roomId'],'name'=>$item['name']];
                 }
 
                 return $result;
             },
             $allow,
         );
+
+        $registry->add('resolve_room',
+            'Resolve an exact or partial public room name, including a short name supplied as a follow-up. Use the name itself, not category/budget words. Exact matches take priority. If ambiguous show actual candidates; never select the first by guess. Use returned room IDs to fetch pricing or facts.',
+            $obj(['query'=>$s(150),'prefer_viewed'=>['type'=>['boolean','null'],'description'=>'Null/default uses a matching current page room for a short name. Set false when the user explicitly requests a different room or comparison.']],['query']),
+            $obj(['match'=>['type'=>'string','enum'=>['unique','ambiguous','empty']],'items'=>['type'=>'array','items'=>$room,'maxItems'=>5]],['match','items']),
+            function($args) use (&$evidence) {
+                $r=$this->catalog->resolve($args['query']);
+                $viewed=$evidence['viewedRoom']??null;
+                if($r['match']==='ambiguous' && ($args['prefer_viewed']??true) && $viewed && PublicCatalog::nameMatches($args['query'],$viewed['name'])) {
+                    $r=['match'=>'unique','items'=>[array_intersect_key($viewed,array_flip(['roomId','name','capacity','description','basePrice','rateUnit']))]];
+                }
+                $evidence['resolvedRooms']=$r;
+                $evidence['agentState']['selectionRequired']=$r['match']==='ambiguous';
+                if($r['match']!=='unique')unset($evidence['agentState']['selectedRoomId']);
+                $evidence['rooms']=[];$evidence['roomSearchCompleted']=true;
+                $evidence['agentState']['candidates']=[];
+                foreach($r['items'] as $item) {
+                    self::rememberRoom($evidence,$item,$r['match']==='unique');
+                    $evidence['rooms'][$item['roomId']]=self::roomCard($item);
+                    $evidence['agentState']['candidates'][]=['roomId'=>$item['roomId'],'name'=>$item['name']];
+                }
+                return $r;
+            },$allow);
 
         $registry->add(
             'get_room_details',
@@ -698,8 +770,10 @@ final class AgentService
                 ['roomId', 'name', 'capacity', 'description', 'availability'],
             ),
             function ($args) use (&$evidence) {
+                if(!empty($evidence['agentState']['selectionRequired']) && ($evidence['context']['roomId']??null)!==$args['roomId']) throw new Failure('room_selection_required',422);
                 $item = $this->catalog->details($args['roomId']);
                 $evidence['rooms'][$item['roomId']] = self::roomCard($item);
+                self::rememberRoom($evidence,$item,true);
 
                 return $item;
             },
@@ -713,8 +787,10 @@ final class AgentService
             $obj(['roomId'=>['type'=>'integer','minimum'=>1]],['roomId']),
             $obj(['roomId'=>$s(20),'text'=>$s(16000),'missingFields'=>['type'=>'array','items'=>$s(100),'maxItems'=>30],'checkedAt'=>$s(100)],['roomId','text','missingFields','checkedAt']),
             function($args)use(&$evidence){
+                if(!empty($evidence['agentState']['selectionRequired']))throw new Failure('room_selection_required',422);
                 $facts=$this->catalog->facts($args['roomId']);
                 $evidence['roomFacts'][$facts['roomId']]=$facts;
+                $evidence['agentState']['selectedRoomId']=$args['roomId'];
                 return $facts;
             },
             $allow,
@@ -725,6 +801,11 @@ final class AgentService
                 'unitPrice' => ['type' => 'integer', 'minimum' => 0],
                 'rateUnit'  => $s(30),
                 'currency'  => ['type' => 'string', 'enum' => ['VND']],
+                'rate_id'=>['type'=>'integer','minimum'=>1],
+                'unit_minutes'=>['type'=>'integer','minimum'=>0],
+                'minimum_units'=>['type'=>'integer','minimum'=>0],
+                'maximum_units'=>['type'=>'integer','minimum'=>0],
+                'effective_from'=>$s(10), 'effective_to'=>$s(10),
             ],
             ['unitPrice', 'rateUnit', 'currency'],
         );
@@ -739,11 +820,16 @@ final class AgentService
                     'rates'     => ['type' => 'array', 'items' => $rate, 'maxItems' => 10],
                     'quote'     => ['type' => 'boolean'],
                     'checkedAt' => $s(50),
+                    'roomName'=>$s(150),
                 ],
                 ['roomId', 'rates', 'quote', 'checkedAt'],
             ),
             function ($args) use (&$evidence) {
+                if(!empty($evidence['agentState']['selectionRequired']))throw new Failure('room_selection_required',422);
                 $result = $this->catalog->rates($args['roomId']);
+                $known=$evidence['agentState']['knownRooms'][(string)$args['roomId']]??null;
+                if($known)$result['roomName']=$known['name'];
+                $evidence['agentState']['selectedRoomId']=$args['roomId'];
                 $evidence['rates'][] = $result;
 
                 return $result;
@@ -828,7 +914,14 @@ final class AgentService
             'kind'        => 'room',
             'title'       => $item['name'],
             'roomId'      => $item['roomId'],
-            'description' => 'Sức chứa ' . $item['capacity'] . ' người. ' . $item['description'],
+            'description' => (isset($item['basePrice'])?'Giá cơ bản '.number_format($item['basePrice'],0,',','.').' VND/'.Util::rentalUnitLabel($item['rateUnit']).'. ':'').'Sức chứa ' . $item['capacity'] . ' người. ' . $item['description'],
         ];
+    }
+
+    private static function rememberRoom(array &$evidence,array $item,bool $select=false): void
+    {
+        $evidence['agentState']['knownRooms'][$item['roomId']]=['roomId'=>$item['roomId'],'name'=>$item['name']];
+        $evidence['agentState']['knownRooms']=array_slice($evidence['agentState']['knownRooms'],-10,null,true);
+        if($select){$evidence['agentState']['selectedRoomId']=(int)$item['roomId'];$evidence['agentState']['selectionRequired']=false;}
     }
 }

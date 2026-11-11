@@ -359,7 +359,9 @@ test('empty search returns a useful refinement prompt',function()use($guest){
 });
 test('catalog page context guides room lookup and excludes support mutations',function()use($guest){
     $cfg=config(['STUDIOHUB_PUBLIC_TOOLS'=>'true']);$store=new Store($cfg);$store->migrate();global $corpus,$manifest;
-    $http=new FakeTransport([['status'=>200,'body'=>['status'=>'success','data'=>['roomId'=>'12','text'=>'Thông tin phòng 12 từ API.','missingFields'=>[],'checkedAt'=>date(DATE_ATOM)]]]]);
+    $http=new FakeTransport([
+        ['status'=>200,'body'=>['status'=>'success','data'=>['room_id'=>12,'name'=>'Actual room','capacity'=>4,'description'=>'Public']]],
+        ['status'=>200,'body'=>['status'=>'success','data'=>['roomId'=>'12','text'=>'Thông tin phòng 12 từ API.','missingFields'=>[],'checkedAt'=>date(DATE_ATOM)]]]]);
     $m=new ScriptedModel([function($messages,$tools){
         check(str_contains(Util::json($messages),'viewing public room ID 12'));
         $names=array_column(array_column($tools,'function'),'name');
@@ -377,6 +379,8 @@ test('catalog page context guides room lookup and excludes support mutations',fu
     fails(fn()=>Util::context(['surface'=>'public','scope'=>'catalog','roomId'=>'12']),'invalid_context');
     fails(fn()=>Util::context(['surface'=>'public','scope'=>'catalog','roomId'=>-1]),'invalid_context');
 });
+require __DIR__.'/readonly-tools.php';
+require __DIR__.'/harness.php';
 $failed=0;
 foreach($tests as$name=>$fn){try{$fn();echo "PASS $name\n";}catch(Throwable $e){$failed++;echo "FAIL $name: ".$e->getMessage()."\n";}}
 echo Util::json(['tests'=>count($tests),'passed'=>count($tests)-$failed,'failed'=>$failed,'assertions'=>$assertions,'provider'=>'scripted/mocked, no live gateway claim'])."\n";

@@ -60,6 +60,7 @@ final class Application
         // --- 1. Xác thực & kiểm tra nguồn gọi --------------------------------------------------
 
         $transport = new CurlTransport();
+        if (($headers['authorization'] ?? '') === '') throw new Failure('authentication_required', 401);
         $actor     = (new Identity($this->config, $transport))->resolve($headers);
 
         // Chấp nhận một hoặc nhiều origin, phân cách bằng dấu phẩy.
@@ -101,6 +102,7 @@ final class Application
         // --- 4. Điều hướng (routing) ------------------------------------------------------------
 
         // POST /conversations -> tạo hội thoại mới
+        if ($method === 'GET' && $path === self::API_BASE . '/conversations/current') {Util::fields($query,[]);return [200,$agent->current($actor)];}
         if ($method === 'POST' && $path === self::API_BASE . '/conversations') {
             return [201, $agent->create($body, $actor)];
         }

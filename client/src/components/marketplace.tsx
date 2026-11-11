@@ -28,7 +28,6 @@ import { unitLabels } from "@/services/api/contracts";
 import { ApiImage } from "@/features/marketplace/backend-pages";
 import { ApiMessage } from "./api-ui";
 import { RoomListingCard, RoomListingSkeleton } from "@/features/marketplace/RoomListingCard";
-import { discoveryPurposes, typesForPurpose } from "@/features/marketplace/discovery-purposes";
 import { RoomSearchAutocomplete } from "@/features/marketplace/RoomSearchAutocomplete";
 import {
   roomRate,
@@ -99,11 +98,11 @@ export function Home() {
           <div className="hero-editorial">
           <span className="hero-kicker">Không gian sáng tạo / StudioHub</span>
           <h1 className="riso-headline" id="home-title">
-            <span>StudioHub-UIT</span>
-            <span className="hero-emphasis">Xin chào bạn!</span>
+                  <span className="motion-line"><span className="motion-line-text">StudioHub-UIT</span></span>
+                  <span className="hero-emphasis motion-line"><span className="motion-line-text">Xin chào bạn!</span></span>
           </h1>
           <p>
-            Hệ thống tìm kiếm Studio lớn nhì UIT. Tiện lợi, nhanh chóng.
+            Trung tâm tìm kiếm/cho thuê Studio lớn nhì UIT. An toàn, tiện lợi.
           </p>
           </div>
           <form
@@ -119,8 +118,8 @@ export function Home() {
             }}
           >
             <label>
-              <span>{backendEnabled ? "Studio / phòng" : "Địa điểm"}</span>
-              {backendEnabled ? <RoomSearchAutocomplete value={location} onChange={setLocation} types={catalog.data ?? []}/> : <select
+              <span>Studio / Phòng</span>
+              {backendEnabled ? <RoomSearchAutocomplete value={location} onChange={setLocation} types={catalog.data ?? []} placeholder={'Thử "lookbook", "podcast", "Quận 3"...'}/> : <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               >
@@ -165,9 +164,7 @@ export function Home() {
       <section className="section container home-categories" aria-labelledby="home-categories-title">
         <div className="section-head">
           <h2 id="home-categories-title">
-            Mỗi ý tưởng,
-            <br />
-            một không gian.
+            Các loại Studio phổ biến
           </h2>
           <p className="muted">
             Từ những khung hình đầu tiên đến bản thu cuối cùng.
@@ -202,23 +199,13 @@ export function Home() {
           </section>;
           })}
         </div>
-        <section className="purpose-discovery" aria-labelledby="purpose-discovery-title">
-          <div className="purpose-discovery-heading"><div><span className="mono">BẮT ĐẦU TỪ Ý TƯỞNG</span><h3 id="purpose-discovery-title">Bạn đang tìm không gian cho mục đích gì?</h3></div><p>Chọn nhu cầu trước; xem loại phòng phù hợp ở bước tiếp theo.</p></div>
-          <div className="purpose-discovery-grid">
-            {discoveryPurposes.map(purpose => {
-              const matches = typesForPurpose(categories.map(type => ({ id: type.id, name: type.category })), purpose.typeNames);
-              if (!matches.length) return null;
-              return <article className="purpose-card" key={purpose.id}><Image className="purpose-card-photo" src={categoryPhoto(matches[0].name)} alt="" width={720} height={440} loading="lazy"/><div className="purpose-card-copy"><h4>{purpose.label}</h4><p>{purpose.detail}</p><div className="purpose-card-links" aria-label={`Chọn loại phòng cho ${purpose.label}`}>{matches.map(type => <Link key={type.id} href={backendEnabled ? `/rooms?space_type_id=${encodeURIComponent(type.id)}` : `/rooms?category=${encodeURIComponent(type.name)}`}>{matches.length > 1 ? type.name : "Xem phòng phù hợp"} <ArrowUpRight size={14}/></Link>)}</div></div></article>;
-            })}
-          </div>
-        </section>
       </section>
       <section className="section container">
         <div className="section-head">
           <div>
-            <h2>Chọn nơi bắt đầu.</h2>
+            <h2>Các Studio được đánh giá cao</h2>
             <p className="muted">
-              {backendEnabled ? "Những phòng Studio đang mở cho thuê." : "Những phòng Studio trong bộ dữ liệu minh họa."}
+              {backendEnabled ? "Những phòng Studio được người thuê đánh giá tốt nhất." : "Những phòng Studio trong bộ dữ liệu minh họa."}
             </p>
           </div>
           <Link className="text-link" href="/rooms">
@@ -258,11 +245,15 @@ export function Home() {
       </section>
       <section className="how-section">
         <div className="container how-grid">
-          <h2>
-            Từ ý tưởng
-            <br />
-            đến buổi sáng tạo.
-          </h2>
+          <div className="home-campus">
+            <Image
+              src="/images/uit-campus.png"
+              alt="Cổng trường và tòa nhà Trường Đại học Công nghệ Thông tin, Đại học Quốc gia TP. Hồ Chí Minh"
+              width={1293}
+              height={854}
+              sizes="(max-width: 640px) calc(100vw - 40px), 44vw"
+            />
+          </div>
           <div>
             {[
               [
@@ -271,11 +262,11 @@ export function Home() {
               ],
               [
                 "Chọn lịch và thiết bị",
-                "Biết rõ chi phí và chính sách trước khi xác nhận.",
+                "Thông tin rõ ràng, hỗ trợ giải đáp nhanh chóng.",
               ],
               [
                 "Đặt cọc, nhận xác nhận",
-                "Thanh toán cọc mô phỏng và chờ chủ Studio duyệt.",
+                "Thanh toán cọc nhanh chóng và an toàn.",
               ],
             ].map(([title, text], i) => (
               <div className="how-row" key={title}>
@@ -293,9 +284,8 @@ export function Home() {
         <PrintArtwork />
         <div>
           <h2>
-            Không gian của bạn.
-            <br />
-            Cảm hứng của nhiều người.
+            <span className="motion-line"><span className="motion-line-text">Không gian của bạn.</span></span>
+            <span className="motion-line"><span className="motion-line-text">Cảm hứng của nhiều người.</span></span>
           </h2>
           <p className="muted">
             Đưa Studio của bạn đến với cộng đồng sáng tạo.
@@ -304,13 +294,13 @@ export function Home() {
             Trở thành đối tác <ArrowUpRight size={18} />
           </Link>
         </div>
-        <Image
+        <div className="partner-media"><span className="partner-image-wipe" aria-hidden="true"/><Image
           width={1400}
           height={1000}
           src="/images/cyclorama.jpg"
           alt="Không gian Studio rộng với cửa sổ lớn"
           loading="lazy"
-        />
+        /></div>
       </section>
     </>
   );

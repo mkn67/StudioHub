@@ -3,7 +3,7 @@ import { Presence, PublicTransition, MotionSurface } from "./motion/system";
 import { Suspense, useState } from "react";
 import Link from "./motion/navigation-link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpRight, Menu, X, ArrowRight } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { useSession, useStore, DemoTools } from "./store";
 import { Home, SearchRooms, RoomDetail } from "./marketplace";
 import { Auth, Profile, Support } from "./accounts";
@@ -20,6 +20,9 @@ import { BackendOperations } from "@/features/host/backend-host";
 import { CustomerAccountMenu } from "@/features/customer/account-menu";
 import { demoMode } from "@/data/api";
 import { LegalPolicies } from "@/features/legal/policies";
+import { PublicHeaderMotion } from "./motion/public-interactions";
+import { PublicFooter } from "./PublicFooter";
+import { AboutPage } from "@/features/about/AboutPage";
 export default function Application() {
   const apiSession = useApiSession();
   const demoUser = useSession();
@@ -84,6 +87,7 @@ export default function Application() {
         </Link>
       </div>
     );
+  else if (segments[0] === "about" && segments.length === 1) content = <AboutPage/>;
   else if (segments[0] === "policies") content = <LegalPolicies slug={segments[1]} />;
   else
     content = (
@@ -102,6 +106,7 @@ export default function Application() {
     else if (ops) content = <BackendOperations key={user?.id ?? "guest"} role={segments[0] as "host" | "admin"} segments={segments.slice(1)} />;
     else if (["my-bookings", "payment"].includes(segments[0])) content = <div className="container account-page">{!apiSession.ready ? <ApiMessage loading /> : apiSession.user?.role !== "customer" ? <Empty title="Đơn thuê của khách hàng" text="Đăng nhập bằng tài khoản khách hàng để tiếp tục." href="/login" label="Đăng nhập" /> : segments[1] && segments[1] !== "history" ? <BackendBookingDetail key={`${user?.id}:${segments[1]}`} id={segments[1]} payment={segments[0] === "payment"} /> : <BackendBookings key={`${user?.id}:${segments[1] === "history" ? "history" : "current"}`} history={segments[1] === "history"} />}</div>;
     else if (segments[0] === "checkout") content = <div className="container account-page checkout-guide"><p className="booking-eyebrow">Đặt thuê studio</p><h1>Chọn phòng và lịch trước khi thanh toán</h1><p>StudioHub kiểm tra lịch và báo giá trong trang đặt thuê của từng phòng. Sau khi tạo đơn, bạn sẽ đến trang thanh toán sandbox.</p><div className="actions"><Link className="btn" href="/rooms">Khám phá phòng</Link>{apiSession.user?.role === "customer" && <Link className="btn secondary" href="/my-bookings">Xem đơn của tôi</Link>}</div></div>;
+    else if (segments[0] === "about" && segments.length === 1) content = <AboutPage/>;
     else if (segments[0] === "policies") content = <LegalPolicies slug={segments[1]} />;
     else content = <div className="container account-page"><Unavailable>Trang này chưa có luồng tương ứng trong API hiện tại. Vui lòng quay lại danh sách phòng hoặc đơn thuê.</Unavailable></div>;
   }
@@ -110,11 +115,12 @@ export default function Application() {
       <a className="skip-link" href="#main-content">
         Đến nội dung chính
       </a>
-      {!ops && <header className={`site-header public-header ${hero ? "over-hero" : ""}`}>
+      {!ops && <PublicHeaderMotion hero={hero} path={path}>
         <Link className="brand" href="/">
           StudioHub<span>®</span>
         </Link>
         <nav className="public-nav" aria-label="Điều hướng chính">
+          <span className="motion-active-indicator" aria-hidden="true"/>
           <Link
             href="/rooms"
             className={segments[0] === "rooms" ? "active" : ""}
@@ -129,6 +135,7 @@ export default function Application() {
           >
             Đơn của tôi
           </Link>
+          <Link href="/about" className={segments[0] === "about" ? "active" : ""} aria-current={segments[0] === "about" ? "page" : undefined}>Về chúng tôi</Link>
           {user?.role === "host" ? (
             <Link href="/host">
               Quản lý Studio
@@ -161,7 +168,7 @@ export default function Application() {
           ) : (
             <Link className="nav-login" href="/login">
               Đăng nhập
-              <ArrowUpRight size={15} />
+              <span className="login-arrow" aria-hidden="true"><ArrowUpRight size={15}/><ArrowUpRight size={15}/></span>
             </Link>
           )}
           <button
@@ -173,7 +180,7 @@ export default function Application() {
             {menu ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
-      </header>}
+      </PublicHeaderMotion>}
       {backendEnabled && !ops && apiSession.error && <div className="container"><ApiMessage error={apiSession.error} /></div>}
       <Presence>{menu && !ops && (
         <Modal title="Điều hướng StudioHub" onClose={() => setMenu(false)} className="navigation-drawer">
@@ -184,6 +191,7 @@ export default function Application() {
         >
           <Link href="/rooms" aria-current={segments[0] === "rooms" ? "page" : undefined}>Khám phá Studio</Link>
           <Link href="/my-bookings" aria-current={segments[0] === "my-bookings" ? "page" : undefined}>Đơn của tôi</Link>
+          <Link href="/about" aria-current={segments[0] === "about" ? "page" : undefined}>Về chúng tôi</Link>
           {!ops && user?.role === "host" && <Link href="/host">Quản lý Studio</Link>}
           {!ops && user?.role === "admin" && <Link href="/admin">Quản trị</Link>}
           {!(backendEnabled && user?.role === "customer") && <Link href={user ? accountHref : "/login"}>
@@ -212,43 +220,7 @@ export default function Application() {
         )}
       </Suspense>
       {!ops && !["login", "register"].includes(segments[0]) && (
-        <footer>
-          <div className="footer-top container">
-            <Link className="brand" href="/">
-              StudioHub<span>®</span>
-            </Link>
-            <p>
-              Không gian cho những điều
-              <br />
-              chưa từng được tạo ra.
-            </p>
-            <address className="footer-agency-address">StudioHub · 123 Đường Lê Văn Việt<br/>Quận 9, TP. Hồ Chí Minh · Địa chỉ minh họa</address>
-            <nav className="footer-policy-links" aria-label="Chính sách và điều khoản">
-              <strong>Chính sách</strong>
-              <Link href="/policies/privacy">Bảo mật</Link>
-              <Link href="/policies/terms">Điều khoản sử dụng</Link>
-              <Link href="/policies/cookies">Cookie</Link>
-              <Link href="/policies/personal-data">Dữ liệu cá nhân</Link>
-              <Link href="/policies/disclaimer">Miễn trừ trách nhiệm</Link>
-            </nav>
-            <div className="footer-explore-links">
-              <Link href="/rooms">
-                Khám phá Studio
-                <ArrowRight size={14} />
-              </Link>
-              <Link href="/register/host">
-                Trở thành đối tác
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-          <div className="footer-bottom container">
-            <span>© 2026 StudioHub</span>
-            <span>
-              {backendEnabled ? "Trường Đại học Công nghệ Thông tin - ĐHQG TP Hồ Chí Minh" : demoMode ? "Môi trường demo · Dữ liệu minh họa · Không thanh toán thật" : "StudioHub · Đặt thuê không gian sáng tạo"}
-            </span>
-          </div>
-        </footer>
+        <PublicFooter demo={demoMode}/>
       )}
       <DemoTools />
     </>

@@ -10,6 +10,10 @@ namespace StudioHub\Helpdesk;
  */
 final class Util
 {
+    public static function rentalUnitLabel(string $unit): string
+    {
+        return ['hour'=>'giờ','session'=>'buổi','half_day'=>'nửa ngày','day'=>'ngày','week'=>'tuần','month'=>'tháng'][$unit]??$unit;
+    }
     /** Mẫu UUID phiên bản 4 (chữ số phiên bản = 4, biến thể = 8/9/a/b). */
     private const UUID_V4_PATTERN = '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i';
 

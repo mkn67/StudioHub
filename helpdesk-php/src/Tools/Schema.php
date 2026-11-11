@@ -8,7 +8,13 @@ final class Schema
     {
         if(isset($schema['enum'])&&!in_array($value,$schema['enum'],true))throw new Failure('invalid_tool_arguments',422);
         $type=$schema['type']??null;
-        $valid=match($type){'object'=>is_array($value)&&($value===[]||!array_is_list($value)),'array'=>is_array($value)&&array_is_list($value),'string'=>is_string($value),'integer'=>is_int($value),'boolean'=>is_bool($value),'number'=>is_int($value)||is_float($value),null=>true,default=>false};
+        if(is_array($type)) {
+            foreach($type as $candidate) {
+                try {self::check($value,array_replace($schema,['type'=>$candidate]));return;} catch(Failure) {}
+            }
+            throw new Failure('invalid_tool_arguments',422);
+        }
+        $valid=match($type){'object'=>is_array($value)&&($value===[]||!array_is_list($value)),'array'=>is_array($value)&&array_is_list($value),'string'=>is_string($value),'integer'=>is_int($value),'boolean'=>is_bool($value),'number'=>is_int($value)||is_float($value),'null'=>$value===null,null=>true,default=>false};
         if(!$valid)throw new Failure('invalid_tool_arguments',422);
         if($type==='object'){
             foreach($schema['required']??[]as$key)if(!array_key_exists($key,$value))throw new Failure('invalid_tool_arguments',422);

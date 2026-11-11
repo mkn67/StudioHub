@@ -91,6 +91,8 @@ final class Identity
             || ($response['body']['status'] ?? '') !== 'success'
             || !is_array($user)
             || !isset($user['user_id'])
+            || (!is_int($user['user_id']) && !is_string($user['user_id']))
+            || !preg_match('/^[1-9][0-9]{0,18}$/D', (string)$user['user_id'])
             || !in_array($user['role'] ?? '', self::VALID_ROLES, true)
         ) {
             throw new Failure('identity_unavailable', 503);
@@ -105,7 +107,8 @@ final class Identity
             'user:' . $userId,
             $user['role'],
             $userId,
-            in_array($userId, $supportUserIds, true) // true nếu là nhân viên hỗ trợ
+            in_array($userId, $supportUserIds, true), // true nếu là nhân viên hỗ trợ
+            $token
         );
     }
 

@@ -3,7 +3,7 @@
 .widget button { cursor:pointer; }
 .widget button:disabled { cursor:default; opacity:.55; }
 .widget :is(button,textarea,a,[tabindex]):focus-visible { outline:3px solid var(--brand); outline-offset:3px; }
-.launcher { position:fixed; right:24px; bottom:calc(var(--helpdesk-bottom) + env(safe-area-inset-bottom)); z-index:31; display:grid; place-items:center; width:58px; height:58px; border:2px solid var(--ink); border-radius:var(--radius-utility); background:var(--brand); color:var(--inverse); box-shadow:var(--shadow-hard-sm); transition:transform .15s,box-shadow .15s,background .15s; }
+.launcher { position:fixed; right:24px; bottom:calc(var(--helpdesk-bottom) + env(safe-area-inset-bottom)); z-index:31; display:grid; place-items:center; width:58px; height:58px; border:2px solid var(--ink); border-radius:var(--radius-utility); background:var(--brand); color:var(--inverse); box-shadow:var(--shadow-hard-sm); transition:transform var(--motion-fast,.18s) var(--motion-ease-press,ease-out),box-shadow var(--motion-fast,.18s),background var(--motion-fast,.18s); }
 .launcher:hover { transform:translateY(-3px); background:var(--brand-hover); }
 .launcher:active { transform:translate(2px,2px); box-shadow:var(--shadow-hard-pressed); }
 .launcherTag { position:absolute; right:-5px; top:-8px; padding:1px 4px; font:10px/1.5 var(--font-utility); background:var(--surface); color:var(--ink); border:1.5px solid var(--ink); }
@@ -19,7 +19,7 @@
 .secondaryAction { color:var(--muted); }
 .iconButton:hover { background:var(--surface-muted); }
 .mode { display:flex; align-items:center; gap:6px; min-width:0; padding:3px 10px; border-bottom:1px solid var(--line); background:var(--surface-muted); flex-shrink:0; }
-.mode span { flex-shrink:0; border:1px solid var(--line); background:var(--surface); padding:1px 4px; font:10px/1.2 var(--font-utility); border-radius:var(--radius-control); }
+.mode span { flex-shrink:0; max-width:75%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:1px solid var(--line); background:var(--surface); padding:1px 4px; font:10px/1.2 var(--font-utility); border-radius:var(--radius-control); }
 .mode small { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; line-height:1.4; color:var(--muted); }
 .transcript { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; padding:12px; background:var(--canvas); scroll-behavior:auto; scrollbar-width:thin; }
 .message { box-sizing:border-box; width:fit-content; max-width:92%; min-width:0; padding:9px 10px; margin:0 0 8px; border:1px solid var(--line-strong); border-radius:var(--radius-control); font-size:13px; line-height:1.55; overflow-wrap:anywhere; white-space:normal; animation:messageIn .14s ease-out; }

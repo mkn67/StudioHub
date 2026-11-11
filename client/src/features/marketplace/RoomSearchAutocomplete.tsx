@@ -6,7 +6,7 @@ import { useResource } from "@/services/api/use-resource";
 import type { ApiRoom } from "@/services/api/contracts";
 import { buildSearchSuggestions } from "./search-suggestions";
 
-export function RoomSearchAutocomplete({ value, onChange, types }: { value: string; onChange: (value: string) => void; types: { space_type_id: number; name: string }[] }) {
+export function RoomSearchAutocomplete({ value, onChange, types, placeholder = "Thử ‘lookbook’, ‘podcast’, ‘Quận 3’…" }: { value: string; onChange: (value: string) => void; types: { space_type_id: number; name: string }[]; placeholder?: string }) {
   const [query, setQuery] = useState(value), [open, setOpen] = useState(false), [active, setActive] = useState(-1);
   const id = useId(), router = useRouter();
   useEffect(() => { const timer = setTimeout(() => setQuery(value.trim()), 250); return () => clearTimeout(timer); }, [value]);
@@ -15,7 +15,7 @@ export function RoomSearchAutocomplete({ value, onChange, types }: { value: stri
   const expanded = open && (suggestions.length > 0 || rooms.loading || value.trim().length > 1);
   const select = (href: string) => { setOpen(false); setActive(-1); router.push(href); };
   return <div className="room-search-autocomplete">
-    <input role="combobox" aria-label="Tên Studio, loại phòng hoặc nhu cầu" aria-autocomplete="list" aria-expanded={expanded} aria-controls={`${id}-list`} aria-activedescendant={active >= 0 && suggestions[active] ? `${id}-${active}` : undefined} autoComplete="off" placeholder="Thử ‘lookbook’, ‘podcast’, ‘Quận 3’…" value={value}
+    <input role="combobox" aria-label="Tên Studio, loại phòng hoặc nhu cầu" aria-autocomplete="list" aria-expanded={expanded} aria-controls={`${id}-list`} aria-activedescendant={active >= 0 && suggestions[active] ? `${id}-${active}` : undefined} autoComplete="off" placeholder={placeholder} value={value}
       onFocus={() => setOpen(true)} onBlur={() => { setOpen(false); setActive(-1); }}
       onChange={e => { onChange(e.target.value); setOpen(true); setActive(-1); }}
       onKeyDown={e => {

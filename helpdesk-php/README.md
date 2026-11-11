@@ -4,7 +4,36 @@ Independent PHP >=8.2 application. No existing business PHP, router, schema or C
 
 Implemented: bounded model-directed function calling, publication-gated lexical RAG and extractive citations, conversations/idempotency, real tickets with confirmation, handoff state machine, scoped operator API, retention, rate limits and tests. See [implementation](../docs/helpdesk/AGENT_IMPLEMENTATION.md) for exact limits and [API](../docs/helpdesk/HELPDESK_API_IMPLEMENTATION.md).
 
+Harness mới: **bắt buộc đăng nhập** để chat; giữ hội thoại khi chuyển trang và khôi phục khi reload; xác minh phòng đang mở; resolve tên phòng/Studio; trả giá thật trong card hoặc bảng giá thay vì lời đáp chung. Xem [harness và các giới hạn](../docs/helpdesk/HELPDESK_HARNESS.md). Hành vi guest chat/reset theo URL trong tài liệu milestone cũ không còn áp dụng.
+
+Milestone 10/11/2026: [audit nghiệp vụ](../docs/helpdesk/HELPDESK_BUSINESS_RULE_AUDIT.md), [tool catalog](../docs/helpdesk/HELPDESK_TOOL_CATALOG.md), [kiến trúc](../docs/helpdesk/HELPDESK_AGENTIC_ARCHITECTURE.md), [test report](../docs/helpdesk/HELPDESK_TOOL_TEST_REPORT.md), [giới hạn](../docs/helpdesk/HELPDESK_REMAINING_GAPS.md). Public tools thêm authoritative availability; customer booking list dùng `STUDIOHUB_CUSTOMER_READ_TOOLS=true` (mặc định false). Booking detail không đăng ký vì GET hiện tại có expire/refund khi đọc. Không có business mutation tool. `NINEROUTER_TOOL_CALLING_ENABLED=false` dùng approved-only lexical RAG, không gọi provider.
+
+Test bổ sung: `node tests/readonly-http.mjs` (cURL + backend/provider HTTP giả lập, không gọi dịch vụ thật). Kiểm tra public API thật tùy chọn: `bin/php.cmd bin/readonly-smoke.php` (không model/ghi nghiệp vụ). Kết quả môi trường phiên này: API upstream 503, chưa xác minh dữ liệu thật; không tuyên bố 9Router thật đã hỗ trợ protocol.
+
 ## Run locally
+
+### MySQL riêng cho Helpdesk trong Docker local
+
+Khi stack local đang chạy, tạo credentials/TLS riêng (script giữ nguyên khóa/model 9Router):
+
+```powershell
+node helpdesk-php/bin/setup-local-mysql.mjs
+docker compose --env-file .env.compose up -d --no-deps helpdesk-db
+docker compose --env-file .env.compose up -d --build --no-deps helpdesk-php
+docker compose --env-file .env.compose exec -T --user www-data helpdesk-php php bin/check-storage.php
+```
+
+Chạy từ gốc repo. Overlay tạo MySQL riêng `helpdesk-db`, database `studiohub_helpdesk_dev`, user chỉ có quyền database này, volume `studiohub_helpdesk_mysql_data`. TLS xác minh CA và hostname; không tắt TLS verification. Cổng host `127.0.0.1:3308`; credentials và chứng chỉ local ở `helpdesk-php/var/` đã được Git ignore. `.env` Helpdesk được cập nhật DSN/credentials/CA cho PHP chạy trực tiếp trên host; Compose override dùng DNS/cổng/CA mount tương ứng trong container. Không đổi DB nghiệp vụ.
+
+Setup lưu `COMPOSE_FILE`, dấu phân cách và credentials MySQL local vào `.env.compose` đã ignored. Vì vậy lệnh thông thường `docker compose --env-file .env.compose up -d --build` tự nạp overlay MySQL, kể cả sau khi down/up toàn stack. Không cần nhớ thêm file `-f`; chỉ định riêng `-f docker-compose.yml` sẽ bỏ qua lựa chọn overlay này và trở về SQLite trong Compose gốc. Không chạy `down -v` nếu cần giữ dữ liệu. Migration lúc startup chỉ tạo ba bảng Helpdesk bằng script sẵn có. Để chuyển lịch sử SQLite hiện có, sao lưu file trước rồi chạy `php bin/import-local-sqlite.php --apply` trong container Helpdesk: script chỉ đọc SQLite, transaction vào DB Helpdesk dev, không ghi đè ID đã có. File SQLite gốc vẫn được giữ.
+
+MySQL dùng để lưu dữ liệu Helpdesk; LLM không có quyền SQL tùy ý. Tra cứu nghiệp vụ vẫn qua tool/API đã kiểm quyền.
+
+Kiểm tra sau khi chuyển: `php bin/check-storage.php` trả driver và trạng thái TLS (không in credentials); `node helpdesk-php/bin/check-local-http.mjs` từ gốc repo kiểm tạo hội thoại qua localhost:3000 và đọc lại đúng owner, không gọi model. Setup tự bật OpenSSL trong portable PHP local nếu có DLL để PDO MySQL xác minh TLS.
+
+Docker gọi 9Router trên máy host qua `host.docker.internal`. Overlay MySQL đặt `NINEROUTER_HTTP_HOSTS=host.docker.internal` để cho phép đúng HTTP host nội bộ này; HTTPS hoặc loopback không cần cấu hình đó. Không dùng wildcard và không nhận hostname từ tin nhắn người dùng. Kiểm cả bước gửi tin nhắn thật bằng `node helpdesk-php/bin/check-local-chat.mjs --live` từ gốc repo; lệnh này có gọi model đang cấu hình, không nằm trong suite test tự động.
+
+Overlay local bật `STUDIOHUB_PUBLIC_TOOLS=true` để model có search/detail/pricing/availability; bật giao thức gọi tool thôi chưa cấp các tool danh mục. Kiểm luồng tìm phòng thật với câu “thu âm”: `node helpdesk-php/bin/check-local-chat.mjs --live --discovery`. Lệnh yêu cầu có room cards từ evidence API, in số phòng/ID của hội thoại kiểm thử; xem audit metadata bằng `php bin/check-tool-trace.php --conversation=UUID` trong Helpdesk container. Tracer chỉ xuất tên tool/outcome, không chat, arguments hoặc credentials. Bộ lọc người dùng chưa cung cấp để null hoặc bỏ qua, không tự đặt ngân sách 0 hay khu vực giả. Customer reader vẫn cần opt-in riêng; không có business mutation tool.
 
 The current workspace has a checksum-verified portable PHP under ignored .runtime; no system installation is needed. From helpdesk-php/ on Windows:
 

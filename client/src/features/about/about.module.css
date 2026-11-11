@@ -1,0 +1,65 @@
+.page { max-width: 1320px; margin-inline: auto; padding: 32px 48px 56px; color: var(--ink); font-family: "StudioHub Vietnam", sans-serif; }
+.hero { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(200px, .7fr); align-items: center; gap: 40px; padding: 40px; border: 2px solid var(--ink); border-radius: 18px; background: #dceef2; overflow: hidden; }
+.eyebrow { margin: 0 0 14px; color: #0b657d; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; line-height: 1.6; }
+.hero h1 { font: 800 clamp(34px, 4vw, 54px)/1.25 "StudioHub Vietnam", sans-serif; letter-spacing: -.045em; max-width: 17ch; margin: 0 0 18px; }
+.intro { max-width: 61ch; margin: 0; color: #40596a; font-size: 16px; line-height: 1.85; }
+.teamMark { position: relative; justify-self: center; text-align: center; }
+.teamMark > span { display: grid; place-items: center; width: 140px; height: 140px; margin: 0 auto 24px; font-size: 58px; font-weight: 800; letter-spacing: -.07em; border: 2px solid var(--ink); border-radius: 25px; background: #f5fafc; box-shadow: 6px 6px 0 var(--ink); transform: rotate(-5deg); }
+.teamMark > div { display: flex; justify-content: center; gap: 8px; }
+.teamMark i { width: 14px; height: 14px; border: 1px solid var(--ink); border-radius: 50%; background: #0d7490; }
+.teamMark i:nth-child(even) { background: #f5fafc; }
+.teamMark small { display: block; margin-top: 12px; font-size: 12px; color: #40596a; }
+.project { display: grid; grid-template-columns: 1fr 1.5fr; gap: 44px; padding: 44px 0; border-bottom: 1px solid var(--line); }
+.page h2 { margin: 0; font: 800 clamp(25px, 2.8vw, 32px)/1.35 "StudioHub Vietnam", sans-serif; letter-spacing: -.035em; }
+.projectCopy p { margin: 0 0 14px; color: var(--muted); font-size: 15px; line-height: 1.85; }
+.explore { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--brand-text); font-weight: 700; font-size: 14px; text-underline-offset: 4px; }
+.team { padding: 40px 0; }
+.sectionHeading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.count { border: 1px solid var(--ink); border-radius: 6px; padding: 7px 10px; background: #e5ecfa; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.teamIntro { margin: 14px 0 26px; color: var(--muted); font-size: 15px; line-height: 1.75; }
+.memberGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
+.memberCard { grid-column: span 2; min-width: 0; padding: 24px; border: 2px solid var(--ink); border-radius: 14px; background: #fff; box-shadow: 3px 3px 0 var(--ink); transition: transform var(--motion-fast, .18s), box-shadow var(--motion-fast, .18s); }
+.memberCard:nth-child(4) { grid-column: 2 / span 2; }
+.memberCard:nth-child(5) { grid-column: 4 / span 2; }
+.memberCard:is(:hover, :focus-within) { transform: translateY(-3px); box-shadow: 4px 6px 0 var(--ink); }
+.memberTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.avatar { display: grid; place-items: center; width: 80px; height: 80px; flex-shrink: 0; border: 1px solid #b0cbd4; border-radius: 50%; background: #eaf5f8; color: #0d7490; overflow: hidden; }
+.avatar > span { display: grid; place-items: center; width: 100%; height: 100%; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.memberCard:nth-child(even) .avatar { background: #e5ecfa; }
+.memberIndex { color: #647c88; font-size: 12px; letter-spacing: .08em; }
+.memberCard h3 { margin: 0; font: 700 21px/1.5 "StudioHub Vietnam", sans-serif; overflow-wrap: anywhere; }
+.studentId { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.role { width: fit-content; margin: 12px 0 0; padding: 5px 9px; border-radius: 5px; background: #dceef2; color: #0b657d; font-size: 13px; font-weight: 600; }
+.memberDescription { margin: 12px 0 0; font-size: 14px; line-height: 1.8; color: var(--muted); overflow-wrap: anywhere; }
+.memberLinks { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; }
+.memberLinks a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--brand-text); font-size: 13px; font-weight: 600; text-underline-offset: 4px; }
+.technology { padding: 28px 0 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; }
+.technology h2 { font-size: 23px; }
+.technology ul { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.technology li { padding: 7px 11px; border: 1px solid #b6c9d4; border-radius: 6px; background: #eaf3f6; font-size: 13px; }
+.page a:focus-visible { outline: 3px solid var(--brand); outline-offset: 4px; border-radius: 3px; }
+@media (max-width: 1000px) {
+ .page { padding-inline: 28px; }
+ .hero { grid-template-columns: minmax(0, 1fr) 180px; padding: 28px; gap: 24px; }
+ .teamMark > span { width: 110px; height: 110px; font-size: 48px; }
+ .memberGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+ .memberCard:nth-child(4) { grid-column: span 2; }
+ .memberCard:nth-child(5) { grid-column: 2 / span 2; }
+}
+@media (max-width: 600px) {
+ .page { padding: 20px 18px 40px; }
+ .hero { display: block; padding: 26px 22px; }
+ .hero h1 { font-size: 34px; }
+ .intro { font-size: 15px; line-height: 1.8; }
+ .teamMark { display: none; }
+ .project { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-block: 32px; }
+ .team { padding-block: 32px; }
+ .sectionHeading { align-items: flex-start; }
+ .count { font-size: 11px; padding: 6px 8px; }
+ .memberGrid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+ .memberCard, .memberCard:nth-child(4), .memberCard:nth-child(5) { grid-column: auto; padding: 20px; }
+ .memberTop { margin-bottom: 14px; }
+ .avatar { width: 72px; height: 72px; }
+}
+@media (prefers-reduced-motion: reduce) { .memberCard { transition: none; } .memberCard:is(:hover, :focus-within) { transform: none; } }

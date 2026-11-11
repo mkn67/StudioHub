@@ -71,7 +71,7 @@ test("malformed agent reply has an actionable error instead of generic failure",
     error instanceof Error && error.message.includes("JSON"));
 });
 test("bridge enforces origin and fixed route; no arbitrary upstream URL", async () => {
-  const denied = await proxyHelpdesk(new Request("http://localhost:3000/api/helpdesk/conversations", { method: "POST", headers: { origin: "https://attacker.invalid" } }), ["conversations"], "a".repeat(64));
+  const denied = await proxyHelpdesk(new Request("http://localhost:3000/api/helpdesk/conversations", { method: "POST", headers: { authorization: "Bearer synthetic-bridge-user", origin: "https://attacker.invalid" } }), ["conversations"], "a".repeat(64));
   assert.equal(denied.status, 403);
   const arbitrary = await proxyHelpdesk(new Request("http://localhost:3000/api/helpdesk/https://evil.invalid"), ["https:", "evil.invalid"], "a".repeat(64));
   assert.equal(arbitrary.status, 404);
@@ -83,7 +83,7 @@ test("Helpdesk bridge fails closed in production when its trusted origin is miss
   Reflect.set(process.env, "NODE_ENV", "production");
   try {
     const response = await proxyHelpdesk(new Request("http://localhost:3000/api/helpdesk/conversations", {
-      method: "POST", headers: { origin: "http://localhost:3000", "content-type": "application/json" }, body: "{}",
+      method: "POST", headers: { authorization: "Bearer synthetic-bridge-user", origin: "http://localhost:3000", "content-type": "application/json" }, body: "{}",
     }), ["conversations"], "a".repeat(64));
     assert.equal(response.status, 503);
   } finally {
@@ -101,12 +101,12 @@ test("Helpdesk bridge rejects insecure production origins and upstream URLs", as
   Reflect.set(process.env, "NODE_ENV", "production");
   try {
     const response = await proxyHelpdesk(new Request("http://studio.example/api/helpdesk/conversations", {
-      method: "POST", headers: { origin: "http://studio.example", "content-type": "application/json" }, body: "{}",
+      method: "POST", headers: { authorization: "Bearer synthetic-bridge-user", origin: "http://studio.example", "content-type": "application/json" }, body: "{}",
     }), ["conversations"], "a".repeat(64));
     assert.equal(response.status, 503);
     process.env.HELPDESK_FRONTEND_ORIGIN = "https://studio.example";
     const insecureUpstream = await proxyHelpdesk(new Request("https://studio.example/api/helpdesk/conversations", {
-      method: "POST", headers: { origin: "https://studio.example", "content-type": "application/json" }, body: "{}",
+      method: "POST", headers: { authorization: "Bearer synthetic-bridge-user", origin: "https://studio.example", "content-type": "application/json" }, body: "{}",
     }), ["conversations"], "a".repeat(64));
     assert.equal(insecureUpstream.status, 503);
   } finally {
@@ -128,7 +128,7 @@ test("Helpdesk session cookie is secure and HttpOnly in production", async () =>
   globalThis.fetch = async () => ok({ conversation: { id: "11111111-1111-4111-8111-111111111111" } });
   try {
     const request = new NextRequest("https://studio.example/api/helpdesk/conversations", {
-      method: "POST", headers: { origin: "https://studio.example", "content-type": "application/json" }, body: "{}",
+      method: "POST", headers: { cookie: "studiohub_auth=synthetic-cookie-user", origin: "https://studio.example", "content-type": "application/json" }, body: "{}",
     });
     const response = await helpdeskRoutePost(request, { params: Promise.resolve({ path: ["conversations"] }) });
     const cookie = response.cookies.get("studiohub_helpdesk_session");
@@ -144,6 +144,49 @@ test("Helpdesk session cookie is secure and HttpOnly in production", async () =>
     });
   }
 });
+
+test("guest cannot reach Helpdesk even with a claimed browser Authorization header", async () => {
+  const keys = ["HELPDESK_FRONTEND_ORIGIN", "HELPDESK_BRIDGE_SECRET"] as const;
+  const previous = keys.map(key => process.env[key]);
+  const previousFetch = globalThis.fetch;
+  process.env.HELPDESK_FRONTEND_ORIGIN = "http://localhost:3000";
+  process.env.HELPDESK_BRIDGE_SECRET = "synthetic-bridge-".repeat(4);
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return ok({}); };
+  try {
+    const r = await helpdeskRoutePost(new NextRequest("http://localhost:3000/api/helpdesk/conversations", { method: "POST", headers: { origin: "http://localhost:3000", authorization: "Bearer claimed-admin", "content-type": "application/json" }, body: "{}" }), { params: Promise.resolve({ path: ["conversations"] }) });
+    assert.equal(r.status, 401); assert.equal(calls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    keys.forEach((key,index) => { if (previous[index] === undefined) delete process.env[key]; else process.env[key] = previous[index]; });
+  }
+});
+
+test("navigation reuses the same conversation while sending the newest room context", async () => {
+  const bodies: Record<string, unknown>[] = []; const urls: string[] = [];
+  const fake: typeof fetch = async (url, options) => {
+    urls.push(String(url)); bodies.push(JSON.parse(String(options?.body)));
+    return urls.length === 1 ? ok({ conversation: { id: "11111111-1111-4111-8111-111111111111" } }) : ok({ response });
+  };
+  const adapter = createPhpHelpdeskAdapter(fake);
+  await adapter.sendMessage("Phòng này?", { surface: "public", scope: "catalog", roomId: 6 });
+  await adapter.sendMessage("Phòng này?", { surface: "public", scope: "catalog", roomId: 15 });
+  assert.equal(urls.length, 3); assert.equal(urls[1], urls[2]);
+  assert.deepEqual(bodies[2].context, { surface: "public", scope: "catalog", roomId: 15 });
+});
+
+test("new adapter resumes the account's active history without browser storage", async () => {
+  const id = "11111111-1111-4111-8111-111111111111"; const urls: string[] = [];
+  const fake: typeof fetch = async url => {
+    urls.push(String(url));
+    return urls.length === 1 ? ok({ conversation: { id, state: "bot_active" }, messages: [{ id, role: "user", text: "Giá thuê?", createdAt: "2026-11-10T10:00:00+07:00" }] }) : ok({ response });
+  };
+  const adapter = createPhpHelpdeskAdapter(fake);
+  assert.equal((await adapter.loadHistory!()).messages.length, 1);
+  await adapter.sendMessage("Phòng này?", { surface: "public", roomId: 15 });
+  assert.equal(urls[0], "/api/helpdesk/conversations/current");
+  assert.equal(urls[1], `/api/helpdesk/conversations/${id}/messages`);
+});
 test("bridge forwards only allowlisted server headers", async () => {
   const old = process.env.HELPDESK_BRIDGE_SECRET; process.env.HELPDESK_BRIDGE_SECRET = "test-only-".repeat(5);
   try {
@@ -154,7 +197,7 @@ test("bridge forwards only allowlisted server headers", async () => {
       assert.equal(headers["X-Helpdesk-Session"], "a".repeat(64)); assert.equal(headers["X-Evil"], undefined);
       return ok({ conversation: { id: "example" } });
     };
-    const request = new Request("http://localhost:3000/api/helpdesk/conversations", { method: "POST", headers: { origin: "http://localhost:3000", "content-type": "application/json", "x-evil": "do not forward" }, body: "{}" });
+    const request = new Request("http://localhost:3000/api/helpdesk/conversations", { method: "POST", headers: { authorization: "Bearer synthetic-bridge-user", origin: "http://localhost:3000", "content-type": "application/json", "x-evil": "do not forward" }, body: "{}" });
     const r = await proxyHelpdesk(request, ["conversations"], "a".repeat(64), fake);
     assert.equal(r.status, 200); assert.ok(called);
   } finally { if (old === undefined) delete process.env.HELPDESK_BRIDGE_SECRET; else process.env.HELPDESK_BRIDGE_SECRET = old; }
@@ -167,7 +210,7 @@ test("Docker HTTP upstream needs an exact server-configured hostname", async () 
   process.env.HELPDESK_API_URL = "http://helpdesk-php";
   delete process.env.HELPDESK_HTTP_HOSTS;
   const request = () => new Request("http://localhost:3000/api/helpdesk/conversations", {
-    method: "POST", headers: { origin: "http://localhost:3000", "content-type": "application/json" }, body: "{}",
+    method: "POST", headers: { authorization: "Bearer synthetic-bridge-user", origin: "http://localhost:3000", "content-type": "application/json" }, body: "{}",
   });
   let calls = 0;
   const fake: typeof fetch = async url => {
@@ -192,7 +235,7 @@ test("container GET validates public Host with same-origin fetch metadata", asyn
   process.env.HELPDESK_BRIDGE_SECRET = "test-only-".repeat(5);
   const fake: typeof fetch = async () => ok({ conversation: { id: "example" } });
   const request = (host: string, site = "same-origin") => new Request("http://0.0.0.0:3000/api/helpdesk/conversations", {
-    headers: { host, "sec-fetch-site": site },
+    headers: { authorization: "Bearer synthetic-bridge-user", host, "sec-fetch-site": site },
   });
   try {
     assert.equal((await proxyHelpdesk(request("localhost:3000"), ["conversations"], "a".repeat(64), fake)).status, 200);

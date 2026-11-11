@@ -25,6 +25,11 @@ final class ToolRegistry
     /** Danh sách tool đã đăng ký, khóa theo tên tool. */
     private array $tools = [];
 
+    public function alias(string $name, string $existing): void
+    {
+        $this->tools[$name] = array_replace($this->tools[$existing], ['name'=>$name]);
+    }
+
     /**
      * Đăng ký một tool.
      *
@@ -106,7 +111,9 @@ final class ToolRegistry
         $result = ($tool['execute'])($args, $actor);
 
         // Kết quả tool cũng phải đúng schema trước khi được đưa lại cho mô hình.
-        Schema::check($result, $tool['output']);
+        try {Schema::check($result, $tool['output']);}
+        catch (Failure) {throw new Failure('invalid_tool_result', 502);}
+        if (strlen(Util::json($result)) > 24000) throw new Failure('tool_output_limit', 502);
 
         return [
             'result' => $result,

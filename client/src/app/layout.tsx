@@ -10,6 +10,7 @@ import "./motion.css";
 import "./explore.css";
 import "./homepage.css";
 import "./room-editorial.css";
+import "./public-motion.css";
 import { motionTokenCSS } from "@/components/motion/tokens";
 import { Provider } from "@/components/store";
 import { ApiSessionProvider } from "@/components/api-session";
@@ -29,8 +30,7 @@ export default function RootLayout({
     <html lang="vi">
       <head><style id="studiohub-motion-tokens">{motionTokenCSS}</style></head>
       <body>
-        <ApiSessionProvider><Provider>{children}</Provider></ApiSessionProvider>
-        <HelpdeskWidget />
+        <ApiSessionProvider><Provider>{children}</Provider><HelpdeskWidget /></ApiSessionProvider>
       </body>
     </html>
   );

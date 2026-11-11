@@ -1,0 +1,83 @@
+/* Public-only motion. Fixed-size header slot prevents layout shift while its surface compacts. */
+body .room-detail-page { min-height: calc(100svh - 88px); }
+.public-header-slot { position: sticky; top: 0; height: 88px; z-index: 20; pointer-events: none; }
+body .public-header-slot .site-header { position: relative; top: 0; width: 100%; height: 88px; min-height: 88px; pointer-events: auto; transition: height var(--motion-normal) var(--motion-ease-out), min-height var(--motion-normal) var(--motion-ease-out), background var(--motion-normal), box-shadow var(--motion-normal); }
+body .public-header-slot .site-header.is-scrolled { height: 78px; min-height: 78px; background: #ffffffed; backdrop-filter: blur(10px); box-shadow: 0 4px 16px #20323e12; }
+.public-header .public-nav, body .room-detail-page .room-detail-anchor { position: relative; }
+body .room-detail-page .room-detail-anchor { top: auto; }
+.motion-active-indicator { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; opacity: 0; background: var(--brand); pointer-events: none; transform-origin: left; transition: transform var(--motion-normal) var(--motion-ease-out), width var(--motion-normal) var(--motion-ease-out), opacity var(--motion-fast); }
+body .public-header .public-nav a::after { content: none; }
+body .public-header .public-nav a:is(:hover, .active) { text-decoration: none; }
+.public-header .public-nav a:hover { color: var(--brand); }
+.public-header .nav-login { transition: border-color var(--motion-normal); }
+.login-arrow { display: inline-block; position: relative; width: 17px; height: 17px; overflow: hidden; }
+.login-arrow svg { position: absolute; inset: 1px; transition: transform var(--motion-normal) var(--motion-ease-out), opacity var(--motion-normal); }
+.login-arrow svg:last-child { transform: translate(-17px, 17px); opacity: 0; }
+.nav-login:is(:hover, :focus-visible) .login-arrow svg:first-child { transform: translate(17px, -17px); opacity: 0; }
+.nav-login:is(:hover, :focus-visible) .login-arrow svg:last-child { transform: translate(0, 0); opacity: 1; }
+.motion-line, .room-title-mask { overflow: clip; }
+.motion-line { display: block; padding-block: .12em; margin-block: -.12em; }
+.motion-line-text, .room-title-text { display: block; }
+.room-title-mask { padding-block: .12em; }
+body .home-hero .hero-search label { transition: background var(--motion-fast); border-radius: 6px; }
+body .home-hero .hero-search label:focus-within { background: #e6f6fa; }
+body .home-hero .hero-search label:focus-within > span:first-child { color: var(--brand-text); }
+body .home-hero .hero-search:focus-within { border-color: var(--brand); }
+body:has(.home-hero) .home-hero .hero-search .btn,
+body .host-cta .btn,
+body .room-detail-page .room-booking-card .btn { transition: transform var(--motion-fast) var(--motion-ease-press), box-shadow var(--motion-fast) var(--motion-ease-press), background var(--motion-fast); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+body:has(.home-hero) .home-hero .hero-search .btn:is(:hover, :focus-visible),
+body .host-cta .btn:is(:hover, :focus-visible),
+body .room-detail-page .room-booking-card .btn:is(:hover, :focus-visible) { transform: translate(1px, 1px); box-shadow: 3px 3px 0 var(--ink); }
+body:has(.home-hero) .home-hero .hero-search .btn:active,
+body .host-cta .btn:active,
+body .room-detail-page .room-booking-card .btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--ink); }
+.home-hero .hero-search .btn:hover > svg { transform: rotate(-8deg) scale(1.06); }
+.home-categories .section-head { position: relative; }
+.home-categories .section-head::after { content: ""; position: absolute; bottom: -2px; left: 0; width: 100%; height: 2px; background: var(--brand); transform: scaleX(var(--heading-rule-scale, 1)); transform-origin: left; }
+.home-categories .space-category-group h3::before { transform: rotate(var(--group-marker-angle, 0deg)); }
+.home-categories .space-category-group h3::after { transform: scaleX(var(--group-rule-scale, 1)); transform-origin: left; }
+body:has(.home-hero) .home-categories .categories > a.home-category-card { transition: transform var(--motion-fast) var(--motion-ease-out), box-shadow var(--motion-fast), border-color var(--motion-fast); }
+body:has(.home-hero) .home-categories .categories > a.home-category-card:is(:hover, :focus-visible) { transform: translateY(-5px); box-shadow: 5px 6px 0 var(--ink); border-color: var(--brand); }
+body:has(.home-hero) .home-categories .categories > a.home-category-card:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.home-category-card .home-category-image-wrap { overflow: hidden; }
+.home-category-card .category-photo { transition: transform var(--motion-normal) var(--motion-ease-out); }
+body:has(.home-hero) .home-categories .home-category-card:is(:hover, :focus-visible) .category-photo { transform: scale(1.05); }
+.home-category-title svg { transition: transform var(--motion-normal) var(--motion-ease-out); }
+body:has(.home-hero) .home-categories .home-category-card:is(:hover, :focus-visible) .home-category-title svg { transform: translate(3px, -3px); }
+.host-cta .partner-media { position: relative; width: 100%; height: 330px; border-radius: var(--radius-panel); overflow: hidden; }
+.host-cta .partner-media > img { width: 100%; height: 100%; object-fit: cover; }
+.partner-image-wipe { position: absolute; inset: 0; z-index: 1; background: var(--brand); transform: scaleX(0); transform-origin: right; pointer-events: none; }
+body .room-detail-page .room-detail-heading,
+body .room-detail-page .api-gallery > *,
+body .room-detail-page .room-detail-layout > * { animation: none; }
+body .room-detail-page .room-booking-card:is(:hover, :focus-within) { transform: none; box-shadow: 5px 5px 0 var(--ink); }
+.room-detail-page .room-package-list li { transition: background var(--motion-fast); }
+.room-detail-page .room-package-list li:hover { background: #e7f5f9; }
+.room-detail-page .room-detail-anchor a[aria-current="location"] { color: var(--brand-text); }
+.room-detail-media .api-lightbox > img { animation: room-image-swap var(--motion-fast) var(--motion-ease-out); }
+@keyframes room-image-swap { from { opacity: .65; } to { opacity: 1; } }
+@media (max-width: 640px) {
+ body .room-detail-page { min-height: calc(100svh - 72px); }
+ .public-header-slot { height: 72px; }
+ body .public-header-slot .site-header { height: 72px; min-height: 72px; }
+ body .public-header-slot .site-header.is-scrolled { height: 64px; min-height: 64px; }
+ .host-cta .partner-media { height: 230px; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .room-detail-media .api-lightbox > img { animation: none; }
+ body .public-header-slot .site-header,
+ .motion-active-indicator, .login-arrow svg,
+ .home-category-card .category-photo, .home-category-title svg,
+ body:has(.home-hero) .home-categories .categories > a.home-category-card,
+ body:has(.home-hero) .home-hero .hero-search .btn,
+ body .host-cta .btn, body .room-detail-page .room-booking-card .btn { transition: none; }
+ body:has(.home-hero) .home-categories .categories > a.home-category-card:is(:hover, :active, :focus-visible),
+ body:has(.home-hero) .home-categories .home-category-card:is(:hover, :focus-visible) .category-photo,
+ body:has(.home-hero) .home-categories .home-category-card:is(:hover, :focus-visible) .home-category-title svg,
+ body:has(.home-hero) .home-hero .hero-search .btn:is(:hover, :active, :focus-visible),
+ body .host-cta .btn:is(:hover, :active, :focus-visible),
+ body .room-detail-page .room-booking-card .btn:is(:hover, :active, :focus-visible) { transform: none; }
+ .login-arrow svg:last-child { display: none; }
+ .nav-login:is(:hover, :focus-visible) .login-arrow svg:first-child { transform: none; opacity: 1; }
+}

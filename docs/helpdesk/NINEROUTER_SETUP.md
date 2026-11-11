@@ -50,3 +50,9 @@ PHP authentication is separately verified through the configured StudioHub /auth
 Public catalog tools are independent of model setup. Explicitly set STUDIOHUB_PUBLIC_TOOLS=true to advertise the fixed read-only tools. Each call validates the live API response; no transient CLI marker or paid Render Shell is required. bin/catalog-smoke.php remains an optional diagnostic for search/details/rates; it does not guarantee availability. See [MySQL catalog](MYSQL_CATALOG.md).
 
 For starting PHP/Next.js, storage initialization and tests see [module README](../../helpdesk-php/README.md).
+
+## Local Docker fix and verification — 10/11/2026
+
+For a 9Router service on the Windows host, Compose uses `http://host.docker.internal:20128/v1`. Set `NINEROUTER_HTTP_HOSTS=host.docker.internal` in trusted server configuration (already set in `helpdesk-php/docker-compose.mysql.yml`). The adapter now passes this exact allowlist to the URL validator. Default remains blank; arbitrary HTTP hosts, redirects and URLs from user/model input remain forbidden. Provider keys/model are unchanged.
+
+After rebuilding only local Helpdesk, `node helpdesk-php/bin/check-local-chat.mjs --live` passed a real application chat turn: conversation 201, messages 200, state answered, kind greeting. This supersedes the earlier deferred/unverified status for **basic live chat only**; it does not certify a complete live tool roundtrip or model accuracy. Ordinary automated tests still use synthetic providers and no live credentials.

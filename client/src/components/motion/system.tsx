@@ -49,20 +49,23 @@ export function MotionSurface({ children, operational = false }: { children: Rea
             onStart:()=>mark([node],timeline),onComplete:()=>release([node]),
           }, at);
         };
-        timeline.addLabel("plate", 0);
-        layer(".hero-editorial",18,.84,duration.section,"plate");
-        layer(".home-hero .riso-headline",6,.86,.3,"plate+=0.05");
-        layer(".hero-editorial > p",6,.82,.3,"plate+=0.10");
-        timeline.addLabel("search", .16);
-        layer(".hero-search",12,.86,duration.card,"search");
-        layer(".hero-search .btn",0,.82,duration.select,"search+=0.10");
+        layer(".hero-kicker",8,.55,duration.normal,"0");
+        const lines = Array.from(hero.querySelectorAll<HTMLElement>(".motion-line-text"));
+        if (lines.length) timeline.fromTo(lines,{ yPercent:105 },{
+          yPercent:0,duration:duration.reveal,stagger:.12,ease:gsapEase,clearProps:"transform",
+          onStart:()=>mark(lines,timeline),onComplete:()=>release(lines),
+        },.08);
+        layer(".hero-editorial > p",12,.6,duration.normal,"0.48");
+        layer(".hero-search",26,.55,duration.slow,"0.64");
+        layer(".hero-caption",8,.65,duration.normal,"0.84");
       } else if (!hero && (operational || typeof document.startViewTransition !== "function")) {
         const heading = select(".page-heading, .detail-heading, .booking-header, .auth-panel");
         if (heading) gsap.fromTo(heading, { opacity:.9, y:operational?3:6 }, { opacity:1,y:0,duration:operational?.16:duration.page,ease:gsapEase,clearProps:"opacity,transform" });
       }
       if (!operational) {
         // Create triggers in DOM order. Group only true sibling card collections.
-        root.querySelectorAll<HTMLElement>(".section-head, .categories:not(.home-category-grid), .how-grid > h2, .host-cta, .room-related-section > div:first-child, .room-information > h2").forEach((trigger, index) => {
+        root.querySelectorAll<HTMLElement>(".section-head, .categories:not(.home-category-grid), .how-grid > h2, .room-related-section > div:first-child, .room-information > h2").forEach((trigger, index) => {
+          if (trigger.closest(".home-categories")) return;
           const group = trigger.matches(".categories");
           const photographic = trigger.matches(".host-cta");
           // Photograph-heavy listings stay still; their section heading carries the reveal.
@@ -89,6 +92,16 @@ export function MotionSurface({ children, operational = false }: { children: Rea
           });
         });
       }
+      const partner = select(".host-cta");
+      if (partner && !operational) {
+        const headingLines = Array.from(partner.querySelectorAll<HTMLElement>(".motion-line-text"));
+        const wipe = partner.querySelector<HTMLElement>(".partner-image-wipe");
+        const entrance = gsap.timeline({ defaults:{ease:gsapEase,immediateRender:false}, scrollTrigger:{id:"studiohub-partner",trigger:partner,start:"top 90%",once:true} });
+        entrance.fromTo(partner,{opacity:.85,scale:.98},{opacity:1,scale:1,duration:duration.slow,clearProps:"opacity,transform",onStart:()=>mark([partner],entrance),onComplete:()=>release([partner])},0);
+        if (headingLines.length) entrance.fromTo(headingLines,{yPercent:105},{yPercent:0,duration:duration.slow,stagger:.1,clearProps:"transform"},.08);
+        if (wipe) entrance.fromTo(wipe,{scaleX:1},{scaleX:0,duration:duration.reveal,clearProps:"transform"},.12);
+        owned.set(partner,entrance);
+      }
       // Interaction finishes a decorative entrance, immediately returning ownership to CSS.
       const finishOnInteraction = safe((event: Event) => {
         const node = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-gsap-revealing], .hero-search, .categories > a") : null;
@@ -114,15 +127,34 @@ export function MotionSurface({ children, operational = false }: { children: Rea
 export function useHomepageCategoryMotion(categoryKey: string) {
   const scope = useRef<HTMLDivElement>(null);
   useGSAP(() => {
+    const root = scope.current;
+    if (!root) return;
     const media = gsap.matchMedia();
     media.add("(prefers-reduced-motion: no-preference)", () => {
-      scope.current?.querySelectorAll<HTMLElement>(".categories > a").forEach((card, index) => {
-        gsap.fromTo(card, { opacity: .78, y: 12 }, {
-          opacity: 1, y: 0, duration: .35, delay: (index % 3) * .04,
-          ease: gsapEase, immediateRender: false, clearProps: "opacity,transform",
-          scrollTrigger: { trigger: card, start: "top 96%", once: true },
-        });
+      const owned = new Map<HTMLElement, gsap.core.Timeline>();
+      const sectionHeading = root.closest(".home-categories")?.querySelector<HTMLElement>(".section-head");
+      if (sectionHeading && !sectionHeading.dataset.motionRevealed) {
+        const intro = gsap.timeline({defaults:{ease:gsapEase,immediateRender:false},scrollTrigger:{id:"studiohub-category-intro",trigger:sectionHeading,start:"top 92%",once:true,onEnter:()=>{sectionHeading.dataset.motionRevealed="true";}}});
+        intro.fromTo(sectionHeading.querySelector("h2"),{opacity:.7,y:18},{opacity:1,y:0,duration:duration.slow,clearProps:"opacity,transform"},0);
+        intro.fromTo(sectionHeading.querySelector("p"),{opacity:.6,y:8},{opacity:1,y:0,duration:duration.normal,clearProps:"opacity,transform"},.12);
+        intro.fromTo(sectionHeading,{"--heading-rule-scale":0},{"--heading-rule-scale":1,duration:duration.slow},.12);
+      }
+      root.querySelectorAll<HTMLElement>(".space-category-group").forEach((group,index) => {
+        if (group.dataset.motionRevealed) return;
+        const heading = group.querySelector("h3");
+        const cards = Array.from(group.querySelectorAll<HTMLElement>(".home-category-card"));
+        const timeline = gsap.timeline({defaults:{ease:gsapEase,immediateRender:false},scrollTrigger:{id:"studiohub-category-group:"+index,trigger:group,start:"top 93%",once:true,onEnter:()=>{group.dataset.motionRevealed="true";}}});
+        if (heading) timeline.fromTo(heading,{opacity:.65,y:10,"--group-rule-scale":0,"--group-marker-angle":"-20deg"},{opacity:1,y:0,"--group-rule-scale":1,"--group-marker-angle":"0deg",duration:duration.slow,clearProps:"opacity,transform"},0);
+        if (cards.length) timeline.fromTo(cards,{opacity:.65,y:24},{opacity:1,y:0,duration:duration.slow,stagger:.09,clearProps:"opacity,transform"},.08);
+        owned.set(group,timeline);
       });
+      const finish = (event: Event) => {
+        const group = event.target instanceof Element ? event.target.closest<HTMLElement>(".space-category-group") : null;
+        if (group) owned.get(group)?.progress(1);
+      };
+      root.addEventListener("pointerover",finish); root.addEventListener("focusin",finish);
+      const refreshFrame = requestAnimationFrame(() => ScrollTrigger.refresh());
+      return () => {cancelAnimationFrame(refreshFrame);root.removeEventListener("pointerover",finish);root.removeEventListener("focusin",finish);owned.clear();};
     }, scope);
     return () => media.revert();
   }, { scope, dependencies: [categoryKey], revertOnUpdate: true });

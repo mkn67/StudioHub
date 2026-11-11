@@ -1,0 +1,51 @@
+# Local-only overlay. Paths resolve from the repository's docker-compose.yml.
+# Initialize credentials/TLS with: node helpdesk-php/bin/setup-local-mysql.mjs
+services:
+  helpdesk-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: studiohub_helpdesk_dev
+      MYSQL_USER: helpdesk_app
+      MYSQL_PASSWORD: ${LOCAL_HELPDESK_MYSQL_PASSWORD:?Run Helpdesk MySQL setup}
+      MYSQL_ROOT_PASSWORD: ${LOCAL_HELPDESK_MYSQL_ROOT_PASSWORD:?Run Helpdesk MySQL setup}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+07:00
+      - --require-secure-transport=ON
+      - --ssl-ca=/etc/mysql/helpdesk-tls/ca.pem
+      - --ssl-cert=/etc/mysql/helpdesk-tls/server-cert.pem
+      - --ssl-key=/etc/mysql/helpdesk-tls/server-key.pem
+    ports:
+      - "127.0.0.1:3308:3306"
+    volumes:
+      - helpdesk_mysql_data:/var/lib/mysql
+      - ./helpdesk-php/var/mysql-tls:/etc/mysql/helpdesk-tls:ro
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=TCP -h helpdesk-db -u"$$MYSQL_USER" --ssl-mode=VERIFY_IDENTITY --ssl-ca=/etc/mysql/helpdesk-tls/ca.pem "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null 2>&1']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+
+  helpdesk-php:
+    environment:
+      # 9Router runs on the Windows host; container loopback is a different host.
+      NINEROUTER_HTTP_HOSTS: host.docker.internal
+      # Public read-only catalog/evaluator tools verified against the local API.
+      STUDIOHUB_PUBLIC_TOOLS: "true"
+      HELPDESK_ENV: development
+      HELPDESK_DATABASE_URL: mysql:host=helpdesk-db;port=3306;dbname=studiohub_helpdesk_dev;charset=utf8mb4
+      HELPDESK_DB_USER: helpdesk_app
+      HELPDESK_DB_PASSWORD: ${LOCAL_HELPDESK_MYSQL_PASSWORD:?Run Helpdesk MySQL setup}
+      HELPDESK_DB_SSL_CA: /etc/helpdesk-mysql/ca.pem
+      HELPDESK_ALLOW_PRODUCTION_MIGRATIONS: "false"
+    volumes:
+      - ./helpdesk-php/var/mysql-tls/ca.pem:/etc/helpdesk-mysql/ca.pem:ro
+    depends_on:
+      helpdesk-db:
+        condition: service_healthy
+
+volumes:
+  helpdesk_mysql_data:

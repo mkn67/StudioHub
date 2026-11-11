@@ -4,9 +4,10 @@ import { welcomeMessage } from "../data/demoFaq";
 import { MAX_MESSAGES, MAX_MESSAGE_LENGTH, type HelpdeskContext, type HelpdeskMessage, type HelpdeskTransport } from "../types/helpdesk.types";
 import { HelpdeskApiError } from "../services/phpHelpdeskAdapter";
 
-export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskContext) {
+export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskContext, enabled = true) {
   const [messages, setMessages] = useState<HelpdeskMessage[]>([{ id: "welcome", role: "assistant", text: welcomeMessage, createdAt: "" }]);
   const [pending, setPending] = useState(false);
+  const [restoring, setRestoring] = useState(() => enabled && transport.mode === "connected" && !!transport.loadHistory);
   const [error, setError] = useState("");
   const [failedMessage, setFailedMessage] = useState<HelpdeskMessage | null>(null);
   const [handoff, setHandoff] = useState(false);
@@ -18,6 +19,19 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
     mounted.current = true;
     return () => { mounted.current = false; active.current?.abort(); };
   }, []);
+  useEffect(() => {
+    if (!enabled || transport.mode !== "connected" || !transport.loadHistory) return;
+    const request = new AbortController(); active.current = request;
+    void transport.loadHistory(request.signal).then(result => {
+      if (request.signal.aborted) return;
+      if (result.messages.length) setMessages(result.messages);
+      setHandoff(result.state === "human_pending" || result.state === "human_active");
+      setHandoffState(result.state);
+    }).catch(failure => {
+      if (!request.signal.aborted && !(failure instanceof HelpdeskApiError && failure.reason === "authentication_required")) setError("Chưa khôi phục được lịch sử trò chuyện. Vui lòng thử lại.");
+    }).finally(() => { if (active.current === request) active.current = null; if (!request.signal.aborted) setRestoring(false); });
+    return () => request.abort();
+  }, [transport, enabled]);
   useEffect(() => {
     if (!handoff || !transport.loadHistory) return;
     const controller = new AbortController();
@@ -38,7 +52,7 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
 
   function send(input: string, retryMessage?: HelpdeskMessage): boolean {
     const text = input.trim();
-    if (!text || active.current || handoff) return false;
+    if (!enabled || !text || active.current || handoff) return false;
     if (text.length > MAX_MESSAGE_LENGTH || messages.length + (retryMessage ? 1 : 2) > MAX_MESSAGES) {
       setError("Đã đạt giới hạn cuộc trò chuyện. Bạn có thể xóa cuộc trò chuyện để bắt đầu lại.");
       return false;
@@ -80,11 +94,17 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
       if (active.current === request) { active.current = null; if (mounted.current) setPending(false); }
     }
   }
-  function clear() {
+  async function clear() {
     if (active.current || handoff) return;
     setMessages([{ id: "welcome", role: "assistant", text: welcomeMessage, createdAt: "" }]);
     setError(""); setFailedMessage(null); setHandoff(false);
     setStatus("idle"); transport.reset?.();
+    if (transport.startNew) {
+      const request = new AbortController(); active.current = request; setPending(true);
+      try { await transport.startNew(); }
+      catch { if (mounted.current) setError("Chưa tạo được cuộc trò chuyện mới. Vui lòng thử lại."); }
+      finally { if (active.current === request) { active.current = null; if (mounted.current) setPending(false); } }
+    }
   }
   async function confirmTicket(proposalId: string) {
     if (active.current || !transport.confirmTicket) return;
@@ -105,5 +125,5 @@ export function useHelpdeskChat(transport: HelpdeskTransport, context: HelpdeskC
   function retry() {
     if (failedMessage) send(failedMessage.text, failedMessage);
   }
-  return { messages, pending, error, failedMessage, handoff, handoffState, status, send, retry, clear, confirmTicket };
+  return { messages, pending, restoring, error, failedMessage, handoff, handoffState, status, send, retry, clear, confirmTicket };
 }
