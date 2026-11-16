@@ -6,7 +6,17 @@ export type HelpdeskCard =
   | { kind: "availability"; title: string; description: string; checkedAt: string }
   | { kind: "booking"; title: string; bookingStatus: string; paymentStatus: string; refundStatus: string }
   | { kind: "ticket"; title: string; ticketId: string; status: string };
+export type StudioContactFallback = {
+  reason: "explicit_contact_request" | "insufficient_verified_information";
+  status: "available" | "missing" | "ambiguous";
+  studioId: number | null;
+  studioName: string | null;
+  roomId: number | null;
+  publicPhone: string | null;
+  publicEmail: string | null;
+};
 export type HelpdeskResponse = {
+  contactFallback?: StudioContactFallback;
   text: string;
   mode: "demo" | "connected";
   state: "answered" | "unavailable" | "unauthorized" | "human_handoff";

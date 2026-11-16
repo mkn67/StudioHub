@@ -177,6 +177,13 @@ final class AgentOrchestrator
                         'tool_call_id' => $call['id'],
                         'content'      => Util::json($result),
                     ];
+                    if (isset($evidence['contactFallback'])) {
+                        // The verified contact is final application data, not a draft for the model.
+                        // Stop before later calls can change the selected room or request mutations.
+                        $evidence['trace'] = $trace;
+                        $evidence['usage'] = $usage;
+                        return StudioContactFallback::response($evidence['contactFallback']);
+                    }
                 }
                 continue; // Cho mô hình xem kết quả tool rồi tiếp tục.
             }
@@ -322,6 +329,7 @@ final class AgentOrchestrator
     private function buildResponse(array $final, array $evidence): array
     {
         $kind = $final['kind'] ?? '';
+        if (isset($evidence['contactFallback'])) return StudioContactFallback::response($evidence['contactFallback']);
         if ($kind==='auth_required') return self::base('Bạn cần đăng nhập tài khoản khách hàng và chức năng tra cứu đơn cần được bật để xem danh sách đơn của mình. Mã đơn trong tin nhắn không cấp quyền truy cập.','unauthorized');
 
         // Nếu đã có yêu cầu gặp nhân viên đang chờ thì ưu tiên báo trạng thái này, bất kể kind là gì.
@@ -338,7 +346,7 @@ final class AgentOrchestrator
             && isset($evidence['roomFacts'][(string)$final['roomId']])) {
             $facts=$evidence['roomFacts'][(string)$final['roomId']];
             // Render the exact API projection; model-authored prices or refund claims are never used.
-            return array_replace(self::base($facts['text'], 'answered'),[
+            return array_replace(self::base(RoomSummary::format($facts['text'], $final['roomId']), 'answered'),[
                 'answerKind'=>'catalog','reasonCode'=>null,
             ]);
         }
@@ -472,23 +480,38 @@ final class AgentOrchestrator
      */
     private static function formatRates(array $rateResults): string
     {
-        $lines = [];
-
+        $sections = [];
         foreach ($rateResults as $rateResult) {
+            $name = RoomSummary::escape($rateResult['roomName'] ?? ('Phòng '.$rateResult['roomId']));
+            $offers = [];
             foreach ($rateResult['rates'] as $rate) {
-                $lines[] = ($rateResult['roomName']??('Phòng ' . $rateResult['roomId'])) . ': '
-                    . $rate['unitPrice'] . ' VND / ' . Util::rentalUnitLabel($rate['rateUnit'])
-                    . (isset($rate['rate_id'])?' — mã giá '.$rate['rate_id']:'')
-                    . (isset($rate['unit_minutes'])?' — '.$rate['unit_minutes'].' phút/đơn vị':'')
-                    . (isset($rate['minimum_units'])?' — tối thiểu '.$rate['minimum_units'].' đơn vị':'')
-                    . (isset($rate['maximum_units'])?' — tối đa '.$rate['maximum_units'].' đơn vị':'')
-                    . (isset($rate['effective_from'])?' — hiệu lực từ '.$rate['effective_from']:'')
-                    . (isset($rate['effective_to'])?' đến '.$rate['effective_to']:'')
-                    . ' (kiểm tra ' . $rateResult['checkedAt'] . ').';
+                $unit = RoomSummary::escape(Util::rentalUnitLabel($rate['rateUnit']));
+                $offer = '**'.number_format($rate['unitPrice'], 0, ',', '.').' ₫ / '.$unit.'**';
+                $details = [];
+                $minutes = $rate['unit_minutes'] ?? 0;
+                if ($minutes > 0) {
+                    $duration = $minutes % 1440 === 0 ? (int)($minutes / 1440).' ngày'
+                        : ($minutes % 60 === 0 ? (int)($minutes / 60).' giờ' : $minutes.' phút');
+                    $details[] = 'Thời lượng: '.$duration.' / '.$unit.'.';
+                }
+                $min = $rate['minimum_units'] ?? null;
+                $max = $rate['maximum_units'] ?? null;
+                if ($min !== null && $max !== null) $details[] = 'Thuê từ '.$min.' đến '.$max.' '.$unit.'.';
+                elseif ($min !== null) $details[] = 'Thuê tối thiểu '.$min.' '.$unit.'.';
+                elseif ($max !== null) $details[] = 'Thuê tối đa '.$max.' '.$unit.'.';
+                $date = static fn(string $value): string => implode('/', array_reverse(explode('-', $value)));
+                $from = $rate['effective_from'] ?? null;
+                $to = $rate['effective_to'] ?? null;
+                if ($from && $to) $details[] = 'Áp dụng: '.$date($from).' – '.$date($to).'.';
+                elseif ($from) $details[] = 'Áp dụng từ '.$date($from).'.';
+                elseif ($to) $details[] = 'Áp dụng đến '.$date($to).'.';
+                if ($details) $offer .= "\n\n- ".implode("\n- ", $details);
+                $offers[] = $offer;
             }
+            if ($offers) $sections[] = '**'.$name."**\n\n".implode("\n\n", $offers);
         }
-
-        return ($lines ? implode("\n", $lines) : self::MSG_RATES_EMPTY) . self::MSG_RATES_NOTE;
+        return ($sections ? implode("\n\n", $sections) : self::MSG_RATES_EMPTY)
+            . "\n\n*Giá tham khảo, chưa phải tổng tiền đơn thuê. Chưa kiểm tra lịch trống.*";
     }
 
     private static function renderReadResult(string $kind, array $r): array

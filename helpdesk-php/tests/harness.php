@@ -16,7 +16,7 @@ test('current room is API verified before model reasoning and prices use its nam
     $model=new ScriptedModel([function($messages){$data=json_decode(end($messages)['content'],true);check($data['data']['name']==='Zenith Music Recording');return call('get_room_pricing',['roomId'=>6]);},['content'=>'{"kind":"rates"}']]);
     [$service,$store]=readService($model,$http);$actor=customerActor();$id=$service->create([],$actor)['conversation']['id'];
     $r=$service->send($id,['text'=>'Phòng này giá bao nhiêu?','context'=>roomContext(6),'clientMessageId'=>Util::id()],$actor);
-    check(str_contains($r['response']['text'],'Zenith Music Recording'));check(str_contains($r['response']['text'],'250000 VND'));check(count($http->requests)===2);
+    check(str_contains($r['response']['text'],'Zenith Music Recording'));check(str_contains($r['response']['text'],'250.000 ₫'));check(count($http->requests)===2);
     $saved=json_decode($store->get('helpdesk_conversations',$id)['payload'],true);check($saved['agentState']['selectedRoomId']===6);
 });
 test('navigation changes the viewed room while preserving conversation and previous messages',function(){
@@ -35,7 +35,7 @@ test('explicit full room name resolves another room without silently using the v
     $model=new ScriptedModel([call('resolve_room',['query'=>'Zenith Vocal Recording Booth']),call('get_room_rates',['roomId'=>15],'call_2'),['content'=>'{"kind":"rates"}']]);
     [$s]=readService($model,$http);$a=customerActor();$id=$s->create([],$a)['conversation']['id'];
     $r=$s->send($id,['text'=>'Zenith Vocal Recording Booth giá bao nhiêu?','context'=>roomContext(6),'clientMessageId'=>Util::id()],$a);
-    check(str_contains($r['response']['text'],'Zenith Vocal Recording Booth'));check(str_contains($r['response']['text'],'180000 VND'));
+    check(str_contains($r['response']['text'],'Zenith Vocal Recording Booth'));check(str_contains($r['response']['text'],'180.000 ₫'));
 });
 test('ambiguous room name produces actual named choices instead of asking generic purpose',function(){
     $http=new FakeTransport([apiResponse(['items'=>[['room_id'=>6,'name'=>'Zenith Music','capacity'=>5],['room_id'=>15,'name'=>'Zenith Vocal','capacity'=>3]]])]);
@@ -80,7 +80,7 @@ test('matching short name resolves to the verified viewed room while explicit ot
     $http=new FakeTransport([roomResponse(6,'Zenith Music'),$rows,rateResponse(250000)]);
     $model=new ScriptedModel([call('resolve_room',['query'=>'Zenith','prefer_viewed'=>null]),call('get_room_rates',['roomId'=>6],'call_2'),['content'=>'{"kind":"rates"}']]);
     [$s]=readService($model,$http);$a=customerActor();$id=$s->create([],$a)['conversation']['id'];
-    $r=$s->send($id,['text'=>'phòng Zenith','context'=>roomContext(6),'clientMessageId'=>Util::id()],$a);check(str_contains($r['response']['text'],'Zenith Music'));check(str_contains($r['response']['text'],'250000 VND'));
+    $r=$s->send($id,['text'=>'phòng Zenith','context'=>roomContext(6),'clientMessageId'=>Util::id()],$a);check(str_contains($r['response']['text'],'Zenith Music'));check(str_contains($r['response']['text'],'250.000 ₫'));
 });
 test('failed lookup for another name cannot turn page-context metadata into a search answer',function(){
     $http=new FakeTransport([roomResponse(6,'Zenith Music'),new \StudioHub\Helpdesk\Failure('catalog_unavailable',503)]);

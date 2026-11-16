@@ -79,6 +79,24 @@ final class PublicCatalog
         if($room['roomId']!==(string)$id)throw new Failure('invalid_catalog_response',502);
         return $room+['availability'=>'not_checked'];
     }
+    public function publicContact(int $roomId): array
+    {
+        $data = $this->get('/rooms/'.$roomId);
+        $studio = $data['studio'] ?? null;
+        if ((string)($data['room_id'] ?? '') !== (string)$roomId || !is_array($studio)
+            || !is_int($data['studio_id'] ?? null) || $data['studio_id'] < 1
+            || ($studio['studio_id'] ?? null) !== $data['studio_id']
+            || !is_string($studio['name'] ?? null) || trim($studio['name']) === '') {
+            throw new Failure('invalid_catalog_response', 502);
+        }
+        // Only studios.phone is published business contact. Never use host_* or users.*.
+        $raw = $studio['phone'] ?? null;
+        $phone = is_string($raw) && preg_match('/^\+?[0-9 ().-]{8,30}$/D', $raw)
+            ? preg_replace('/[ ().-]/', '', $raw) : null;
+        if ($phone !== null && !preg_match('/^\+?[0-9]{8,15}$/D', $phone)) $phone = null;
+        return ['studioId'=>$data['studio_id'], 'studioName'=>mb_substr($studio['name'],0,150),
+            'roomId'=>$roomId, 'publicPhone'=>$phone, 'publicEmail'=>null];
+    }
     public function facts(int $id): array
     {
         $data=$this->get('/rooms/'.$id.'/helpdesk-facts');

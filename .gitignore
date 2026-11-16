@@ -59,3 +59,4 @@ docs/*
 docs/devops/*
 !docs/devops/STAGING_DEPLOY_VI.md
 !docs/demo-room-catalog-v2.md
+learning/

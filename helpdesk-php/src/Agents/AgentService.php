@@ -409,7 +409,10 @@ final class AgentService
     {
         if (($evidence['context']['scope'] ?? '') === 'catalog'
             && $text === '/handoff') {
-            return AgentOrchestrator::base('Mình giúp tìm phòng và giải thích thông tin phòng. Bạn mở Đơn của tôi để xem và quản lý đơn thuê.');
+            if (isset($evidence['context']['roomId']) && $this->catalog->enabled()) {
+                $evidence['viewedRoom'] = $this->catalog->details($evidence['context']['roomId']);
+            }
+            return StudioContactFallback::response(StudioContactFallback::resolve($this->catalog, $evidence, 'explicit_contact_request'));
         }
         if ($text === '/handoff') {
             $evidence['handoff'] = true;
@@ -452,10 +455,17 @@ final class AgentService
             $this->assertProviderConfigured();
         }
 
+        $evidence['explicitContact'] = StudioContactFallback::explicit($text);
         $registry = $this->registry($actor, $evidence);
         $agent = new AgentOrchestrator($this->config, $this->model, $registry, $this->knowledge->version);
 
-        return $agent->run($text, $conversation['messages'], $actor, $evidence);
+        $answer = $agent->run($text, $conversation['messages'], $actor, $evidence);
+        if (!isset($answer['contactFallback']) && ($evidence['context']['scope'] ?? '') === 'catalog'
+            && ($evidence['explicitContact'] || (($answer['state'] ?? '') === 'unavailable' && StudioContactFallback::insufficient($evidence)))) {
+            return StudioContactFallback::response(StudioContactFallback::resolve($this->catalog, $evidence,
+                $evidence['explicitContact'] ? 'explicit_contact_request' : 'insufficient_verified_information'));
+        }
+        return $answer;
     }
 
     /**
@@ -622,6 +632,21 @@ final class AgentService
 
         $this->registerKnowledgeTool($registry, $evidence);
 
+        $registry->add('get_studio_public_contact',
+            'Read public business contact for the verified selected/viewed room. No room/Studio/Host IDs or contacts accepted. Resolve an explicitly named different room first. Multiple rooms require clarification. Use only for an explicit contact/human request or after tools show missing evidence. If retrieved sources conflict and no authoritative answer can be chosen, supply two or three actual conflicting chunk IDs; the server validates their existence and distinct content. Never a live handoff.',
+            ToolRegistry::object(['conflictingChunkIds'=>['type'=>'array','items'=>ToolRegistry::string(160),'minItems'=>2,'maxItems'=>3]], []),
+            ToolRegistry::object(['status'=>ToolRegistry::string(30)], ['status']),
+            function ($args) use (&$evidence) {
+                if (isset($args['conflictingChunkIds'])) {
+                    if (!StudioContactFallback::verifyConflict($args['conflictingChunkIds'], $evidence)) throw new Failure('contact_fallback_not_supported',422);
+                    $evidence['verifiedConflict'] = true;
+                }
+                if (empty($evidence['explicitContact']) && !StudioContactFallback::insufficient($evidence)) throw new Failure('contact_fallback_not_supported',422);
+                $evidence['contactFallback'] = StudioContactFallback::resolve($this->catalog, $evidence,
+                    !empty($evidence['explicitContact']) ? 'explicit_contact_request' : 'insufficient_verified_information');
+                return ['status'=>$evidence['contactFallback']['status']];
+            }, self::allowAll());
+
         if ($this->catalog->enabled()) {
             $this->registerCatalogTools($registry, $evidence);
             $registry->alias('search_studios', 'search_rooms');
@@ -664,6 +689,7 @@ final class AgentService
             $obj(['chunks' => ['type' => 'array', 'items' => $chunk, 'maxItems' => 5]], ['chunks']),
             function ($args, $actor) use (&$evidence) {
                 $chunks = (new LexicalRetriever($this->knowledge))->search($args['query'], $actor);
+                $evidence['knowledgeSearched'] = true;
                 $out = [];
 
                 foreach ($chunks as $c) {

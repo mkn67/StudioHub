@@ -1,3 +1,5 @@
+import { AssistantMarkdown } from "./AssistantMarkdown";
+import { Phone, Mail } from "lucide-react";
 import Link from "next/link";
 import { safeHelpdeskHref, type HelpdeskMessage } from "../types/helpdesk.types";
 import styles from "../styles/helpdesk.module.css";
@@ -6,7 +8,13 @@ export function ChatMessage({ message, confirmTicket, pending = false }: { messa
   const response = message.response;
   return <article className={`${styles.message} ${message.role === "user" ? styles.userMessage : styles.assistantMessage}`}>
     <span className={styles.speaker}>{message.role === "user" ? "Bạn" : response?.operatorMessage ? "Nhân viên hỗ trợ" : "StudioHub AI"}</span>
-    <p>{message.text}</p>
+    {message.role === "assistant" ? <div className={styles.markdown}><AssistantMarkdown text={message.text} /></div> : <p>{message.text}</p>}
+    {response?.contactFallback && <div className={styles.contactFallback}>
+      {response.contactFallback.studioName && <strong>{response.contactFallback.studioName}</strong>}
+      {response.contactFallback.publicPhone && <a href={"tel:" + response.contactFallback.publicPhone}><Phone size={14} aria-hidden="true" /> Điện thoại: {response.contactFallback.publicPhone}</a>}
+      {response.contactFallback.publicEmail && <a href={"mailto:" + encodeURIComponent(response.contactFallback.publicEmail)}><Mail size={14} aria-hidden="true" /> Email: {response.contactFallback.publicEmail}</a>}
+      {response.contactFallback.roomId && <Link href={"/rooms/" + response.contactFallback.roomId}>Xem trang chi tiết phòng</Link>}
+    </div>}
     {response?.ticketProposal && <div className={styles.card}>
       <strong>Xem lại trước khi gửi</strong>
       <p>{response.ticketProposal.description}</p>

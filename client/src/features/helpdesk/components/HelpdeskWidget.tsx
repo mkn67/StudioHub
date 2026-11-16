@@ -130,9 +130,9 @@ function HelpdeskWidgetContent({ path, transport, authenticated, ready, visible 
   }, [chat.messages, chat.pending, open, draft]);
 
   return <div ref={root} style={visible ? undefined : { display: "none" }} className={`${styles.widget} ${roomDetail ? styles.aboveBooking : ""}`} data-helpdesk={transport.mode}>
-    <button ref={launcher} type="button" className={styles.launcher} aria-label="Trò chuyện với StudioHub AI"
+    <button ref={launcher} type="button" className={styles.launcher} aria-label="Mở hỗ trợ StudioHub"
       aria-expanded={open} aria-controls="studiohub-helpdesk" aria-haspopup="dialog" onClick={() => setOpen(value => !value)}>
-      <MessageCircle size={25} aria-hidden="true" /><span className={styles.launcherTag}>AI</span>
+      <MessageCircle size={25} aria-hidden="true" /><span className={styles.launcherTag}>Hỗ trợ</span>
     </button>
     <dialog ref={panel} id="studiohub-helpdesk" className={styles.panel} aria-labelledby="helpdesk-title" aria-describedby="helpdesk-mode"
       onCancel={event => { event.preventDefault(); setOpen(false); }} onKeyDown={event => {
@@ -154,13 +154,13 @@ function HelpdeskWidgetContent({ path, transport, authenticated, ready, visible 
         </header>
         <div id="helpdesk-mode" className={styles.mode}>
           <span>{!authenticated ? "Cần đăng nhập" : roomId ? viewedRoom?.id === roomId ? viewedRoom.name : "Phòng đang mở" : chat.status === "connecting" ? "Đang kết nối" : chat.status === "unavailable" ? "Chưa sẵn sàng" : "Khám phá Studio"}</span>
-          <small>{chat.restoring ? "Đang khôi phục hội thoại…" : transport.mode === "connected" ? "AI xử lý và lưu lịch sử hỗ trợ; không gửi thông tin nhạy cảm." : roomId ? "Hỏi về phòng đang xem" : "Tìm phòng theo nhu cầu của bạn"}</small>
+          <small>{chat.restoring ? "Đang khôi phục hội thoại…" : transport.mode === "connected" ? "AI xử lý và hỗ trợ người dùng." : roomId ? "Hỏi về phòng đang xem" : "Tìm phòng theo nhu cầu của bạn"}</small>
         </div>
         <div ref={list} className={styles.transcript} role="log" aria-label="Nội dung trò chuyện" aria-live="off" tabIndex={0} onScroll={event => {
           const node = event.currentTarget;
           followLatest.current = node.scrollHeight - node.scrollTop - node.clientHeight < 48;
         }}>
-          {!authenticated ? <div className={styles.message}><p>{ready ? "Đăng nhập để trò chuyện với StudioHub AI. Lịch sử trò chuyện được gắn với tài khoản của bạn." : "Đang kiểm tra phiên đăng nhập…"}</p>{ready && <Link href="/login" className={styles.actionLink}>Đăng nhập</Link>}</div> : chat.messages.map(message => <ChatMessage key={message.id} message={message} confirmTicket={chat.confirmTicket} pending={chat.pending} />)}
+          {!authenticated ? <div className={styles.message}><p>{ready ? "Đăng nhập để trò chuyện với StudioHub AI." : "Đang kiểm tra phiên đăng nhập…"}</p>{ready && <Link href="/login" className={styles.actionLink}>Đăng nhập</Link>}</div> : chat.messages.map(message => <ChatMessage key={message.id} message={message} confirmTicket={chat.confirmTicket} pending={chat.pending} />)}
           {chat.pending && <TypingIndicatorBubble />}
         </div>
         <div className={styles.suggestions} aria-label="Câu hỏi gợi ý">

@@ -45,6 +45,24 @@ export function validateHelpdeskResponse(value: unknown): HelpdeskResponse {
     if (!record(p) || !string(p.id, 36) || !string(p.description, 1000) || !string(p.category, 40) || !string(p.suggestedDestination, 100)) throw new HelpdeskApiError("invalid_response", "Tóm tắt ticket không hợp lệ.");
     response.ticketProposal = { id: p.id, description: p.description, category: p.category, suggestedDestination: p.suggestedDestination };
   }
+  if (value.contactFallback !== undefined) {
+    const c = value.contactFallback;
+    const id = (v: unknown) => v === null || (Number.isSafeInteger(v) && Number(v) > 0);
+    if (!record(c) || !["explicit_contact_request", "insufficient_verified_information"].includes(String(c.reason)) ||
+      !["available", "missing", "ambiguous"].includes(String(c.status)) || !id(c.studioId) || !id(c.roomId) ||
+      !(c.studioName === null || string(c.studioName, 150)) ||
+      !(c.publicPhone === null || (typeof c.publicPhone === "string" && /^\+?[0-9]{8,15}$/.test(c.publicPhone))) ||
+      !(c.publicEmail === null || (typeof c.publicEmail === "string" && /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/.test(c.publicEmail) && c.publicEmail.length <= 254)) ||
+      (c.status === "ambiguous" && [c.studioId, c.studioName, c.roomId, c.publicPhone, c.publicEmail].some(v => v !== null)) ||
+      (c.status !== "ambiguous" && (!c.studioId || !c.roomId || !c.studioName)) ||
+      (c.status === "available" ? !(c.publicPhone || c.publicEmail) : !!(c.publicPhone || c.publicEmail))) {
+      throw new HelpdeskApiError("invalid_response", "Liên hệ Studio không hợp lệ.");
+    }
+    response.contactFallback = {
+      reason: c.reason, status: c.status, studioId: c.studioId, studioName: c.studioName,
+      roomId: c.roomId, publicPhone: c.publicPhone, publicEmail: c.publicEmail,
+    } as NonNullable<HelpdeskResponse["contactFallback"]>;
+  }
   if (value.handoffStatus === "human_pending") response.handoffStatus = "human_pending";
   if (value.operatorMessage === true) response.operatorMessage = true;
   return response;
