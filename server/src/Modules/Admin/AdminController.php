@@ -101,7 +101,7 @@ class AdminController
 
     public function rooms(Request $request): void
     {
-        $this->listResource("SELECT r.*, s.name AS studio_name, u.full_name AS host_name FROM rooms r JOIN studios s ON s.studio_id = r.studio_id JOIN users u ON u.user_id = s.host_id WHERE (? = '' OR r.status = ?) AND (? = '' OR r.name LIKE ? OR s.name LIKE ?) ORDER BY r.room_id DESC", $request, 'Lấy danh sách phòng thành công');
+        $this->listResource("SELECT r.*, s.name AS studio_name, u.full_name AS host_name FROM rooms r JOIN studios s ON s.studio_id = r.studio_id JOIN users u ON u.user_id = s.host_id WHERE (? = '' OR r.status = ?) AND (? = '' OR r.name LIKE ? OR s.name LIKE ?) AND (? = '' OR r.review_status = ?) ORDER BY r.room_id DESC", $request, 'Lấy danh sách phòng thành công', [trim((string) $request->query('review_status', ''))]);
     }
 
     public function equipments(Request $request): void
@@ -117,6 +117,47 @@ class AdminController
     public function updateRoom(Request $request, array $vars): void
     {
         $this->updateResource('rooms', 'room_id', (int) $vars['id'], $request, ['name', 'description', 'area', 'ceiling_height', 'capacity', 'soundproof_level', 'power_specs', 'rules', 'status'], ['status' => ['active', 'maintenance', 'inactive']]);
+    }
+
+    public function reviewRoom(Request $request, array $vars): void
+    {
+        $roomId = (int) ($vars['id'] ?? 0);
+        $body = $request->json();
+        $decision = trim((string) ($body['decision'] ?? ''));
+        $reason = trim((string) ($body['reason'] ?? ''));
+        if ($roomId < 1 || !in_array($decision, ['approve', 'reject'], true)) {
+            throw new ApiException(400, 'invalid_room_review', 'Quyết định duyệt phòng không hợp lệ');
+        }
+        if (mb_strlen($reason) > 2000 || ($decision === 'reject' && $reason === '')) {
+            throw new ApiException(400, 'room_review_reason_required', 'Cần ghi lý do từ chối (tối đa 2.000 ký tự)');
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $lock = $this->pdo->prepare('SELECT room_id, status, review_status, description, rules FROM rooms WHERE room_id=? FOR UPDATE');
+            $lock->execute([$roomId]);
+            $room = $lock->fetch(PDO::FETCH_ASSOC);
+            if (!$room) throw new ApiException(404, 'room_not_found', 'Không tìm thấy phòng');
+            if ($decision === 'approve') {
+                $images = $this->pdo->prepare('SELECT COUNT(*) FROM room_images WHERE room_id=?');
+                $images->execute([$roomId]);
+                $rate = $this->pdo->prepare("SELECT 1 FROM room_rates WHERE room_id=? AND status='active' AND effective_from<=CURDATE() AND (effective_to IS NULL OR effective_to>=CURDATE()) LIMIT 1");
+                $rate->execute([$roomId]);
+                if ($room['status'] !== 'active' || trim((string) $room['description']) === '' || trim((string) $room['rules']) === '' || (int) $images->fetchColumn() < 3 || !$rate->fetchColumn()) {
+                    throw new ApiException(409, 'room_listing_incomplete', 'Chưa thể duyệt: cần phòng đang hoạt động, mô tả, nội quy, ít nhất 3 ảnh và một giá còn hiệu lực');
+                }
+            }
+            $status = $decision === 'approve' ? 'approved' : 'rejected';
+            $update = $this->pdo->prepare('UPDATE rooms SET review_status=?, review_reason=?, reviewed_at=NOW(), reviewed_by=?, updated_at=NOW() WHERE room_id=?');
+            $update->execute([$status, $reason !== '' ? $reason : null, (int) $request->user()['user_id'], $roomId]);
+            $audit = $this->pdo->prepare('INSERT INTO audit_logs(user_id,action,entity_type,entity_id,metadata) VALUES(?,?,?,?,?)');
+            $audit->execute([(int) $request->user()['user_id'], 'room_review_' . $decision, 'rooms', $roomId, json_encode(['review_status' => $status, 'reason' => $reason], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+            $this->pdo->commit();
+            ApiResponse::ok(['room_id' => $roomId, 'review_status' => $status, 'review_reason' => $reason !== '' ? $reason : null], $decision === 'approve' ? 'Đã duyệt phòng' : 'Đã từ chối phòng');
+        } catch (\Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
     }
 
     public function updateEquipment(Request $request, array $vars): void
@@ -157,7 +198,7 @@ class AdminController
         ApiResponse::ok(['period' => ['from' => $period['from'], 'to' => $period['to']], 'series' => $series], 'Lấy chuỗi báo cáo hệ thống thành công');
     }
 
-    private function listResource(string $sql, Request $request, string $message): void
+    private function listResource(string $sql, Request $request, string $message, array $extraFilters = []): void
     {
         $status = trim((string) $request->query('status', ''));
         $search = trim((string) $request->query('search', ''));
@@ -171,8 +212,13 @@ class AdminController
         $stmt->bindValue(3, $search, PDO::PARAM_STR);
         $stmt->bindValue(4, $keyword, PDO::PARAM_STR);
         $stmt->bindValue(5, $keyword, PDO::PARAM_STR);
-        $stmt->bindValue(6, $limit, PDO::PARAM_INT);
-        $stmt->bindValue(7, ($page - 1) * $limit, PDO::PARAM_INT);
+        $position = 6;
+        foreach ($extraFilters as $filter) {
+            $stmt->bindValue($position++, $filter, PDO::PARAM_STR);
+            $stmt->bindValue($position++, $filter, PDO::PARAM_STR);
+        }
+        $stmt->bindValue($position++, $limit, PDO::PARAM_INT);
+        $stmt->bindValue($position, ($page - 1) * $limit, PDO::PARAM_INT);
         $stmt->execute();
         ApiResponse::ok(['items' => $stmt->fetchAll(PDO::FETCH_ASSOC), 'page' => $page, 'limit' => $limit], $message);
     }

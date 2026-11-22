@@ -191,6 +191,8 @@ class PaymentService
                 'transaction_code' => $txCode,
                 'paid_at'          => $paidAt,
             ], $this->pdo);
+            $paymentStatus = in_array($paymentType, ['full', 'remaining'], true) ? 'paid' : 'deposit_paid';
+            $this->bookingRepo->updatePaymentStatus($bookingId, $paymentStatus, $this->pdo);
 
             // Audit log
             $this->bookingRepo->insertAuditLog(
@@ -205,6 +207,7 @@ class PaymentService
                     'payment_method'   => $paymentMethod,
                     'amount'           => $amount,
                     'status'           => 'success',
+                    'payment_status'   => $paymentStatus,
                     'transaction_code' => $txCode,
                     'expires_at'       => $newExpiresAt ?? $booking['expires_at'],
                 ],
@@ -221,6 +224,7 @@ class PaymentService
                 'payment_method'   => $paymentMethod,
                 'amount'           => $amount,
                 'status'           => 'success',
+                'payment_status'   => $paymentStatus,
                 'transaction_code' => $txCode,
                 'paid_at'          => $paidAt,
                 'expires_at'       => $newExpiresAt ?? $booking['expires_at'],

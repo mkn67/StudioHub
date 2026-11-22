@@ -4,7 +4,7 @@ Fictional demonstration inventory. Photos illustrate room types and may show dif
 
 Photos are downloaded from Pexels, licensed under https://www.pexels.com/license/. Gallery entries illustrate a room type and can depict different real locations. No endorsement by photographed people or businesses is claimed. Avatar photos are explicitly labelled illustrative demo profiles in the UI.
 
-66 distinct gallery assets, 3 per fictional room. Five new room records. No repeated cover asset between rooms. Reference videos are explicitly not tours of the fictional room.
+66 distinct Pexels gallery assets were originally assigned three per fictional room. Four representative rooms now have two additional illustrative gallery photos sourced from the legacy curated image set; see `client/public/images/PROVENANCE.md`. Five new room records. No repeated cover asset between rooms. Reference videos are explicitly not tours of the fictional room.
 
 ## Artemis Phòng Cyclorama Trắng
 

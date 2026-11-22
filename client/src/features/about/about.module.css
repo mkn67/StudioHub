@@ -4,7 +4,7 @@
 .hero h1 { font: 800 clamp(34px, 4vw, 54px)/1.25 "StudioHub Vietnam", sans-serif; letter-spacing: -.045em; max-width: 17ch; margin: 0 0 18px; }
 .intro { max-width: 61ch; margin: 0; color: #40596a; font-size: 16px; line-height: 1.85; }
 .teamMark { position: relative; justify-self: center; text-align: center; }
-.teamMark > span { display: grid; place-items: center; width: 140px; height: 140px; margin: 0 auto 24px; font-size: 58px; font-weight: 800; letter-spacing: -.07em; border: 2px solid var(--ink); border-radius: 25px; background: #f5fafc; box-shadow: 6px 6px 0 var(--ink); transform: rotate(-5deg); }
+.teamLogo { display: block; width: min(100%, 260px); height: auto; margin: 0 auto 18px; border: 1px solid #e5e8eb; border-radius: 14px; background: #fff; box-shadow: 5px 5px 0 var(--ink); }
 .teamMark > div { display: flex; justify-content: center; gap: 8px; }
 .teamMark i { width: 14px; height: 14px; border: 1px solid var(--ink); border-radius: 50%; background: #0d7490; }
 .teamMark i:nth-child(even) { background: #f5fafc; }
@@ -42,7 +42,7 @@
 @media (max-width: 1000px) {
  .page { padding-inline: 28px; }
  .hero { grid-template-columns: minmax(0, 1fr) 180px; padding: 28px; gap: 24px; }
- .teamMark > span { width: 110px; height: 110px; font-size: 48px; }
+ .teamLogo { width: min(100%, 220px); }
  .memberGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
  .memberCard:nth-child(4) { grid-column: span 2; }
  .memberCard:nth-child(5) { grid-column: 2 / span 2; }
@@ -52,7 +52,8 @@
  .hero { display: block; padding: 26px 22px; }
  .hero h1 { font-size: 34px; }
  .intro { font-size: 15px; line-height: 1.8; }
- .teamMark { display: none; }
+ .teamMark { display: block; margin: 26px auto 0; }
+ .teamLogo { width: 180px; }
  .project { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-block: 32px; }
  .team { padding-block: 32px; }
  .sectionHeading { align-items: flex-start; }

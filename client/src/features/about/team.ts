@@ -14,9 +14,9 @@ export type TeamMember = {
 
 /** Thay thông tin trực tiếp ở đây. Không cần API hoặc cơ sở dữ liệu. */
 export const teamMembers: TeamMember[] = [
-  { id: 1, name: "Thành viên 1" },
-  { id: 2, name: "Thành viên 2" },
-  { id: 3, name: "Thành viên 3" },
-  { id: 4, name: "Thành viên 4" },
-  { id: 5, name: "Thành viên 5" },
+  { id: 1, name: "Mai Kỳ" },
+  { id: 2, name: "Thu Diễm" },
+  { id: 3, name: "Minh Ánh" },
+  { id: 4, name: "Thiên Lộc" },
+  { id: 5, name: "Đức Lộc" },
 ];

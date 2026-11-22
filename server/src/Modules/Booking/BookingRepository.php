@@ -52,7 +52,9 @@ class BookingRepository
                 note,
                 status,
                 expires_at,
-                policy_snapshot
+                policy_snapshot,
+                request_key,
+                request_hash
             ) VALUES (
                 :booking_code,
                 :room_id,
@@ -77,7 +79,9 @@ class BookingRepository
                 :note,
                 :status,
                 :expires_at,
-                :policy_snapshot
+                :policy_snapshot,
+                :request_key,
+                :request_hash
             )
         ");
 
@@ -106,6 +110,8 @@ class BookingRepository
             'status'           => $data['status'] ?? 'pending',
             'expires_at'       => $data['expires_at'],
             'policy_snapshot' => $data['policy_snapshot'] ?? null,
+            'request_key'     => $data['request_key'] ?? null,
+            'request_hash'    => $data['request_hash'] ?? null,
         ]);
 
         return (int) $db->lastInsertId();
@@ -331,6 +337,15 @@ class BookingRepository
         $db = $pdo ?? $this->pdo;
         $stmt = $db->prepare("UPDATE bookings SET expires_at = :expires_at, updated_at = NOW() WHERE booking_id = :id");
         $stmt->execute(['expires_at' => $expiresAt, 'id' => $bookingId]);
+    }
+
+    public function updatePaymentStatus(int $bookingId, string $status, ?PDO $pdo = null): void
+    {
+        if (!in_array($status, ['unpaid', 'deposit_paid', 'paid', 'refund_pending', 'partially_refunded', 'refunded'], true)) {
+            throw new \InvalidArgumentException('Invalid booking payment status');
+        }
+        $db = $pdo ?? $this->pdo;
+        $db->prepare('UPDATE bookings SET payment_status=?, updated_at=NOW() WHERE booking_id=?')->execute([$status, $bookingId]);
     }
 
     /**

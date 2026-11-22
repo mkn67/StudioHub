@@ -133,13 +133,20 @@ CREATE TABLE IF NOT EXISTS rooms (
     power_specs VARCHAR(100) NULL,
     rules TEXT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active',
+    review_status VARCHAR(20) NOT NULL DEFAULT 'approved',
+    review_reason TEXT NULL,
+    reviewed_at DATETIME NULL,
+    reviewed_by INT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_rooms_area CHECK (area > 0),
     CONSTRAINT chk_rooms_capacity CHECK (capacity > 0),
     CONSTRAINT chk_rooms_status CHECK (status IN ('active', 'maintenance', 'inactive')),
+    CONSTRAINT chk_rooms_review_status CHECK (review_status IN ('draft', 'pending_review', 'approved', 'rejected')),
     CONSTRAINT fk_rooms_studio FOREIGN KEY (studio_id) REFERENCES studios (studio_id) ON DELETE RESTRICT,
-    INDEX idx_rooms_studio_status (studio_id, status)
+    CONSTRAINT fk_rooms_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users (user_id) ON DELETE SET NULL,
+    INDEX idx_rooms_studio_status (studio_id, status),
+    INDEX idx_rooms_review_status (review_status, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. Bảng room_space_types: Liên kết phòng và loại hình không gian
@@ -257,9 +264,12 @@ CREATE TABLE IF NOT EXISTS bookings (
     customer_email VARCHAR(150) NOT NULL,
     note TEXT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    payment_status VARCHAR(24) NOT NULL DEFAULT 'unpaid',
     expires_at DATETIME NULL,
     completed_at DATETIME NULL,
     policy_snapshot JSON NULL,
+    request_key VARCHAR(100) NULL,
+    request_hash CHAR(64) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_bookings_type CHECK (booking_type IN ('short_term', 'long_term')),
@@ -270,6 +280,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     CONSTRAINT chk_bookings_total_amount CHECK (total_amount >= 0),
     CONSTRAINT chk_bookings_deposit_amount CHECK (deposit_amount >= 0),
     CONSTRAINT chk_bookings_status CHECK (status IN ('pending', 'confirmed', 'checked_in', 'completed', 'cancelled', 'rejected', 'expired')),
+    CONSTRAINT chk_bookings_payment_status CHECK (payment_status IN ('unpaid', 'deposit_paid', 'paid', 'refund_pending', 'partially_refunded', 'refunded')),
     CONSTRAINT chk_bookings_pending_expires CHECK (status <> 'pending' OR expires_at IS NOT NULL),
     CONSTRAINT chk_bookings_completed_time CHECK (status <> 'completed' OR completed_at IS NOT NULL),
     CONSTRAINT fk_bookings_room FOREIGN KEY (room_id) REFERENCES rooms (room_id) ON DELETE RESTRICT,
@@ -278,7 +289,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     INDEX idx_bookings_room_lookup (room_id, status, busy_start, busy_end),
     INDEX idx_bookings_expires (status, expires_at),
     INDEX idx_bookings_completed (status, completed_at),
-    INDEX idx_bookings_customer (customer_id)
+    INDEX idx_bookings_customer (customer_id),
+    UNIQUE KEY uq_booking_request (customer_id, request_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 14. Room reviews: one public rating per completed customer booking
@@ -384,11 +396,15 @@ CREATE TABLE IF NOT EXISTS studio_policies (
     overtime_per_30m INT UNSIGNED NOT NULL DEFAULT 0,
     open_hour TINYINT UNSIGNED NOT NULL DEFAULT 8,
     close_hour TINYINT UNSIGNED NOT NULL DEFAULT 22,
+    buffer_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 30,
+    minimum_advance_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 120,
     updated_by INT NULL,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_policy_payment_minutes CHECK (payment_minutes BETWEEN 1 AND 1440),
     CONSTRAINT chk_policy_deposit_percent CHECK (deposit_percent BETWEEN 0 AND 100),
     CONSTRAINT chk_policy_hours CHECK (open_hour < close_hour AND close_hour <= 24),
+    CONSTRAINT chk_policy_buffer CHECK (buffer_minutes <= 480),
+    CONSTRAINT chk_policy_minimum_advance CHECK (minimum_advance_minutes <= 10080),
     CONSTRAINT fk_studio_policy_studio FOREIGN KEY (studio_id) REFERENCES studios(studio_id) ON DELETE CASCADE,
     CONSTRAINT fk_studio_policy_user FOREIGN KEY (updated_by) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

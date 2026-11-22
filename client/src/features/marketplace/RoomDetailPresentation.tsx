@@ -5,7 +5,7 @@ import { CalendarDays, Camera, Check, Maximize, MoveVertical, Users } from "luci
 import { Modal } from "@/components/ui";
 import { Presence } from "@/components/motion/system";
 import { money } from "@/domain/models";
-import { type ApiRoom, type CalendarData, formatApiTime, unitLabels } from "@/services/api/contracts";
+import { type ApiRoom, unitLabels } from "@/services/api/contracts";
 import { ApiImage } from "./ApiImage";
 import { BackendBookingWizard } from "@/features/booking/backend-booking";
 
@@ -51,21 +51,15 @@ export function RoomRateSummary({ room }: { room: ApiRoom }) {
   </section>;
 }
 
-export function RoomBookingPanel({ room, calendar }: { room: ApiRoom; calendar: { data: CalendarData | null; loading: boolean; error: string } }) {
+export function RoomBookingPanel({ room }: { room: ApiRoom }) {
   const [open, setOpen] = useState(false);
   return <><aside className="surface room-booking-card room-booking-entry" aria-labelledby="room-booking-title">
     <h2 id="room-booking-title"><CalendarDays size={24} aria-hidden="true"/>Đặt lịch Studio</h2>
     <p className="room-booking-guidance">Chọn gói thuê, ngày giờ và thiết bị trong cửa sổ đặt lịch.</p>
     <button className="btn" type="button" aria-haspopup="dialog" onClick={() => setOpen(true)}>Kiểm tra giá &amp; lịch trống</button>
-    <p className="room-quote-note"><Check size={15}/>Giá và lịch được máy chủ kiểm tra theo lựa chọn. Lịch chưa được giữ chỗ.</p>
+    <p className="room-quote-note"><Check size={15}/>Xem ngày có lịch bận và chọn giờ trong lịch đặt phòng. Máy chủ sẽ xác nhận lại trước khi tạo đơn.</p>
   </aside>
     <Presence>{open && <Modal wide className="room-booking-dialog" title="Đặt lịch Studio" onClose={() => setOpen(false)}>
-      <details className="room-calendar-disclosure room-modal-calendar"><summary>Xem lịch đã bận</summary>
-        {calendar.loading ? <p role="status">Đang tải lịch…</p> : calendar.error ? <p role="alert">{calendar.error}</p> : calendar.data ? <>
-          {calendar.data.busy_slots.length ? <ul>{calendar.data.busy_slots.map((slot, index) => <li key={index}>{formatApiTime(slot.busy_start)} – {formatApiTime(slot.busy_end)}</li>)}</ul> : <p>Chưa ghi nhận khung giờ bận trong khoảng đang xem.</p>}
-          <p>Lịch được kiểm tra lại theo ngày giờ và gói thuê bạn chọn; thông tin này không giữ chỗ.</p>
-        </> : <p>Chưa tải được dữ liệu lịch. Hãy kiểm tra lịch theo lựa chọn trong form bên dưới.</p>}
-      </details>
       <BackendBookingWizard id={String(room.room_id)} embedded/>
     </Modal>}</Presence>
   </>;

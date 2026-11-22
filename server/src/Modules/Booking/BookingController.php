@@ -46,6 +46,15 @@ class BookingController
             'end_time'   => $result['end_time'],
             'busy_start' => $result['busy_start'],
             'busy_end'   => $result['busy_end'],
+            'policy'     => [
+                'open_hour' => (int) $result['policy']['open_hour'],
+                'close_hour' => (int) $result['policy']['close_hour'],
+                'buffer_minutes' => (int) $result['policy']['buffer_minutes'],
+                'minimum_advance_minutes' => (int) $result['policy']['minimum_advance_minutes'],
+                'deposit_percent' => (float) $result['policy']['deposit_percent'],
+                'cancel_hours' => (int) $result['policy']['cancel_hours'],
+                'refund_tiers' => array_values($result['policy']['refund_tiers']),
+            ],
             'pricing'    => $result['pricing'],
         ], 'Phòng và thiết bị khả dụng');
     }
@@ -59,7 +68,7 @@ class BookingController
         $body = $request->json();
         $user = $request->getAttribute('user');
 
-        $result = $this->bookingService->create($body, $user);
+        $result = $this->bookingService->create($body, $user, $request->header('idempotency-key'));
 
         ApiResponse::created($result, 'Đặt phòng thành công');
     }

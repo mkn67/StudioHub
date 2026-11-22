@@ -50,7 +50,7 @@ export function AboutPage() {
       <div><p className={styles.eyebrow}>StudioHub / Đội ngũ</p><h1 id="about-title" data-about-title>Đằng sau StudioHub là ai?</h1>
         <p className={styles.intro} data-about-intro>Chúng mình là nhóm sinh viên gồm 5 thành viên, cùng phát triển StudioHub với mong muốn giúp việc tìm kiếm và thuê không gian sáng tạo trở nên thuận tiện hơn.</p>
       </div>
-      <div className={styles.teamMark} aria-hidden="true"><span>SH</span><div>{teamMembers.map(member => <i key={member.id}/>)}</div><small>Cùng làm nên StudioHub</small></div>
+      <div className={styles.teamMark}><Image className={styles.teamLogo} src="/images/team/studiohub-team-logo.png" alt="Logo đội ngũ StudioHub" width={501} height={332} priority/><div aria-hidden="true">{teamMembers.map(member => <i key={member.id}/>)}</div><small>Cùng làm nên StudioHub</small></div>
     </section>
 
     <section className={styles.project} aria-labelledby="about-project-title">
@@ -60,7 +60,7 @@ export function AboutPage() {
 
     <section className={styles.team} aria-labelledby="about-team-title">
       <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>Những người cùng xây dựng</p><h2 id="about-team-title">Gặp gỡ đội ngũ</h2></div><span className={styles.count}>05 thành viên</span></div>
-      <p className={styles.teamIntro}>Thông tin giới thiệu từng thành viên sẽ được cập nhật tại đây.</p>
+      <p className={styles.teamIntro}>Năm thành viên cùng xây dựng StudioHub.</p>
       <div className={styles.memberGrid} data-team-grid>{teamMembers.map(member => {
         const github = githubProfile(member.github);
         const email = member.emailPublic && member.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email) ? member.email : null;

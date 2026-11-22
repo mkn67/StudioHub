@@ -41,11 +41,11 @@ class StudioPolicyService
         $studioId = filter_var($input['studio_id'] ?? null, FILTER_VALIDATE_INT);
         if ($studioId === false || $studioId === null || $studioId < 1) throw new ApiException(400, 'studio_id_required', 'studio_id hợp lệ là bắt buộc');
         $this->assertOwnership($hostId, (int) $studioId);
-        $allowed = ['payment_minutes','deposit_percent','cancel_hours','change_hours','refund_tiers','overtime_per_30m','open_hour','close_hour'];
+        $allowed = ['payment_minutes','deposit_percent','cancel_hours','change_hours','refund_tiers','overtime_per_30m','open_hour','close_hour','buffer_minutes','minimum_advance_minutes'];
         if (array_diff(array_keys($input), [...$allowed, 'studio_id']) !== []) throw new ApiException(400, 'unknown_fields', 'Payload có field không hỗ trợ');
         $current = $this->getForHost($hostId, (int) $studioId);
         $value = array_replace($current, array_intersect_key($input, array_flip($allowed)));
-        foreach (['payment_minutes' => [1, 1440], 'cancel_hours' => [0, 720], 'change_hours' => [0, 720], 'overtime_per_30m' => [0, 100000000], 'open_hour' => [0, 23], 'close_hour' => [1, 24]] as $field => [$min, $max]) {
+        foreach (['payment_minutes' => [1, 1440], 'cancel_hours' => [0, 720], 'change_hours' => [0, 720], 'overtime_per_30m' => [0, 100000000], 'open_hour' => [0, 23], 'close_hour' => [1, 24], 'buffer_minutes' => [0, 480], 'minimum_advance_minutes' => [0, 10080]] as $field => [$min, $max]) {
             if (filter_var($value[$field], FILTER_VALIDATE_INT) === false || (int) $value[$field] < $min || (int) $value[$field] > $max) throw new ApiException(400, 'invalid_' . $field, "{$field} nằm ngoài giới hạn cho phép");
             $value[$field] = (int) $value[$field];
         }
@@ -62,8 +62,8 @@ class StudioPolicyService
             if ($hours === false || $hours < 0 || $hours >= $previousHours || !is_numeric($percent) || (float) $percent < 0 || (float) $percent > 100) throw new ApiException(400, 'invalid_refund_tiers', 'Mức hoàn phải giảm dần theo giờ và phần trăm nằm trong 0..100');
             $previousHours = $hours;
         }
-        $stmt = $this->pdo->prepare('INSERT INTO studio_policies (studio_id, payment_minutes, deposit_percent, cancel_hours, change_hours, refund_tiers, overtime_per_30m, open_hour, close_hour, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE payment_minutes = VALUES(payment_minutes), deposit_percent = VALUES(deposit_percent), cancel_hours = VALUES(cancel_hours), change_hours = VALUES(change_hours), refund_tiers = VALUES(refund_tiers), overtime_per_30m = VALUES(overtime_per_30m), open_hour = VALUES(open_hour), close_hour = VALUES(close_hour), updated_by = VALUES(updated_by)');
-        $stmt->execute([(int) $studioId, $value['payment_minutes'], $value['deposit_percent'], $value['cancel_hours'], $value['change_hours'], json_encode(array_values($tiers), JSON_THROW_ON_ERROR), $value['overtime_per_30m'], $value['open_hour'], $value['close_hour'], $actorId]);
+        $stmt = $this->pdo->prepare('INSERT INTO studio_policies (studio_id, payment_minutes, deposit_percent, cancel_hours, change_hours, refund_tiers, overtime_per_30m, open_hour, close_hour, buffer_minutes, minimum_advance_minutes, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE payment_minutes = VALUES(payment_minutes), deposit_percent = VALUES(deposit_percent), cancel_hours = VALUES(cancel_hours), change_hours = VALUES(change_hours), refund_tiers = VALUES(refund_tiers), overtime_per_30m = VALUES(overtime_per_30m), open_hour = VALUES(open_hour), close_hour = VALUES(close_hour), buffer_minutes = VALUES(buffer_minutes), minimum_advance_minutes = VALUES(minimum_advance_minutes), updated_by = VALUES(updated_by)');
+        $stmt->execute([(int) $studioId, $value['payment_minutes'], $value['deposit_percent'], $value['cancel_hours'], $value['change_hours'], json_encode(array_values($tiers), JSON_THROW_ON_ERROR), $value['overtime_per_30m'], $value['open_hour'], $value['close_hour'], $value['buffer_minutes'], $value['minimum_advance_minutes'], $actorId]);
         $audit = $this->pdo->prepare("INSERT INTO audit_logs (user_id, action, entity_type, entity_id, metadata) VALUES (?, 'studio_policy_updated', 'studios', ?, ?)");
         $audit->execute([$actorId, (int) $studioId, json_encode(['policy_fields' => array_keys(array_intersect_key($input, array_flip($allowed)))], JSON_THROW_ON_ERROR)]);
         return $this->withDefaults((int) $studioId, $this->fetchRow((int) $studioId));
@@ -78,9 +78,9 @@ class StudioPolicyService
 
     private function withDefaults(int $studioId, array $row): array
     {
-        $policy = array_replace(['studio_id' => $studioId, 'payment_minutes' => (int) ($_ENV['HOLD_MINUTES'] ?? 15), 'deposit_percent' => 100 * (float) ($_ENV['DEPOSIT_RATE'] ?? 0.30), 'cancel_hours' => 24, 'change_hours' => 24, 'refund_tiers' => [], 'overtime_per_30m' => 0, 'open_hour' => 8, 'close_hour' => 22], $row);
+        $policy = array_replace(['studio_id' => $studioId, 'payment_minutes' => (int) ($_ENV['HOLD_MINUTES'] ?? 15), 'deposit_percent' => 100 * (float) ($_ENV['DEPOSIT_RATE'] ?? 0.30), 'cancel_hours' => 24, 'change_hours' => 24, 'refund_tiers' => [], 'overtime_per_30m' => 0, 'open_hour' => 8, 'close_hour' => 22, 'buffer_minutes' => 30, 'minimum_advance_minutes' => 120], $row);
         if (is_string($policy['refund_tiers'])) $policy['refund_tiers'] = json_decode($policy['refund_tiers'], true) ?: [];
-        foreach (['payment_minutes','cancel_hours','change_hours','overtime_per_30m','open_hour','close_hour'] as $field) $policy[$field] = (int) $policy[$field];
+        foreach (['payment_minutes','cancel_hours','change_hours','overtime_per_30m','open_hour','close_hour','buffer_minutes','minimum_advance_minutes'] as $field) $policy[$field] = (int) $policy[$field];
         $policy['deposit_percent'] = (float) $policy['deposit_percent'];
         return $policy;
     }

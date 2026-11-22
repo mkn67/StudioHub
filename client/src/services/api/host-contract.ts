@@ -20,7 +20,7 @@ export function hostEquipment(value: unknown): HostEquipment[] {
 export function hostRoom(value: unknown): HostRoom {
   const row = record(value);
   const images = row.images === undefined ? [] : records(row.images).map(image => ({ image_url: required(image, "image_url") }));
-  return { room_id: number(row, "room_id"), studio_id: number(row, "studio_id"), name: required(row, "name"), area: number(row, "area"), capacity: number(row, "capacity"), room_type_id: row.room_type_id == null ? null : number(row, "room_type_id"), status: required(row, "status"), description: text(row.description, ""), rules: text(row.rules, ""), thumbnail_url: text(row.thumbnail_url, images[0]?.image_url ?? ""), images };
+  return { room_id: number(row, "room_id"), studio_id: number(row, "studio_id"), name: required(row, "name"), area: number(row, "area"), capacity: number(row, "capacity"), room_type_id: row.room_type_id == null ? null : number(row, "room_type_id"), status: required(row, "status"), review_status: typeof row.review_status === "string" ? row.review_status : "approved", review_reason: row.review_reason == null ? null : text(row.review_reason), description: text(row.description, ""), rules: text(row.rules, ""), thumbnail_url: text(row.thumbnail_url, images[0]?.image_url ?? ""), images };
 }
 export function hostRooms(value: unknown): HostRoom[] { return records(value).map(hostRoom); }
 export function hostRates(value: unknown): HostRate[] {

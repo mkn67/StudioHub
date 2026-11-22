@@ -10,8 +10,47 @@ import type { ApiRoom, EquipmentItem, Quote, ApiBooking, BookingPage, CalendarDa
 import { rentalRange, sqlVietnamTime, formatApiTime, vnTimestamp, bookingLabels, unitLabels } from "@/services/api/contracts";
 import { money } from "@/domain/models";
 
+const paymentStatusLabels: Record<string, string> = {
+    unpaid: "Chưa thanh toán",
+    deposit_paid: "Đã cọc",
+    paid: "Đã thanh toán",
+    refund_pending: "Đang chờ hoàn",
+    partially_refunded: "Đã hoàn một phần",
+    refunded: "Đã hoàn tiền (sandbox)",
+};
+
+function paymentStatusFor(booking: ApiBooking): string {
+    if (booking.payment_status) return booking.payment_status;
+    const successful = booking.payments?.filter(payment => payment.status === "success") ?? [];
+    if (!successful.length) return "unpaid";
+    if (successful.some(payment => ["remaining", "full"].includes(payment.payment_type))) return "paid";
+    return "deposit_paid";
+}
+
 function localSqlDate(value: Date) {
     return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
+}
+
+function monthBounds(month: string) {
+    const [year, monthNumber] = month.split("-").map(Number);
+    const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+    return { from: `${month}-01`, to: `${month}-${String(lastDay).padStart(2, "0")}` };
+}
+
+function monthGrid(month: string) {
+    const [year, monthNumber] = month.split("-").map(Number);
+    const daysInMonth = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+    const firstWeekday = (new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay() + 6) % 7;
+    return Array.from({ length: 42 }, (_, index) => {
+        const day = index - firstWeekday + 1;
+        if (day < 1 || day > daysInMonth) return null;
+        return `${month}-${String(day).padStart(2, "0")}`;
+    });
+}
+
+function shiftMonth(month: string, amount: number) {
+    const [year, monthNumber] = month.split("-").map(Number);
+    return new Date(Date.UTC(year, monthNumber - 1 + amount, 1)).toISOString().slice(0, 7);
 }
 
 function suggestAvailableStarts(date: string, selectedTime: string, durationMinutes: number, busySlots: CalendarData["busy_slots"]) {
@@ -40,6 +79,7 @@ export function BackendBookingWizard({ id, embedded = false }: { id: string; emb
     const router = useRouter();
     const equipment = useResource<EquipmentItem[]>(room.data ? `/api/equipments?studio_id=${room.data.studio_id}` : null);
     const draftKey = `studiohub.api-booking-draft.${id}`;
+    const idempotencyStorageKey = `studiohub.api-booking-request.${id}`;
     const [selection, setSelection] = useState<Record<string, string>>({});
     const [draftReady, setDraftReady] = useState(false);
     const [quote, setQuote] = useState<{ key: string; value: Quote } | null>(null);
@@ -47,8 +87,11 @@ export function BackendBookingWizard({ id, embedded = false }: { id: string; emb
     const [suggestions, setSuggestions] = useState<{ date: string; time: string; label: string }[]>([]);
     const [quotingKey, setQuotingKey] = useState<string | null>(null);
     const [defaultDate] = useState(() => sqlVietnamTime(new Date(Date.now() + 86400000)).slice(0, 10));
+    const [calendarMonth, setCalendarMonth] = useState(() => defaultDate.slice(0, 7));
     const action = useApiAction();
     const r = room.data;
+    const bounds = monthBounds(calendarMonth);
+    const calendar = useResource<CalendarData>(r ? `/api/rooms/${encodeURIComponent(id)}/calendar?from=${bounds.from}&to=${bounds.to}` : null);
     const values: Record<string, string> = {
         date: defaultDate, time: "09:00", units: String(r?.rates?.[0]?.minimum_units ?? 1), party_size: "1",
         rate_id: String(r?.rates?.[0]?.rate_id ?? ""), ...selection
@@ -59,7 +102,26 @@ export function BackendBookingWizard({ id, embedded = false }: { id: string; emb
     const currentQuote = quote?.key === selectionKey ? quote.value : null;
     const currentQuoteError = quoteError?.key === selectionKey ? quoteError.message : "";
     const quoting = quotingKey === selectionKey;
-    const change = (key: string, value: string) => setSelection(previous => ({ ...previous, [key]: value }));
+    const change = (key: string, value: string) => {
+        if (key === "date" && /^\d{4}-\d{2}-\d{2}$/.test(value)) setCalendarMonth(value.slice(0, 7));
+        setSelection(previous => ({ ...previous, [key]: value }));
+    };
+    const calendarDays = monthGrid(calendarMonth);
+    const selectedMonthTitle = new Intl.DateTimeFormat("vi-VN", { month: "long", year: "numeric", timeZone: "Asia/Ho_Chi_Minh" })
+        .format(new Date(`${calendarMonth}-01T12:00:00+07:00`));
+    const today = localSqlDate(new Date());
+    const busyDates = new Set((calendar.data?.busy_slots ?? []).flatMap(slot => {
+        const start = vnTimestamp(slot.busy_start).getTime();
+        const end = vnTimestamp(slot.busy_end).getTime();
+        const dates: string[] = [];
+        for (let cursor = new Date(`${bounds.from}T00:00:00+07:00`); localSqlDate(cursor) <= bounds.to; cursor = new Date(cursor.getTime() + 86400000)) {
+            const date = localSqlDate(cursor);
+            const dayStart = vnTimestamp(`${date} 00:00:00`).getTime();
+            const dayEnd = dayStart + 86400000;
+            if (start < dayEnd && end > dayStart) dates.push(date);
+        }
+        return dates;
+    }));
     const payload = () => {
         if (!r || !rate) throw new Error("Phòng chưa có bảng giá khả dụng.");
         return {
@@ -85,9 +147,11 @@ export function BackendBookingWizard({ id, embedded = false }: { id: string; emb
             try {
                 const draft: unknown = JSON.parse(window.sessionStorage.getItem(draftKey) ?? "{}");
                 if (draft && typeof draft === "object" && !Array.isArray(draft)) {
-                    setSelection(Object.fromEntries(Object.entries(draft).filter(([key, value]) =>
+                    const restored = Object.fromEntries(Object.entries(draft).filter(([key, value]) =>
                         /^(date|time|units|party_size|rate_id|equipment:\d+)$/.test(key) && typeof value === "string"
-                    )));
+                    ));
+                    setSelection(restored);
+                    if (typeof restored.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(restored.date)) setCalendarMonth(restored.date.slice(0, 7));
                 }
             } catch { /* Draft storage is optional. */ }
             setDraftReady(true);
@@ -162,9 +226,23 @@ export function BackendBookingWizard({ id, embedded = false }: { id: string; emb
             const contact = Object.fromEntries(new FormData(event.currentTarget));
             void action.run(async () => {
                 if (!currentQuote || !session.user) throw new Error("Cần báo giá còn hiệu lực và tài khoản khách hàng.");
+                const bookingBody = { ...payload(), ...contact };
+                let requestKey = "";
+                try {
+                    const previous = JSON.parse(window.sessionStorage.getItem(idempotencyStorageKey) ?? "null") as { key?: string; body?: string } | null;
+                    const serialized = JSON.stringify(bookingBody);
+                    if (previous?.key && previous.body === serialized) requestKey = previous.key;
+                    else {
+                        requestKey = crypto.randomUUID();
+                        window.sessionStorage.setItem(idempotencyStorageKey, JSON.stringify({ key: requestKey, body: serialized }));
+                    }
+                } catch {
+                    requestKey = crypto.randomUUID();
+                }
                 const booking = await apiRequest<ApiBooking>("/api/bookings", {
-                    method: "POST", body: { ...payload(), ...contact }
+                    method: "POST", body: bookingBody, idempotencyKey: requestKey
                 });
+                try { window.sessionStorage.removeItem(idempotencyStorageKey); } catch { /* Optional retry protection. */ }
                 try { window.sessionStorage.removeItem(draftKey); } catch { /* Optional draft. */ }
                 router.push(`/payment/${booking.booking_id}`);
             });
@@ -190,6 +268,30 @@ export function BackendBookingWizard({ id, embedded = false }: { id: string; emb
 
                 <section className="surface booking-step">
                     <div className="booking-step-title"><span>02</span><div><h2>Ngày giờ và ekip</h2><p>Thời gian bạn chọn đã gồm chuẩn bị và trả phòng.</p></div></div>
+                    <section className="booking-calendar" aria-label="Lịch đặt phòng">
+                        <div className="booking-calendar-heading">
+                            <div><strong>Chọn ngày trên lịch</strong><small>Lịch bận chỉ để tham khảo; máy chủ xác nhận khung giờ khi bạn chọn.</small></div>
+                            <div className="booking-calendar-nav">
+                                <button type="button" aria-label="Tháng trước" onClick={() => setCalendarMonth(value => shiftMonth(value, -1))}>‹</button>
+                                <strong aria-live="polite">{selectedMonthTitle}</strong>
+                                <button type="button" aria-label="Tháng sau" onClick={() => setCalendarMonth(value => shiftMonth(value, 1))}>›</button>
+                            </div>
+                        </div>
+                        <div className="booking-calendar-weekdays" aria-hidden="true">{["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map(day => <span key={day}>{day}</span>)}</div>
+                        <div className="booking-calendar-grid">
+                            {calendarDays.map((date, index) => date ? <button
+                                key={date}
+                                type="button"
+                                className={`booking-calendar-day${values.date === date ? " selected" : ""}${busyDates.has(date) ? " has-booking" : ""}`}
+                                aria-pressed={values.date === date}
+                                aria-label={`${date}${calendar.loading ? ", đang tải lịch" : calendar.error ? ", chưa xác định được lịch" : busyDates.has(date) ? ", có lịch bận" : ", chưa thấy lịch bận"}`}
+                                title={busyDates.has(date) ? "Có lịch bận trong ngày; vẫn có thể còn khung giờ khác" : "Chưa thấy lịch bận trong ngày; xác nhận lại khi chọn giờ"}
+                                disabled={date < defaultDate}
+                                onClick={() => change("date", date)}
+                            ><span>{Number(date.slice(-2))}</span>{busyDates.has(date) && <i aria-hidden="true"/>}{date === today && <small>Hôm nay</small>}</button> : <span className="booking-calendar-empty" key={`empty-${index}`} aria-hidden="true"/>)}
+                        </div>
+                        <div className="booking-calendar-legend"><span><i className="booking-calendar-dot busy"/>Ngày có lịch bận</span><span>{calendar.loading ? "Đang tải lịch…" : calendar.error ? "Không tải được lịch; trạng thái ngày chưa xác định" : "Ngày không có dấu chấm chưa ghi nhận lịch bận; máy chủ vẫn xác nhận khi chọn giờ."}</span></div>
+                    </section>
                     <div className="booking-field-grid">
                         <label>Ngày bắt đầu <small>Giờ Việt Nam</small>
                             <input required type="date" min={defaultDate} value={values.date} onChange={event => change("date", event.target.value)}/>
@@ -260,6 +362,14 @@ export function BackendBookingWizard({ id, embedded = false }: { id: string; emb
                         <div><dt>Cọc cần thanh toán</dt><dd>{money(currentQuote.pricing.deposit_amount)}</dd></div>
                     </dl>
                     <p className="booking-help">Studio giữ lịch đến {formatApiTime(currentQuote.busy_end)} để dọn phòng. Phần cọc nằm trong tổng tiền, không cộng thêm.</p>
+                    {currentQuote.policy && <section className="booking-policy-summary" aria-label="Điều kiện thuê của Studio">
+                        <h3>Điều kiện thuê</h3>
+                        <p>Hoạt động {String(currentQuote.policy.open_hour).padStart(2, "0")}:00–{String(currentQuote.policy.close_hour).padStart(2, "0")}:00 · Cần đặt trước ít nhất {currentQuote.policy.minimum_advance_minutes} phút · Dọn/setup {currentQuote.policy.buffer_minutes} phút.</p>
+                        <p>Tiền cọc {currentQuote.policy.deposit_percent}% · Hạn hủy có thanh toán: trước giờ thuê {currentQuote.policy.cancel_hours} giờ.</p>
+                        {currentQuote.policy.refund_tiers.length > 0
+                            ? <ul>{currentQuote.policy.refund_tiers.map((tier, index) => <li key={`${tier.hours}-${index}`}>Hủy trước ít nhất {tier.hours} giờ: hoàn {tier.percent}% khoản đã thanh toán (ghi nhận sandbox).</li>)}</ul>
+                            : <p>Studio chưa cấu hình các mốc hoàn tiền riêng.</p>}
+                    </section>}
                 </>}
                 <button className="btn" type="submit" disabled={action.busy || quoting || !currentQuote || !session.user || session.user.role !== "customer" || equipment.loading || !!equipment.error}>
                     {action.busy ? "Đang tạo đơn…" : "Tạo đơn giữ chỗ"}
@@ -282,7 +392,7 @@ export function BackendBookings({ host = false, history = false }: {
       {!host && !history && <p>Đơn “Đang xử lý” có thể đang chờ thanh toán hoặc chờ Studio xác nhận. Mở mã đơn để xem hạn xử lý.</p>}
       <label>Trạng thái<select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}>
         {!history && <option value="">Tất cả</option>}{statusOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-      </select></label><button className="btn secondary" onClick={list.reload}>Làm mới</button><ApiMessage loading={list.loading} error={list.error}/>{list.data && <><div className="api-table-wrap"><table><thead><tr><th>Mã đơn</th><th>Phòng</th><th>Bắt đầu</th><th>Trạng thái</th><th>Tổng</th></tr></thead><tbody>{list.data.items.map(b => <tr key={b.booking_id}><td><Link href={`${host ? "/host/bookings" : "/my-bookings"}/${b.booking_id}`}>{b.booking_code}</Link></td><td>{b.room_name}</td><td>{formatApiTime(b.start_time)}</td><td>{bookingLabels[b.status] ?? b.status}</td><td>{money(b.total_amount)}</td></tr>)}</tbody></table></div>{!list.data.items.length && <p>{history ? "Chưa có đơn nào ở trạng thái này." : "Chưa có đơn thuê phù hợp."}</p>}<div className="actions"><button className="btn secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trang trước</button><span>Trang {page} / {list.data.total_pages}</span><button className="btn secondary" disabled={page >= list.data.total_pages} onClick={() => setPage(page + 1)}>Trang sau</button></div></>}</section>;
+      </select></label><button className="btn secondary" onClick={list.reload}>Làm mới</button><ApiMessage loading={list.loading} error={list.error}/>{list.data && <><div className="api-table-wrap"><table><thead><tr><th>Mã đơn</th><th>Phòng</th><th>Bắt đầu</th><th>Trạng thái đơn</th><th>Thanh toán</th><th>Tổng</th></tr></thead><tbody>{list.data.items.map(b => <tr key={b.booking_id}><td><Link href={`${host ? "/host/bookings" : "/my-bookings"}/${b.booking_id}`}>{b.booking_code}</Link></td><td>{b.room_name}</td><td>{formatApiTime(b.start_time)}</td><td>{bookingLabels[b.status] ?? b.status}</td><td><span className={`payment-badge ${paymentStatusFor(b)}`}>{paymentStatusLabels[paymentStatusFor(b)] ?? paymentStatusFor(b)}</span></td><td>{money(b.total_amount)}</td></tr>)}</tbody></table></div>{!list.data.items.length && <p>{history ? "Chưa có đơn nào ở trạng thái này." : "Chưa có đơn thuê phù hợp."}</p>}<div className="actions"><button className="btn secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Trang trước</button><span>Trang {page} / {list.data.total_pages}</span><button className="btn secondary" disabled={page >= list.data.total_pages} onClick={() => setPage(page + 1)}>Trang sau</button></div></>}</section>;
 }
 export function BackendBookingDetail({ id, host = false, payment = false }: {
     id: string;
@@ -295,8 +405,9 @@ export function BackendBookingDetail({ id, host = false, payment = false }: {
     const savedReview = useResource<{ review_id: number; rating: number; review_text: string } | null>(!host && !payment && b?.status === "completed" ? `/api/bookings/${encodeURIComponent(id)}/review` : null);
     const mutate = (suffix: string, body?: unknown, method: "POST" | "PATCH" = "POST") => { void action.run(async () => { await apiRequest(`/api/bookings/${id}/${suffix}`, { method, body }); booking.reload(); }); };
     const paid = b?.payments?.filter(p => p.status === "success").reduce((sum, p) => sum + Number(p.amount), 0) ?? 0;
+    const paymentStatus = b ? paymentStatusFor(b) : "unpaid";
     const pendingMessage = b?.status === "pending" ? paid > 0 ? "Đã ghi nhận thanh toán · đang chờ Studio xác nhận" : "Đang giữ lịch tạm thời · chờ thanh toán" : null;
-    return <section><h1>{payment ? "Thanh toán sandbox" : "Chi tiết đơn thuê"}</h1><ApiMessage loading={booking.loading} error={booking.error || action.error}/><button className="btn secondary" onClick={booking.reload}>Làm mới</button>{b && <><h2>{b.booking_code} · {b.room_name}</h2><p className="booking-status-explainer"><strong>{pendingMessage ?? bookingLabels[b.status] ?? b.status}</strong></p><p>{formatApiTime(b.start_time)} – {formatApiTime(b.end_time)}</p>{b.status === "pending" && b.expires_at && <BookingExpiry expiresAt={b.expires_at} paid={paid > 0}/>}<p>Tổng: {money(b.total_amount)} · Cọc: {money(b.deposit_amount)} · Đã ghi nhận: {money(paid)}</p>
+    return <section><h1>{payment ? "Thanh toán sandbox" : "Chi tiết đơn thuê"}</h1><ApiMessage loading={booking.loading} error={booking.error || action.error}/><button className="btn secondary" onClick={booking.reload}>Làm mới</button>{b && <><h2>{b.booking_code} · {b.room_name}</h2><p className="booking-status-explainer"><strong>{pendingMessage ?? bookingLabels[b.status] ?? b.status}</strong></p><p><span className={`payment-badge ${paymentStatus}`}>Thanh toán: {paymentStatusLabels[paymentStatus] ?? paymentStatus}</span></p><p>{formatApiTime(b.start_time)} – {formatApiTime(b.end_time)}</p>{b.status === "pending" && b.expires_at && <BookingExpiry expiresAt={b.expires_at} paid={paid > 0}/>}<p>Tổng: {money(b.total_amount)} · Cọc: {money(b.deposit_amount)} · Đã ghi nhận: {money(paid)}</p>
     <h2>Giao dịch</h2>{b.payments?.length ? <ul>{b.payments.map(p => <li key={p.payment_id}>{p.payment_type}: {money(p.amount)} · {p.status}</li>)}</ul> : <p>Chưa có giao dịch.</p>}
     {!host && ["pending", "confirmed", "checked_in"].includes(b.status) && <><p>Thanh toán mô phỏng trên máy chủ, không chuyển tiền thật. Khoản cần hoàn mới chỉ được ghi nhận; chưa có hoàn tiền thật.</p><label className="checkbox-label"><input type="checkbox" checked={sandboxConsent} onChange={e => setSandboxConsent(e.target.checked)}/> Tôi hiểu đây là thanh toán sandbox.</label><div className="actions">{b.status === "pending" && paid === 0 && <button className="btn" disabled={action.busy || !sandboxConsent} onClick={() => mutate("payments", { payment_type: "deposit", payment_method: "sandbox_qr" })}>Mô phỏng trả cọc</button>}{["confirmed", "checked_in"].includes(b.status) && paid < Number(b.total_amount) && <button className="btn" disabled={action.busy || !sandboxConsent} onClick={() => mutate("payments", { payment_type: "remaining", payment_method: "sandbox_qr" })}>Mô phỏng trả phần còn lại</button>}{["pending", "confirmed"].includes(b.status) && <button className="btn secondary" disabled={action.busy} onClick={() => { if (window.confirm("Hủy đơn này? Khoản cần hoàn sẽ được backend ghi nhận, chưa có hoàn tiền thật."))
             mutate("cancel"); }}>Hủy đơn</button>}</div></>}

@@ -100,18 +100,16 @@ class AvailabilityService
         $durationMinutes = (int) (($endDt->getTimestamp() - $startDt->getTimestamp()) / 60);
 
         // Calculate busy range [busy_start, busy_end)
-        $bufferMinutes = (int) ($_ENV['BUFFER_MINUTES'] ?? 30);
         $busyStart = $startDt->format('Y-m-d H:i:s');
-        $busyEnd = $endDt->modify("+{$bufferMinutes} minutes")->format('Y-m-d H:i:s');
 
         // 2. Lock / Fetch Room
-        $roomSql = "SELECT room_id, studio_id, name, capacity, status FROM rooms WHERE room_id = ?"
+        $roomSql = "SELECT room_id, studio_id, name, capacity, status, review_status FROM rooms WHERE room_id = ?"
             . ($locking ? " FOR UPDATE" : "");
         $roomStmt = $db->prepare($roomSql);
         $roomStmt->execute([$roomId]);
         $room = $roomStmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$room || $room['status'] !== 'active') {
+        if (!$room || $room['status'] !== 'active' || $room['review_status'] !== 'approved') {
             throw new ApiException(404, 'room_not_found', 'Phòng không tồn tại hoặc không khả dụng');
         }
 
@@ -149,7 +147,7 @@ class AvailabilityService
             throw new ApiException(400, 'studio_inactive', 'Studio không hoạt động');
         }
 
-        $policyStmt = $db->prepare('SELECT payment_minutes, deposit_percent, cancel_hours, change_hours, refund_tiers, overtime_per_30m, open_hour, close_hour FROM studio_policies WHERE studio_id = ?');
+        $policyStmt = $db->prepare('SELECT payment_minutes, deposit_percent, cancel_hours, change_hours, refund_tiers, overtime_per_30m, open_hour, close_hour, buffer_minutes, minimum_advance_minutes FROM studio_policies WHERE studio_id = ?');
         $policyStmt->execute([(int) $studio['studio_id']]);
         $policy = $policyStmt->fetch(PDO::FETCH_ASSOC) ?: [
             'payment_minutes' => (int) ($_ENV['HOLD_MINUTES'] ?? 15),
@@ -160,10 +158,17 @@ class AvailabilityService
             'overtime_per_30m' => 0,
             'open_hour' => 8,
             'close_hour' => 22,
+            'buffer_minutes' => (int) ($_ENV['BUFFER_MINUTES'] ?? 30),
+            'minimum_advance_minutes' => 120,
         ];
         $policy['refund_tiers'] = is_string($policy['refund_tiers']) ? (json_decode($policy['refund_tiers'], true) ?: []) : ($policy['refund_tiers'] ?? []);
-        foreach (['payment_minutes', 'cancel_hours', 'change_hours', 'overtime_per_30m', 'open_hour', 'close_hour'] as $field) $policy[$field] = (int) $policy[$field];
+        foreach (['payment_minutes', 'cancel_hours', 'change_hours', 'overtime_per_30m', 'open_hour', 'close_hour', 'buffer_minutes', 'minimum_advance_minutes'] as $field) $policy[$field] = (int) $policy[$field];
         $policy['deposit_percent'] = (float) $policy['deposit_percent'];
+
+        if ($startDt < $now->modify('+' . $policy['minimum_advance_minutes'] . ' minutes')) {
+            throw new ApiException(400, 'minimum_advance_time', 'Cần đặt trước giờ thuê ít nhất ' . $policy['minimum_advance_minutes'] . ' phút');
+        }
+        $busyEnd = $endDt->modify('+' . $policy['buffer_minutes'] . ' minutes')->format('Y-m-d H:i:s');
 
         // 4. Load & Validate Rate
         $rateStmt = $db->prepare("SELECT * FROM room_rates WHERE rate_id = ?");

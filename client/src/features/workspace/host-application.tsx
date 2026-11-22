@@ -10,7 +10,9 @@ import { useApiAction } from "@/components/api-ui";
 export function HostApplication() {
   const { user, ready } = useApiSession();
   if (!ready) return <p role="status">Đang kiểm tra tài khoản…</p>;
-  if (user?.role !== "customer") return <div className="container account-page"><h1>Đăng ký đối tác StudioHub</h1><p>Đăng nhập tài khoản khách hàng để gửi hồ sơ đăng ký Host.</p><Link className="btn" href="/login?returnTo=/register/host">Đăng nhập</Link></div>;
+  if (!user) return <div className="container account-page"><h1>Đăng ký đối tác StudioHub</h1><p>Đăng nhập tài khoản khách hàng để gửi hồ sơ đăng ký Host.</p><Link className="btn" href="/login?returnTo=/register/host">Đăng nhập</Link></div>;
+  if (user.role === "host") return <div className="container account-page"><h1>Tài khoản đã là đối tác StudioHub</h1><p>Tài khoản {user.full_name} đã có quyền Host, không cần gửi lại hồ sơ đăng ký.</p><Link className="btn" href="/host">Mở quản lý Studio</Link></div>;
+  if (user.role === "admin") return <div className="container account-page"><h1>Tài khoản quản trị StudioHub</h1><p>Tài khoản Admin không cần đăng ký làm đối tác.</p><Link className="btn" href="/admin">Mở trang quản trị</Link></div>;
   return <ApplicationForm key={user.user_id}/>;
 }
 function ApplicationForm() {

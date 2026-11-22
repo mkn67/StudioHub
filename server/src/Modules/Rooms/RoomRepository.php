@@ -45,7 +45,7 @@ class RoomRepository
         $limit = max(1, min(50, (int) ($filters['limit'] ?? 12)));
         $offset = ($page - 1) * $limit;
 
-        $where = ["r.status = 'active'", "s.status = 'active'"];
+        $where = ["r.status = 'active'", "r.review_status = 'approved'", "s.status = 'active'"];
         $params = [];
 
         // Match discovery labels against public descriptions and space types too.
@@ -89,9 +89,8 @@ class RoomRepository
             $params['amenity_id'] = (int) $filters['amenity_id'];
         }
         if (!empty($filters['available_from']) && !empty($filters['available_to'])) {
-            $busyTo = (new \DateTimeImmutable((string) $filters['available_to']))->modify('+' . max(0, (int) ($_ENV['BUFFER_MINUTES'] ?? 30)) . ' minutes')->format('Y-m-d H:i:s');
-            $where[] = "NOT EXISTS (SELECT 1 FROM bookings b_filter WHERE b_filter.room_id = r.room_id AND (b_filter.status IN ('confirmed','checked_in') OR (b_filter.status = 'pending' AND b_filter.expires_at > NOW())) AND b_filter.busy_start < :available_to AND b_filter.busy_end > :available_from)";
-            $params['available_to'] = $busyTo;
+            $where[] = "NOT EXISTS (SELECT 1 FROM bookings b_filter WHERE b_filter.room_id = r.room_id AND (b_filter.status IN ('confirmed','checked_in') OR (b_filter.status = 'pending' AND b_filter.expires_at > NOW())) AND b_filter.busy_start < DATE_ADD(:available_to, INTERVAL COALESCE((SELECT sp.buffer_minutes FROM studio_policies sp WHERE sp.studio_id=s.studio_id), 30) MINUTE) AND b_filter.busy_end > :available_from)";
+            $params['available_to'] = (string) $filters['available_to'];
             $params['available_from'] = (string) $filters['available_from'];
         }
 
@@ -363,6 +362,7 @@ class RoomRepository
             JOIN users u ON s.host_id = u.user_id
             WHERE r.room_id = :room_id
               AND r.status = 'active'
+              AND r.review_status = 'approved'
               AND s.status = 'active'
         ");
         $stmt->execute(['room_id' => $roomId]);
@@ -664,6 +664,7 @@ class RoomRepository
             JOIN studios s ON r.studio_id = s.studio_id
             WHERE r.room_id = :room_id
               AND r.status = 'active'
+              AND r.review_status = 'approved'
               AND s.status = 'active'
         ");
         $stmt->execute(['room_id' => $roomId]);
@@ -715,8 +716,8 @@ class RoomRepository
             $stmt = $this->pdo->prepare('
                 INSERT INTO rooms (
                     studio_id, room_type_id, name, description, area, ceiling_height,
-                    capacity, soundproof_level, power_specs, rules, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    capacity, soundproof_level, power_specs, rules, status, review_status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'pending_review\')
             ');
             $stmt->execute([
                 $data['studio_id'],
@@ -799,7 +800,10 @@ class RoomRepository
             }
             if (!empty($fields)) {
                 $params[] = $roomId;
-                $sql = 'UPDATE rooms SET ' . implode(', ', $fields) . ', updated_at = NOW() WHERE room_id = ?';
+                $reviewable = ['room_type_id', 'name', 'description', 'area', 'ceiling_height', 'capacity', 'soundproof_level', 'power_specs', 'rules'];
+                $needsReview = count(array_intersect(array_keys($data), $reviewable)) > 0 || $spaceTypeIds !== null || $amenityIds !== null;
+                if ($needsReview) $fields[] = "review_status = 'pending_review'";
+                $sql = 'UPDATE rooms SET ' . implode(', ', $fields) . ($needsReview ? ', review_reason = NULL, reviewed_at = NULL, reviewed_by = NULL' : '') . ', updated_at = NOW() WHERE room_id = ?';
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute($params);
             }
@@ -837,6 +841,10 @@ class RoomRepository
                         $amInsert->execute([$roomId, $amId]);
                     }
                 }
+            }
+
+            if (($spaceTypeIds !== null || $amenityIds !== null) && empty($fields)) {
+                $this->pdo->prepare("UPDATE rooms SET review_status='pending_review', review_reason=NULL, reviewed_at=NULL, reviewed_by=NULL, updated_at=NOW() WHERE room_id=?")->execute([$roomId]);
             }
 
             $this->pdo->commit();
@@ -993,6 +1001,8 @@ class RoomRepository
             ');
             $stmt->execute([$roomId, $imageUrl, $isPrimary ? 1 : 0]);
             $imageId = (int) $this->pdo->lastInsertId();
+
+            $this->pdo->prepare("UPDATE rooms SET review_status='pending_review', review_reason=NULL, reviewed_at=NULL, reviewed_by=NULL WHERE room_id=?")->execute([$roomId]);
 
             $this->pdo->commit();
             return $imageId;

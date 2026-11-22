@@ -39,7 +39,10 @@ export async function apiRequest<T>(
     responseType?: "pdf";
   } = {},
 ): Promise<T> {
-  if (!/^\/api\/[A-Za-z0-9_/?=&%.-]+$/.test(path) || path.includes(".."))
+  // URLSearchParams encodes spaces as `+` in query values (for example,
+  // multi-word room keywords and districts). Keep `+` valid in the query
+  // string while still restricting the request to a relative `/api/...` URL.
+  if (!/^\/api\/[A-Za-z0-9_/?=&%+.-]+$/.test(path) || path.includes(".."))
     throw new ApiError("Đường dẫn API không hợp lệ.", 0, "invalid_api_path");
   let response: Response;
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;

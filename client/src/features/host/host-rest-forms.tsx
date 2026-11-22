@@ -43,8 +43,9 @@ export function RestRoomCreate({ studioId, onClose, onSaved }: { studioId: strin
     { name: "area", label: "Diện tích (m²)", type: "number", step: "any", min: 1 }, { name: "capacity", label: "Sức chứa (người)", type: "number", min: 1 },
     { name: "ceiling_height", label: "Chiều cao trần (m)", type: "number", step: "any", min: 0, required: false, clearable: true },
     { name: "soundproof_level", label: "Cách âm / xử lý âm học (mặc định: Chuẩn Studio)", required: false, clearable: true }, { name: "power_specs", label: "Thông số nguồn điện", required: false, clearable: true },
-    { name: "description", label: "Mô tả phòng", required: false, clearable: true },
-  ]} mapBody={(body, data) => { const { space_type_id, ...rest } = body; return { ...rest, room_type_id: Number(rest.room_type_id), space_type_ids: [Number(space_type_id)], amenity_ids: data.getAll("amenity_ids").map(Number) }; }} onClose={onClose} onSaved={onSaved}><fieldset><legend>Tiện ích có sẵn</legend>{amenities.data.map(item => <label className="host-checkbox" key={text(item.amenity_id)}><input type="checkbox" name="amenity_ids" value={text(item.amenity_id)}/>{text(item.name)}</label>)}</fieldset></HostEditor>}</>;
+    { name: "description", label: "Mô tả phòng" },
+    { name: "rules", label: "Nội quy phòng" },
+  ]} mapBody={(body, data) => { const { space_type_id, ...rest } = body; return { ...rest, room_type_id: Number(rest.room_type_id), space_type_ids: [Number(space_type_id)], amenity_ids: data.getAll("amenity_ids").map(Number) }; }} onClose={onClose} onSaved={onSaved}><p>Để gửi duyệt, phòng cần mô tả, nội quy, ít nhất 3 ảnh và một bảng giá còn hiệu lực. Phòng mới sẽ ở trạng thái chờ Admin duyệt.</p><fieldset><legend>Tiện ích có sẵn</legend>{amenities.data.map(item => <label className="host-checkbox" key={text(item.amenity_id)}><input type="checkbox" name="amenity_ids" value={text(item.amenity_id)}/>{text(item.name)}</label>)}</fieldset></HostEditor>}</>;
 }
 export function RestHostPolicies() {
   const { studios, studioId, selectStudio } = useHostContext();
@@ -58,10 +59,10 @@ function RestPolicyForm({ studioId }: { studioId: string }) {
     void action.run(async () => {
       let refund_tiers: unknown;
       try { refund_tiers = JSON.parse(String(data.get("refund_tiers"))); } catch { throw new Error("Mốc hoàn cọc cần là mảng JSON hợp lệ."); }
-      await apiRequest("/api/host/policies", { method: "PATCH", body: { studio_id: Number(studioId), ...Object.fromEntries(["payment_minutes", "deposit_percent", "cancel_hours", "change_hours", "overtime_per_30m", "open_hour", "close_hour"].map(key => [key, Number(data.get(key))])), refund_tiers } }); resource.reload(); setSaved(true);
+      await apiRequest("/api/host/policies", { method: "PATCH", body: { studio_id: Number(studioId), ...Object.fromEntries(["payment_minutes", "deposit_percent", "cancel_hours", "change_hours", "overtime_per_30m", "open_hour", "close_hour", "buffer_minutes", "minimum_advance_minutes"].map(key => [key, Number(data.get(key))])), refund_tiers } }); resource.reload(); setSaved(true);
     });
   }}><fieldset className="host-fields" disabled={action.busy}>{[
-    ["payment_minutes", "Hạn thanh toán (phút)", 1, 1440], ["deposit_percent", "Tỷ lệ cọc (%)", 0, 100], ["cancel_hours", "Hạn hủy (giờ)", 0, 720], ["change_hours", "Hạn đổi lịch (giờ)", 0, 720], ["overtime_per_30m", "Phí quá giờ / 30 phút (VND)", 0, 100000000], ["open_hour", "Giờ mở cửa", 0, 23], ["close_hour", "Giờ đóng cửa", 1, 24],
+    ["payment_minutes", "Hạn thanh toán (phút)", 1, 1440], ["deposit_percent", "Tỷ lệ cọc (%)", 0, 100], ["cancel_hours", "Hạn hủy (giờ)", 0, 720], ["change_hours", "Hạn đổi lịch (giờ)", 0, 720], ["overtime_per_30m", "Phí quá giờ / 30 phút (VND)", 0, 100000000], ["open_hour", "Giờ mở cửa", 0, 23], ["close_hour", "Giờ đóng cửa", 1, 24], ["buffer_minutes", "Thời gian dọn/setup giữa hai lượt (phút)", 0, 480], ["minimum_advance_minutes", "Thời gian đặt trước tối thiểu (phút)", 0, 10080],
   ].map(([key, label, min, max]) => <label key={String(key)}>{String(label)}<input name={String(key)} type="number" min={Number(min)} max={Number(max)} required defaultValue={text(policy[String(key)], "")}/></label>)}<RefundTiers initial={policy.refund_tiers}/></fieldset>{action.error && <p className="host-form-error" role="alert">{action.error}</p>}{saved && <p className="host-success" role="status">Chính sách đã được máy chủ lưu.</p>}<button className="btn" disabled={action.busy}>Lưu chính sách</button></form>}</HostPanel>;
 }
 function RefundTiers({ initial }: { initial: unknown }) {

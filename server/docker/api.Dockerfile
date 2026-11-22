@@ -15,6 +15,13 @@ COPY --from=docker.io/library/composer:2 /usr/bin/composer /usr/bin/composer
 # Enable Apache mod_rewrite for RESTful routing
 RUN a2enmod rewrite
 
+# Rootless Podman can deny Apache access to the php-apache image's
+# /dev/stderr-backed error.log symlink during startup. Use a writable file so
+# the API container can start reliably in local Compose environments.
+RUN rm -f /var/log/apache2/error.log \
+    && touch /var/log/apache2/error.log \
+    && chmod 0666 /var/log/apache2/error.log
+
 # Configure Apache DocumentRoot to point to /var/www/html/public
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 

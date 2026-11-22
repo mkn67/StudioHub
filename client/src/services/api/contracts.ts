@@ -77,6 +77,7 @@ export type ApiBooking = {
     room_name: string;
     studio_name: string;
     status: string;
+    payment_status?: string;
     start_time: string;
     end_time: string;
     expires_at: string | null;
@@ -102,6 +103,15 @@ export type Quote = {
     start_time: string;
     end_time: string;
     busy_end: string;
+    policy?: {
+        open_hour: number;
+        close_hour: number;
+        buffer_minutes: number;
+        minimum_advance_minutes: number;
+        deposit_percent: number;
+        cancel_hours: number;
+        refund_tiers: { hours: number; percent: number }[];
+    };
     pricing: {
         rate_unit?: string;
         rental_units?: number;

@@ -9,6 +9,8 @@ export type HostRoom = Omit<ApiRoom, "studio"> & {
   studio?: ApiRoom["studio"];
   room_type_id?: number | null;
   status?: string;
+  review_status?: "draft" | "pending_review" | "approved" | "rejected" | string;
+  review_reason?: string | null;
   primary_space_type?: { space_type_id: number; name: string } | null;
 };
 export type HostEquipment = EquipmentItem & {

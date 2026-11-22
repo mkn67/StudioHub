@@ -9,3 +9,5 @@ Photographs illustrate fictional demo spaces and are not verified inventory or e
 - cyclorama-2.jpg: Kinsel Studio, https://images.squarespace-cdn.com/content/v1/5e42dd8c0b49341606c7e829/758eec8e-a657-49e8-8b44-44a8520d7d51/20230524_Cyclorama_LR_9.jpg
 - loft-2.jpg: Unsplash, https://images.unsplash.com/photo-1497366216548-37526070297c
 - sound-2.jpg: Unsplash, https://images.unsplash.com/photo-1516280440614-37939bbacd81
+
+The demo catalog adds two extra gallery views to four representative listings (Cyclorama, concept, daylight lookbook and podcast). These are illustrative reference photos, not verified photos of the named spaces. Their source pages are listed above; confirm the applicable terms before using them in production or implying the source studio is the listing owner.

@@ -3,7 +3,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useResource } from "@/services/api/use-resource";
-import type { ApiRoom, CalendarData } from "@/services/api/contracts";
+import type { ApiRoom } from "@/services/api/contracts";
 import { formatApiTime, unitLabels } from "@/services/api/contracts";
 import { money } from "@/domain/models";
 import { ApiMessage } from "@/components/api-ui";
@@ -146,7 +146,6 @@ export function BackendSearchResults({ home = false }: { home?: boolean }) {
 }
 export function BackendRoomDetail({ id }: { id: string }) {
     const room = useResource<ApiRoom>(`/api/rooms/${encodeURIComponent(id)}`);
-    const calendar = useResource<CalendarData>(`/api/rooms/${encodeURIComponent(id)}/calendar`);
     const reviews = useResource<{ summary: { review_count: number; average_rating: number }; items: { review_id: number; rating: number; review_text: string; customer_name: string; created_at: string }[] }>(`/api/rooms/${encodeURIComponent(id)}/reviews`);
     const relatedRooms = useResource<{ items: ApiRoom[] }>(room.data ? "/api/rooms?limit=50" : null);
     const r = room.data;
@@ -179,7 +178,7 @@ export function BackendRoomDetail({ id }: { id: string }) {
                     <RoomEditorialDetails room={r}/>
                     <RoomSpecGroup room={r}/>
                 </section>
-                <RoomBookingPanel room={r} calendar={calendar}/>
+                <RoomBookingPanel room={r}/>
             </div>
             <section className="room-review-section surface" aria-labelledby="room-reviews-title"><div className="room-review-heading"><div><p className="booking-eyebrow">Khách đã thuê</p><h2 id="room-reviews-title">Đánh giá từ khách hàng</h2></div>{reviews.data && (reviews.data.summary.review_count > 0 ? <strong className="room-review-average" aria-label={`${reviews.data.summary.average_rating} trên 5 sao`}>★ {reviews.data.summary.average_rating.toFixed(1)} <small>({reviews.data.summary.review_count})</small></strong> : <small>Chưa có điểm đánh giá</small>)}</div><ApiMessage loading={reviews.loading} error={reviews.error}/>{reviews.data?.items.length ? <div className="room-review-list">{reviews.data.items.map(review => <article key={review.review_id}><div><strong>{review.customer_name}</strong><span aria-label={`${review.rating} trên 5 sao`} className="room-review-stars">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span></div>{review.review_text && <p>{review.review_text}</p>}<small>{formatApiTime(review.created_at)}</small></article>)}</div> : reviews.data && <p>Chưa có đánh giá. Khách có thể đánh giá sau khi đơn thuê hoàn tất.</p>}</section>
             {(related.length > 0 || relatedRooms.loading || !!relatedRooms.error) && <section className="room-related-section"><div><h2>Phòng liên quan</h2><p>Gợi ý cùng loại không gian hoặc cùng Studio nếu khung bạn chọn không còn.</p></div><ApiMessage loading={relatedRooms.loading} error={relatedRooms.error}/>{related.length > 0 && <div className="room-related-grid">{related.map(item => <Link className="room-related-card" href={`/rooms/${item.room_id}`} key={item.room_id}><ApiImage src={item.thumbnail_url} alt={item.name}/><span>{item.primary_space_type?.name || item.studio.name}</span><strong>{item.name}</strong><small>{item.display_rate ? `${money(item.display_rate.unit_price)} / ${unitLabels[item.display_rate.rate_unit] ?? item.display_rate.rate_unit}` : "Xem bảng giá"}</small></Link>)}</div>}</section>}

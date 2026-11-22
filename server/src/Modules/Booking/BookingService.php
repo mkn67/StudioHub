@@ -36,8 +36,12 @@ class BookingService
      * @return array
      * @throws ApiException
      */
-    public function create(array $request, array $authUser): array
+    public function create(array $request, array $authUser, ?string $idempotencyKey = null): array
     {
+        $idempotencyKey = $idempotencyKey !== null ? trim($idempotencyKey) : null;
+        if ($idempotencyKey !== null && ($idempotencyKey === '' || strlen($idempotencyKey) > 100 || !preg_match('/^[A-Za-z0-9_-]+$/', $idempotencyKey))) {
+            throw new ApiException(400, 'invalid_idempotency_key', 'Mã yêu cầu đặt phòng không hợp lệ');
+        }
         // Step 1: Validate input fields
         $roomId = (int) ($request['room_id'] ?? 0);
         $rateId = (int) ($request['rate_id'] ?? 0);
@@ -92,6 +96,34 @@ class BookingService
                 $this->pdo->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
                 $this->pdo->beginTransaction();
 
+                $requestHash = null;
+                if ($idempotencyKey !== null) {
+                    // Serialize same-user idempotency checks so two concurrent retries
+                    // cannot both pass the lookup before either insert commits.
+                    $userLock = $this->pdo->prepare('SELECT user_id FROM users WHERE user_id=? FOR UPDATE');
+                    $userLock->execute([(int) $authUser['user_id']]);
+                    $canonical = $request;
+                    $sort = static function (&$value) use (&$sort): void {
+                        if (!is_array($value)) return;
+                        if (array_is_list($value)) { foreach ($value as &$item) $sort($item); unset($item); return; }
+                        ksort($value);
+                        foreach ($value as &$item) $sort($item);
+                        unset($item);
+                    };
+                    $sort($canonical);
+                    $requestHash = hash('sha256', json_encode($canonical, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    $existing = $this->pdo->prepare('SELECT booking_id, request_hash FROM bookings WHERE customer_id=? AND request_key=? LIMIT 1');
+                    $existing->execute([(int) $authUser['user_id'], $idempotencyKey]);
+                    $previous = $existing->fetch(PDO::FETCH_ASSOC);
+                    if ($previous) {
+                        if (!hash_equals((string) $previous['request_hash'], $requestHash)) {
+                            throw new ApiException(409, 'idempotency_key_reused', 'Mã yêu cầu này đã được dùng cho một nội dung đặt phòng khác');
+                        }
+                        $this->pdo->commit();
+                        return $this->getBookingDetail((int) $previous['booking_id'], $authUser);
+                    }
+                }
+
                 // Steps 3 to 7: Evaluate booking with locking=true
                 $eval = $this->availabilityService->evaluate($request, true, $this->pdo);
 
@@ -133,6 +165,8 @@ class BookingService
                     'status'           => 'pending',
                     'expires_at'       => $expiresAt,
                     'policy_snapshot' => json_encode($eval['policy'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                    'request_key'      => $idempotencyKey,
+                    'request_hash'     => $requestHash,
                 ];
 
                 // Insert bookings
@@ -735,6 +769,9 @@ class BookingService
             $insert->execute([$paymentId, $bookingId, $refundAmount, $reason, $transactionCode, $key]);
             $refundTotal += $refundAmount;
             $remainingBudget -= $refundAmount;
+        }
+        if ($refundTotal > 0 && $paidTotal > 0) {
+            $this->bookingRepo->updatePaymentStatus($bookingId, $refundTotal >= $paidTotal ? 'refunded' : 'partially_refunded', $pdo);
         }
         return $refundTotal;
     }

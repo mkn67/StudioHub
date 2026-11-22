@@ -16,7 +16,7 @@ final class RoomHelpdeskService
         $db = $this->pdo ?? Db::getConnection();
         // Reuse the public active-room AND active-studio access check.
         $room = ($this->rooms ?? new RoomService())->getRoomDetail($roomId);
-        $policy = $db->prepare('SELECT payment_minutes, deposit_percent, cancel_hours, change_hours, refund_tiers, open_hour, close_hour FROM studio_policies WHERE studio_id = ?');
+        $policy = $db->prepare('SELECT payment_minutes, deposit_percent, cancel_hours, change_hours, refund_tiers, open_hour, close_hour, buffer_minutes, minimum_advance_minutes FROM studio_policies WHERE studio_id = ?');
         $policy->execute([$room['studio_id']]);
         $equipment = $db->prepare("SELECT name, unit_price, pricing_unit FROM equipments WHERE studio_id = ? AND status = 'active' ORDER BY equipment_id LIMIT 10");
         $equipment->execute([$room['studio_id']]);
@@ -53,6 +53,7 @@ final class RoomHelpdeskService
             $text[] = 'Cấu hình thuê hiện tại của Studio: cọc ' . $policy['deposit_percent'] . '%; thời hạn thanh toán ' . $policy['payment_minutes'] . ' phút.';
             $text[] = 'Ngưỡng hủy đơn đã thanh toán: ' . $policy['cancel_hours'] . ' giờ trước giờ bắt đầu; ngưỡng đổi lịch: ' . $policy['change_hours'] . ' giờ.';
             $text[] = 'Giờ hoạt động: ' . $policy['open_hour'] . 'h–' . $policy['close_hour'] . 'h.';
+            $text[] = 'Thời gian dọn/setup giữa hai lượt: ' . (int) ($policy['buffer_minutes'] ?? 30) . ' phút; cần đặt trước tối thiểu ' . (int) ($policy['minimum_advance_minutes'] ?? 120) . ' phút.';
             $tiers = is_array($policy['refund_tiers'] ?? null) ? $policy['refund_tiers'] : json_decode($policy['refund_tiers'] ?? 'null', true);
             $valid = is_array($tiers) && count($tiers) <= 10;
             $previous = PHP_INT_MAX;

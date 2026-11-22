@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "notice": "Fictional demonstration inventory. Photos illustrate room types and may show different locations; not verified photos of the listed room. Reference videos are not room tours. Replace with owner media for real listings.",
+  "notice": "Fictional demonstration inventory. Photos illustrate room types and may show different locations; not verified photos of the listed room. Replace with owner media for real listings. Four catalogues have two additional illustrative gallery photographs; new assets are listed in client/public/images/PROVENANCE.md.",
   "studios": [
     {
       "owner_email": "host1@studio.local",
@@ -74,6 +74,18 @@
           "alt": "Cyclorama Studio — thiết bị hoặc bối cảnh tham khảo",
           "source": "https://www.pexels.com/photo/12767729/",
           "license": "https://www.pexels.com/license/"
+        },
+        {
+          "url": "/images/cyclorama.jpg",
+          "alt": "Cyclorama Studio — góc không gian tham khảo",
+          "source": "https://payload.cargocollective.com/1/18/591919/9398168/DaydreamAgency_Studio_Opt01_0034_V2_1250.jpg",
+          "license": "Source-specific permission or license; illustrative demo media only"
+        },
+        {
+          "url": "/images/cyclorama-2.jpg",
+          "alt": "Cyclorama Studio — bối cảnh chụp tham khảo",
+          "source": "https://images.squarespace-cdn.com/content/v1/5e42dd8c0b49341606c7e829/758eec8e-a657-49e8-8b44-44a8520d7d51/20230524_Cyclorama_LR_9.jpg",
+          "license": "Source-specific permission or license; illustrative demo media only"
         }
       ]
     },
@@ -111,6 +123,18 @@
           "alt": "Concept & Set Design — thiết bị hoặc bối cảnh tham khảo",
           "source": "https://www.pexels.com/photo/13699196/",
           "license": "https://www.pexels.com/license/"
+        },
+        {
+          "url": "/images/loft.jpg",
+          "alt": "Concept Studio — bố trí không gian tham khảo",
+          "source": "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+          "license": "Source-specific permission or license; illustrative demo media only"
+        },
+        {
+          "url": "/images/loft-2.jpg",
+          "alt": "Concept Studio — nội thất tham khảo",
+          "source": "https://images.unsplash.com/photo-1497366216548-37526070297c",
+          "license": "Source-specific permission or license; illustrative demo media only"
         }
       ]
     },
@@ -185,6 +209,18 @@
           "alt": "Podcast & Livestream Hub — thiết bị hoặc bối cảnh tham khảo",
           "source": "https://www.pexels.com/photo/11884525/",
           "license": "https://www.pexels.com/license/"
+        },
+        {
+          "url": "/images/sound.jpg",
+          "alt": "Podcast Studio — góc thu âm tham khảo",
+          "source": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04",
+          "license": "Source-specific permission or license; illustrative demo media only"
+        },
+        {
+          "url": "/images/sound-2.jpg",
+          "alt": "Podcast Studio — thiết bị thu âm tham khảo",
+          "source": "https://images.unsplash.com/photo-1516280440614-37939bbacd81",
+          "license": "Source-specific permission or license; illustrative demo media only"
         }
       ]
     },
@@ -417,6 +453,18 @@
           "alt": "Lookbook & Fashion — thiết bị hoặc bối cảnh tham khảo",
           "source": "https://www.pexels.com/photo/9396401/",
           "license": "https://www.pexels.com/license/"
+        },
+        {
+          "url": "/images/daylight.jpg",
+          "alt": "Lookbook Studio — ánh sáng tự nhiên tham khảo",
+          "source": "https://images.squarespace-cdn.com/content/v1/67214d08df6437668daa86ca/f37a3586-3db1-47c5-bd40-02b2039f845a/Studio%2B122_3232.jpg?format=1800w",
+          "license": "Source-specific permission or license; illustrative demo media only"
+        },
+        {
+          "url": "/images/daylight-2.jpg",
+          "alt": "Lookbook Studio — góc cửa sổ tham khảo",
+          "source": "https://images.squarespace-cdn.com/content/v1/640bbd7566f05442c99f7dc3/472f6c28-f23d-43da-842f-e3de5fac02bf/DSC00285.jpg?format=1600w",
+          "license": "Source-specific permission or license; illustrative demo media only"
         }
       ]
     },

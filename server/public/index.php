@@ -205,6 +205,7 @@ $router->get('/api/admin/rooms', [AdminController::class, 'rooms'], $adminMiddle
 $router->get('/api/admin/equipments', [AdminController::class, 'equipments'], $adminMiddlewares);
 $router->patch('/api/admin/studios/{id:\\d+}', [AdminController::class, 'updateStudio'], $adminMiddlewares);
 $router->patch('/api/admin/rooms/{id:\\d+}', [AdminController::class, 'updateRoom'], $adminMiddlewares);
+$router->patch('/api/admin/rooms/{id:\\d+}/review', [AdminController::class, 'reviewRoom'], $adminMiddlewares);
 $router->patch('/api/admin/equipments/{id:\\d+}', [AdminController::class, 'updateEquipment'], $adminMiddlewares);
 $router->get('/api/admin/audit-logs', [AdminController::class, 'auditLogs'], $adminMiddlewares);
 $router->get('/api/admin/refund-exceptions', [AdminController::class, 'refundExceptions'], $adminMiddlewares);
