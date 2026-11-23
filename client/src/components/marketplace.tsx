@@ -77,6 +77,12 @@ export function Home() {
     : state.types.map(t => ({ ...t, group: "Không gian sáng tạo", description: categoryCopy[t.category] || "Không gian chuyên dụng cho hoạt động sáng tạo và sản xuất nội dung." }));
   const categoryGroups = categories.reduce((groups, type) => groups.set(type.group, [...(groups.get(type.group) ?? []), type]), new Map<string, typeof categories>());
   const preferredGroups = ["Visual & Photo Studio", "Video & Film Production", "Livestream & Broadcast", "Audio & Event"];
+  const groupTitles: Record<string, string> = {
+    "Visual & Photo Studio": "Chụp ảnh & thời trang",
+    "Video & Film Production": "Quay phim & hậu kỳ",
+    "Livestream & Broadcast": "Podcast & phát trực tiếp",
+    "Audio & Event": "Thu âm & sự kiện",
+  };
   const orderedGroups = [...preferredGroups.filter(group => categoryGroups.has(group)), ...Array.from(categoryGroups.keys()).filter(group => !preferredGroups.includes(group))];
   const categoryMotion = useHomepageCategoryMotion(categories.map(type => type.id).join("|"));
   const [searchPending, startSearch] = useTransition();
@@ -106,7 +112,7 @@ export function Home() {
           </p>
           </div>
           <form
-            className="hero-search"
+            className={`hero-search${backendEnabled ? " hero-search--live" : ""}`}
             aria-busy={searchPending}
             onSubmit={(e) => {
               e.preventDefault();
@@ -141,16 +147,16 @@ export function Home() {
                 ))}
               </select>
             </label>
-            <label>
+            {!backendEnabled && <label>
               <span>Ngày thuê</span>
-              {backendEnabled ? <span>Chọn ngày trong trang phòng</span> : <input
+              <input
                 aria-label="Ngày thuê"
                 type="date"
                 min={localDate(state.now)}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-              />}
-            </label>
+              />
+            </label>}
             <button className="btn" type="submit" disabled={searchPending}>
               <Search size={18} />
               {searchPending ? "Đang tìm…" : "Tìm Studio"}
@@ -163,9 +169,10 @@ export function Home() {
       </section>
       <section className="section container home-categories" aria-labelledby="home-categories-title">
         <div className="section-head">
-          <h2 id="home-categories-title">
-            Các loại Studio phổ biến
-          </h2>
+          <div>
+            <span className="home-section-eyebrow">Khám phá theo nhu cầu</span>
+            <h2 id="home-categories-title">Các loại Studio phổ biến</h2>
+          </div>
           <p className="muted">
             Từ những khung hình đầu tiên đến bản thu cuối cùng.
             <br />
@@ -176,7 +183,7 @@ export function Home() {
           {orderedGroups.map(group => {
             const types = categoryGroups.get(group) ?? [];
             return <section className="space-category-group" data-tone={Math.max(0, preferredGroups.indexOf(group)) % 4} key={group}>
-            <h3><span>{group}</span><small>{types.length.toString().padStart(2, "0")} loại không gian</small></h3>
+            <h3><span>{groupTitles[group] ?? group}</span><small>{types.length.toString().padStart(2, "0")} loại không gian</small></h3>
             <div className="categories home-category-grid">
               {types.map(type => <Link className="home-category-card" key={type.id} href={backendEnabled ? `/rooms?space_type_id=${type.id}` : `/rooms?category=${encodeURIComponent(type.category)}`}>
                 <span className="home-category-image-wrap">
@@ -203,9 +210,10 @@ export function Home() {
       <section className="section container">
         <div className="section-head">
           <div>
-            <h2>Các Studio được đánh giá cao</h2>
+            <span className="home-section-eyebrow">Phòng đang mở đặt lịch</span>
+            <h2>Không gian nổi bật</h2>
             <p className="muted">
-              {backendEnabled ? "Những phòng Studio được người thuê đánh giá tốt nhất." : "Những phòng Studio trong bộ dữ liệu minh họa."}
+              {backendEnabled ? "Xem giá, tiện ích và chọn phòng phù hợp với buổi sáng tạo của bạn." : "Những phòng Studio trong bộ dữ liệu minh họa."}
             </p>
           </div>
           <Link className="text-link" href="/rooms">
