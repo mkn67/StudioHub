@@ -70,7 +70,7 @@ The script is idempotent and refuses non-development databases. For Podman, use 
 
 Public `GET /api/rooms` also supports `min_capacity`, `min_area`, `district`, `amenity_id`, `available_from` + `available_to`, and `sort`. Availability bounds use `YYYY-MM-DD HH:mm:ss` in `Asia/Ho_Chi_Minh`, require both bounds, and span at most 24 hours. Sort values are `recommended`, `price_asc`, `price_desc`, `area_desc`, `capacity_desc`, and `newest`. `GET /api/rooms/{id}/reviews` returns published reviews and the aggregate rating. A customer can submit one review per completed booking through `POST /api/bookings/{id}/review`; review authors are anonymized in the public catalog.
 
-Login and availability-check limits default to 10 requests per 15 minutes and 60 requests per minute per client IP. Configure them with `LOGIN_RATE_LIMIT`, `LOGIN_RATE_WINDOW_SECONDS`, `AVAILABILITY_RATE_LIMIT`, and `AVAILABILITY_RATE_WINDOW_SECONDS`. Only `REMOTE_ADDR` is used as the client identity; configure trusted proxy handling before placing the API behind a proxy that does not preserve the originating address.
+Login, registration, and availability-check limits default to 10 requests per 15 minutes, 5 registrations per 15 minutes, and 60 checks per minute per client IP. Configure them with `LOGIN_RATE_LIMIT`, `LOGIN_RATE_WINDOW_SECONDS`, `REGISTER_RATE_LIMIT`, `REGISTER_RATE_WINDOW_SECONDS`, `AVAILABILITY_RATE_LIMIT`, and `AVAILABILITY_RATE_WINDOW_SECONDS`. The API uses `REMOTE_ADDR` unless the immediate peer is listed in `RATE_LIMIT_TRUSTED_PROXY_IPS`; only then does it accept the `CF-Connecting-IP` header. The trusted-proxy list defaults to loopback addresses for Render's local edge proxy. Do not add arbitrary public addresses to this list.
 
 ## API and tests
 

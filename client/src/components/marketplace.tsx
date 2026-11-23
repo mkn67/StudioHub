@@ -96,13 +96,13 @@ export function Home() {
         <div className="hero-shade" />
         <div className="hero-inner">
           <div className="hero-editorial">
-          <span className="hero-kicker">Không gian sáng tạo / StudioHub</span>
+          <span className="hero-kicker">Không gian sáng tạo · StudioHub UIT</span>
           <h1 className="riso-headline" id="home-title">
-                  <span className="motion-line"><span className="motion-line-text">StudioHub-UIT</span></span>
-                  <span className="hero-emphasis motion-line"><span className="motion-line-text">Xin chào bạn!</span></span>
+                  <span className="motion-line"><span className="motion-line-text">Tìm studio.</span></span>
+                  <span className="hero-emphasis motion-line"><span className="motion-line-text">Bắt đầu sáng tạo.</span></span>
           </h1>
           <p>
-            Trung tâm tìm kiếm/cho thuê Studio lớn nhì UIT. An toàn, tiện lợi.
+            Chụp ảnh, quay phim hay thu âm — chọn không gian phù hợp và xem thông tin thuê rõ ràng.
           </p>
           </div>
           <form
@@ -143,7 +143,7 @@ export function Home() {
             </label>
             <label>
               <span>Ngày thuê</span>
-              {backendEnabled ? <span>Chọn lịch tại trang phòng</span> : <input
+              {backendEnabled ? <span>Chọn ngày trong trang phòng</span> : <input
                 aria-label="Ngày thuê"
                 type="date"
                 min={localDate(state.now)}

@@ -17,7 +17,22 @@ export function PublicAuth({ register = false }: { register?: boolean }) {
   const [passwordError, setPasswordError] = useState("");
   const fieldError = (name: string) => action.fieldErrors[name] ? <span id={`${name}-error`} className={styles.error}>{action.fieldErrors[name]}</span> : null;
   return <section className={styles.page} aria-labelledby="auth-title">
-    <div className={styles.panel}>
+    <div className={styles.layout}>
+      <aside className={styles.visual} aria-label="Không gian studio sáng tạo">
+        <div className={styles.visualContent}>
+          <span className={styles.visualTag}><span aria-hidden="true"/>StudioHub · TP. Hồ Chí Minh</span>
+          <div>
+            <p className={styles.visualEyebrow}>Mở lối cho ý tưởng</p>
+            <h2>Không gian{" "}<br/>để sáng tạo{" "}<br/><em>thăng hoa.</em></h2>
+            <p className={styles.visualCopy}>Tìm studio phù hợp cho buổi chụp, podcast, workshop và những dự án bạn đang ấp ủ.</p>
+          </div>
+          <div className={styles.visualFooter}>
+            <span className={styles.visualMark} aria-hidden="true">S</span>
+            <span><strong>Một nơi cho mọi ý tưởng</strong><small>Khám phá · Chọn lịch · Gửi yêu cầu</small></span>
+          </div>
+        </div>
+      </aside>
+      <div className={styles.panel}>
       <p className={styles.eyebrow}>StudioHub / Không gian sáng tạo</p>
       <h1 id="auth-title">{register ? "Tạo tài khoản" : "Chào mừng trở lại"}</h1>
       <p className={styles.intro}>{register ? "Đăng ký để bắt đầu đặt đơn thuê." : "Đăng nhập để tiếp tục sử dụng các tính năng."}</p>
@@ -58,6 +73,7 @@ export function PublicAuth({ register = false }: { register?: boolean }) {
         <span role="status" className={styles.srOnly}>{action.busy ? "Đang xử lý yêu cầu, vui lòng chờ." : ""}</span>
       </form>
       <p className={styles.switch}>{register ? "Đã có tài khoản? " : "Chưa có tài khoản? "}<Link href={register ? "/login" : "/register"}>{register ? "Đăng nhập" : "Đăng ký"}</Link></p>
+      </div>
     </div>
   </section>;
 }

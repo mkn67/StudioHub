@@ -26,7 +26,7 @@ final class RateLimitMiddleware
 
     public function handle(Request $request, callable $next): mixed
     {
-        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $clientIp = $this->clientIp();
         $result = ($this->service ?? new RateLimitService())->consume(
             $this->scope,
             (string) $clientIp,
@@ -42,6 +42,30 @@ final class RateLimitMiddleware
             ]);
         }
         return $next($request);
+    }
+
+    /**
+     * Render terminates public traffic at its edge proxy, so Apache can see the
+     * local proxy address instead of the visitor. Only accept the edge-provided
+     * Cloudflare client IP header when the immediate peer is explicitly trusted.
+     * Never trust forwarding headers from arbitrary clients.
+     */
+    private function clientIp(): string
+    {
+        $remoteAddress = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        $configured = $_ENV['RATE_LIMIT_TRUSTED_PROXY_IPS']
+            ?? getenv('RATE_LIMIT_TRUSTED_PROXY_IPS')
+            ?: '127.0.0.1,::1';
+        $trustedProxies = array_filter(array_map('trim', explode(',', (string) $configured)));
+
+        if (in_array($remoteAddress, $trustedProxies, true)) {
+            $forwardedAddress = trim((string) ($_SERVER['HTTP_CF_CONNECTING_IP'] ?? ''));
+            if (filter_var($forwardedAddress, FILTER_VALIDATE_IP) !== false) {
+                return $forwardedAddress;
+            }
+        }
+
+        return filter_var($remoteAddress, FILTER_VALIDATE_IP) !== false ? $remoteAddress : 'unknown';
     }
 
     private function configuredPositiveInt(mixed $value, int $default): int

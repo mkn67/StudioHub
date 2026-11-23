@@ -1,5 +1,7 @@
 FROM php:8.2-apache-bookworm
 
+ENV APP_ENV=production
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libzip-dev libonig-dev unzip \
     && docker-php-ext-install -j"$(nproc)" pdo_mysql zip mbstring \

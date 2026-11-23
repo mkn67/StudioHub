@@ -58,7 +58,7 @@ class AccountService
             throw $error;
         }
 
-        $environment = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'dev';
+        $environment = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'production';
         if (in_array($environment, ['dev', 'test'], true)) {
             return ['request_id' => $requestId, 'email' => $email, 'expires_in_seconds' => 900, 'development_code' => $code];
         }

@@ -61,7 +61,7 @@ $router->post('/api/booking-quotes', [App\Controllers\WorkspaceController::class
 $router->get('/api/reports', [App\Controllers\WorkspaceController::class, 'report'], [new AuthMiddleware()]);
 
 // --- Phase 3: Auth & Account Routes ---
-$router->post('/api/auth/register', [AuthController::class, 'register']);
+$router->post('/api/auth/register', [AuthController::class, 'register'], [new RateLimitMiddleware('register', 5, 900)]);
 $router->post('/api/auth/login', [AuthController::class, 'login'], [new RateLimitMiddleware('login')]);
 $router->post('/api/auth/logout', [AuthController::class, 'logout'], [new AuthMiddleware()]);
 $router->get('/api/auth/profile', [AuthController::class, 'profile'], [new AuthMiddleware()]);
@@ -214,7 +214,7 @@ $router->post('/api/admin/refund-exceptions/{id:\\d+}/actions', [AdminController
 $router->get('/api/admin/reports/series', [AdminController::class, 'reportSeries'], $adminMiddlewares);
 
 // Test-only identity probes used by the integration suites. Never register them in production.
-$appEnv = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'dev';
+$appEnv = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'production';
 if (in_array($appEnv, ['dev', 'test'], true)) {
     $router->get('/api/test/me', function (Request $req) {
         ApiResponse::success($req->user(), 'Xác thực thành công');
